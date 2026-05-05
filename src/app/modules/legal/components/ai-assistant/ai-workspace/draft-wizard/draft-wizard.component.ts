@@ -254,6 +254,20 @@ export class DraftWizardComponent implements OnInit, AfterViewInit, OnChanges, O
   @Input() availableCases: any[] = [];
   @Input() initialCaseId: number | null = null;
   @Input() initialPrompt = '';
+  /**
+   * When set (e.g. from /legispace/legidraft?docType=demand_letter), the wizard
+   * pre-selects the matching catalog entry once the catalog finishes loading
+   * and — provided the four step-advance prereqs are satisfied (PA, doc type,
+   * jurisdiction, and any per-type config) — jumps directly to the Review step.
+   * Accepts either the BACKEND slug ('demand_letter') or the UI catalog id
+   * ('demand-letter'); the registry catalog response carries both.
+   *
+   * Falls back gracefully when:
+   *   - the catalog has no matching entry → wizard stays on Step 2,
+   *   - the case has a different practice area than the doc type implies → no autopick,
+   *   - any prereq is missing → wizard lands on the highest-valid step.
+   */
+  @Input() initialDocType: string | null = null;
 
   @Output() wizardSubmit = new EventEmitter<DraftWizardResult>();
   @Output() wizardCancel = new EventEmitter<void>();
@@ -303,6 +317,13 @@ export class DraftWizardComponent implements OnInit, AfterViewInit, OnChanges, O
   expandedTiers = new Set<number>([1]);
   private catalogSub: Subscription | null = null;
   private destroyed = false;
+  /**
+   * One-shot flag: `initialDocType` autopick + step-jump runs at most ONCE per
+   * wizard mount. Without this guard, every catalog reload (jurisdiction switch,
+   * PA reload) would re-jump to Review and trample any manual back-navigation
+   * the user did after the initial deeplink landing.
+   */
+  private autoAdvanceConsumed = false;
 
   constructor(
     private router: Router,
@@ -325,6 +346,9 @@ export class DraftWizardComponent implements OnInit, AfterViewInit, OnChanges, O
     this.hydrateFromCase();
     this.prompt = this.initialPrompt || '';
     if (this.initialCaseId != null) this.selectedCaseId = this.initialCaseId;
+    // hydrateFromCase may already have triggered loadCatalog asynchronously;
+    // attempt now in case the catalog was previously cached.
+    this.tryAutoAdvanceFromInitialState();
   }
 
   ngAfterViewInit(): void {
@@ -347,6 +371,11 @@ export class DraftWizardComponent implements OnInit, AfterViewInit, OnChanges, O
     // userCases asynchronously, so availableCases is often empty on first mount.
     if (changes['initialCaseId'] || changes['availableCases']) {
       this.hydrateFromCase();
+    }
+    // Re-attempt auto-advance whenever any of its inputs settle. The first
+    // successful run flips autoAdvanceConsumed so subsequent emissions no-op.
+    if (changes['initialDocType'] || changes['initialCaseId'] || changes['availableCases']) {
+      this.tryAutoAdvanceFromInitialState();
     }
   }
 
@@ -506,6 +535,9 @@ export class DraftWizardComponent implements OnInit, AfterViewInit, OnChanges, O
           if (this.destroyed) return;
           this.catalog = res;
           this.catalogLoading = false;
+          // Now that the catalog is in hand, attempt deeplink auto-advance
+          // (no-op if `initialDocType` wasn't provided or the entry isn't here).
+          this.tryAutoAdvanceFromInitialState();
           this.cdr.detectChanges();
         }),
         error: (err) => this.zone.run(() => {
@@ -909,6 +941,72 @@ export class DraftWizardComponent implements OnInit, AfterViewInit, OnChanges, O
     this.catalogSub?.unsubscribe();
     this.catalogSub = null;
     this.hydrateFromCase();
+  }
+
+  // ─── Deeplink auto-advance (initialDocType) ──────────────────────────────
+  /**
+   * Honors `initialDocType` once all dependencies are present. Idempotent —
+   * called from ngOnInit, ngOnChanges, and the catalog-load callback because
+   * the inputs settle in unpredictable order. The `autoAdvanceConsumed` flag
+   * makes it run at most once per wizard mount.
+   *
+   * Walks the loaded catalog for an entry whose backend slug OR UI id matches
+   * `initialDocType`. On a hit, pre-selects it and advances to the highest
+   * step whose `canAdvanceFromN()` predicate passes — Review (Step 4) when
+   * everything is satisfied, otherwise the configure step that needs input.
+   */
+  private tryAutoAdvanceFromInitialState(): void {
+    if (this.autoAdvanceConsumed) return;
+    if (!this.initialDocType) return;
+    if (!this.catalog || this.catalogLoading) return;
+    if (!this.selectedPracticeArea) return;
+
+    const target = this.initialDocType.toLowerCase();
+    let match: CatalogEntry | null = null;
+    for (const tier of this.catalog.tiers || []) {
+      for (const entry of tier.types || []) {
+        if (entry.documentType?.toLowerCase() === target ||
+            entry.documentTypeUiId?.toLowerCase() === target) {
+          match = entry;
+          break;
+        }
+      }
+      if (match) break;
+    }
+
+    if (!match) {
+      // The catalog finished loading and the requested doc type isn't in it
+      // (different PA cascade / removed template). One escape hatch: a
+      // `legal_memo` deeplink from any PA — the bare `legal_memo.json`
+      // template exists in the registry but only Civil's tier map surfaces
+      // it. Mirror `useBlankDocument()` so PI/Estate/etc. can still land in
+      // Step 3 with a Legal Memo selected via the deeplink.
+      if (target === 'legal_memo' || target === 'legal-memo') {
+        match = {
+          documentType: 'legal_memo',
+          documentTypeUiId: 'legal-memo',
+          displayName: 'Legal Memo',
+          category: 'other',
+          description: 'Free-form document — attorney supplies the structure via instructions',
+          hasSpecificTemplate: false
+        };
+      } else {
+        // Anything else: stop here, user picks manually from Step 2.
+        this.autoAdvanceConsumed = true;
+        return;
+      }
+    }
+
+    this.selectCatalogEntry(match);
+    this.autoAdvanceConsumed = true;
+
+    // Walk forward as far as the per-step predicates allow. We don't force
+    // step 4 — if the type happens to need extra config (e.g. interrogatories
+    // need topics), we'll land on Step 3 so the user can finish there.
+    if (!this.canAdvanceFrom1()) return;
+    if (!this.canAdvanceFrom2()) { this.setStep(2); return; }
+    if (!this.canAdvanceFrom3()) { this.setStep(3); return; }
+    this.setStep(4);
   }
 
   // ─── Step navigation ─────────────────────────────────────────────────────

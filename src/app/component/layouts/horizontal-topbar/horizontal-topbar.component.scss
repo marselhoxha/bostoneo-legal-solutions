@@ -1,102 +1,326 @@
-// Logo styling
+// =====================================================================
+// LEGIENCE BAR 2 — horizontal nav row (clean replacement)
+// Uses .lt-nav-* classes only. Velzon's .navbar-nav .nav-link rules
+// can't match because the markup no longer carries those classes.
+// =====================================================================
+
+// Logo styling (sidebar fallback only — not used in horizontal layout)
 .logo {
   width: 150px;
   height: auto;
 }
 
-// ============================================================================
-// DESKTOP STYLES (min-width: 1024.1px)
-// Matches Velzon theme horizontal nav breakpoint
-// ============================================================================
-@media (min-width: 1024.1px) {
-  .app-menu {
-    .navbar-nav {
-      .nav-item {
-        margin-right: 0.25rem;
+// ---------------------------------------------------------------------
+// Nav row outer — Bar 2 card surface (Direction A "Refined Card")
+// Hardcoded #ffffff/#1c1917 (NOT --legience-bg-card) so the white
+// surface is scoped to the topbar only — not propagated to every
+// dashboard card via the token system.
+// ---------------------------------------------------------------------
+:host .lt-nav-menu,
+.lt-nav-menu {
+  background: #ffffff !important;
+  border-bottom: 1px solid var(--legience-border-hairline) !important;
+}
 
-        .nav-link {
-          padding: 0.5rem 0.75rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          white-space: nowrap;
+[data-bs-theme="dark"] {
+  :host .lt-nav-menu,
+  .lt-nav-menu {
+    background: #1c1917 !important;
+    border-bottom-color: rgba(245, 245, 244, 0.08) !important;
+  }
+}
 
-          .icon {
-            margin-right: 0.375rem;
-            font-size: 1rem;
-          }
+.lt-nav-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+}
 
-          @media (hover: hover) {
-            &:hover {
-              background-color: rgba(var(--bs-primary-rgb), 0.1);
-              border-radius: 0.375rem;
-            }
-          }
-        }
-      }
+.lt-nav-item {
+  display: inline-block;
+  position: relative;
+
+  // Hover-to-show submenu (desktop) + click-toggle (.is-open) for touch.
+  // The dropdown has padding-top=8px + negative margin-top=-2px, so its
+  // hover area extends up into the parent-to-dropdown gap. Cursor never
+  // leaves the hover scope mid-traversal — fixes the "dropdown disappears
+  // when I move down to it" bug that breaks click-through to submenu items.
+  @media (min-width: 1024.1px) {
+    &:hover > .lt-nav-dropdown,
+    &:focus-within > .lt-nav-dropdown,
+    &.is-open > .lt-nav-dropdown {
+      display: block;
     }
+  }
 
-    .menu-dropdown {
-      min-width: 180px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      border-radius: 0.5rem;
-      padding: 0.5rem 0;
+  // Mobile / touch: click parent to toggle submenu (no hover).
+  @media (max-width: 1024px) {
+    &.is-open > .lt-nav-dropdown {
+      display: block;
     }
   }
 }
 
-// Laptop-specific (smaller desktop)
-@media (min-width: 1024.1px) and (max-width: 1366px) {
-  .app-menu {
-    .navbar-nav {
-      .nav-item {
-        margin-right: 0.125rem;
+.lt-nav-title {
+  display: none; // top-level horizontal nav has no titles
+}
 
-        .nav-link {
-          padding: 0.4rem 0.6rem;
-          font-size: 0.8125rem;
-        }
-      }
+// ---------------------------------------------------------------------
+// Nav link — flat or parent. Hover gets a soft accent-tinted pill
+// for clear clickable affordance (Direction A). Active stays as just
+// accent text + weight 500 (no pill, no underline) per prior feedback.
+// ---------------------------------------------------------------------
+.lt-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  color: var(--legience-text-secondary);
+  position: relative;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  background: transparent;
+  border-radius: 6px;
+  white-space: nowrap;
+  line-height: 1;
+
+  &:hover,
+  &:focus {
+    color: var(--legience-text-primary);
+    background: rgba(11, 100, 233, 0.06);
+    text-decoration: none;
+
+    .lt-nav-icon { opacity: 1; color: var(--legience-accent); }
+    .lt-nav-chev { color: var(--legience-text-primary); }
+  }
+
+  &.active,
+  &.router-link-active {
+    color: var(--legience-accent);
+    font-weight: 500;
+    background: transparent;
+
+    .lt-nav-icon { opacity: 1; color: var(--legience-accent); }
+    .lt-nav-chev { color: var(--legience-accent); }
+
+    // Active item gets the same hover bg when hovered — keeps the
+    // hover affordance visible even on the currently-active page.
+    &:hover,
+    &:focus {
+      background: rgba(11, 100, 233, 0.08);
+      color: var(--legience-accent);
     }
   }
 }
 
-// ============================================================================
-// MOBILE/TABLET STYLES (max-width: 1024px)
-// Matches Velzon theme breakpoint where horizontal nav collapses to hamburger
-// ============================================================================
+.lt-nav-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  opacity: 0.75;
+  flex-shrink: 0;
+  pointer-events: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s ease, opacity 0.12s ease;
+}
+
+.lt-nav-label {
+  flex: 1;
+}
+
+.lt-nav-chev {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.25;
+  opacity: 0.55;
+  margin-left: 2px;
+  // Lucide chevron-down's visible glyph hangs in the lower half of its
+  // box (the V points down), making it look top-heavy when flex-centred.
+  // Nudging 1px upward visually balances the icon against the text x-height.
+  margin-top: -1px;
+  flex-shrink: 0;
+  pointer-events: none;
+  color: var(--legience-text-muted);
+  transition: transform 0.15s ease, color 0.12s ease;
+}
+
+// Rotate chev when parent dropdown is open (Bootstrap aria-expanded)
+.lt-nav-link[aria-expanded="true"] .lt-nav-chev {
+  transform: rotate(180deg);
+}
+
+// ---------------------------------------------------------------------
+// Submenu dropdown — hover-to-show, hidden by default
+// Hardcoded white/dark bg (NOT --legience-bg-card) — see comment on
+// .lt-nav-menu. Token would propagate to every card, which we don't want.
+// ---------------------------------------------------------------------
+.lt-nav-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  // Hover bridge — see comment on .lt-nav-item:hover. The padding-top
+  // creates an invisible buffer that bridges the gap between parent and
+  // dropdown, keeping :hover persisted while the cursor traverses.
+  margin-top: 0;
+  padding-top: 14px;
+  z-index: 1030;
+  background: transparent;             // bridge area is transparent
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  min-width: 240px;
+  animation: ltNavDropdownIn 0.15s ease-out both;
+
+  // The actual visible card surface — applied via inner ::before/::after
+  // would be cleaner, but using a wrapper-like trick with the styles on
+  // ".nav nav-sm" inner ul gives the visual card while the outer keeps
+  // its transparent bridge area.
+  > div {
+    background: #ffffff;
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.16);
+    padding: 6px;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 6px;
+    // !important required: rox/_foundation.scss:183 sets
+    // `.nav-sm .nav-link { padding: 5px 12px 5px 36px !important }` for
+    // the SIDEBAR nav, but our `<ul class="nav nav-sm flex-column">` here
+    // matches that selector too. We override to tight padding for the
+    // horizontal submenu without de-scoping the sidebar rule.
+    padding: 7px 10px !important;
+    margin: 0 !important;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    color: var(--legience-text-primary);
+    text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease;
+    line-height: 1;
+    white-space: nowrap;     // prevent "Invoice Generation" from wrapping
+
+    &:hover, &:focus {
+      background: rgba(28, 25, 23, 0.04);
+      color: var(--legience-text-primary);
+
+      .nav-icon, .icon { color: var(--legience-accent); }
+    }
+
+    // Active item — accent text + weight 500 only (no pill bg, matches
+    // Bar 2 active state convention)
+    &.active,
+    &.router-link-active {
+      background: transparent;
+      color: var(--legience-accent);
+      font-weight: 500;
+
+      .nav-icon, .icon { color: var(--legience-accent); }
+    }
+
+    // Icons in submenu items — Velzon uses Remix `bx ri-*` font icons.
+    // Force consistent 15px size so mixed icon weights don't scatter.
+    .nav-icon, .icon, i.bx, i[class^="ri-"], i[class*=" ri-"] {
+      font-size: 15px;
+      width: 16px;
+      text-align: center;
+      color: var(--legience-text-muted);
+      flex-shrink: 0;
+      line-height: 1;
+      margin-right: 0;
+    }
+
+    .menu-text {
+      flex: 1;
+    }
+  }
+}
+
+[data-bs-theme="dark"] .lt-nav-dropdown {
+  > div {
+    background: #1c1917;
+    border-color: rgba(245, 245, 244, 0.08);
+  }
+
+  .nav-link {
+    color: #d4d2d1;
+
+    &:hover, &:focus {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+    }
+
+    &.active,
+    &.router-link-active {
+      color: #5b9dff;
+      .nav-icon, .icon { color: #5b9dff; }
+    }
+  }
+}
+
+@keyframes ltNavDropdownIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ---------------------------------------------------------------------
+// Mobile: < 1024px Velzon collapses horizontal nav into hamburger
+// ---------------------------------------------------------------------
 @media (max-width: 1024px) {
-  .app-menu {
-    .navbar-nav {
-      flex-direction: column;
-      width: 100%;
+  .lt-nav-list {
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch;
+    gap: 2px;
+  }
 
-      .nav-item {
-        margin-right: 0;
-      }
+  .lt-nav-item {
+    display: block;
+  }
 
-      // Ensure ALL menu text is visible in mobile sidebar
-      .nav-link {
-        span,
-        .menu-text {
-          display: inline !important;
-        }
-      }
-    }
+  .lt-nav-link {
+    width: 100%;
+    justify-content: flex-start;
 
-    // Submenu - rely on Velzon's native styling for dash indicators
-    .menu-dropdown {
-      box-shadow: none;
-      border: none;
-      border-radius: 0;
+    // Mobile keeps a left-bar accent indicator (more legible than just
+    // colour change in a stacked vertical list). Re-introduce ::after
+    // here only since the desktop variant was removed per design.
+    &.active::after,
+    &.router-link-active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      width: 3px;
+      height: 16px;
+      background: var(--legience-accent);
+      border-radius: 0 2px 2px 0;
+      pointer-events: none;
     }
   }
-}
 
-// ============================================================================
-// ACTIVE STATE (all breakpoints)
-// ============================================================================
-.nav-link.active,
-.nav-link.router-link-active {
-  color: var(--bs-primary);
+  .lt-nav-dropdown {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    padding: 0 0 0 22px;
+    margin-top: 0;
+  }
 }

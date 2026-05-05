@@ -18,8 +18,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.625rem;
   border-left: 4px solid transparent;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -29,12 +29,12 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 
-  &--primary   { border-left-color: var(--vz-primary); }
-  &--success   { border-left-color: var(--vz-success); }
-  &--info      { border-left-color: var(--vz-info); }
-  &--warning   { border-left-color: var(--vz-warning); }
-  &--danger    { border-left-color: var(--vz-danger); }
-  &--secondary { border-left-color: var(--vz-secondary); }
+  &--primary   { border-left-color: var(--legience-accent); }
+  &--success   { border-left-color: var(--legience-success); }
+  &--info      { border-left-color: var(--legience-info); }
+  &--warning   { border-left-color: var(--legience-warning); }
+  &--danger    { border-left-color: var(--legience-danger); }
+  &--secondary { border-left-color: var(--legience-secondary); }
 
   &__icon {
     width: 36px;
@@ -46,12 +46,12 @@
     font-size: 1.125rem;
     flex-shrink: 0;
 
-    .is-stat--primary &   { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
-    .is-stat--success &   { background: rgba(var(--vz-success-rgb), 0.1); color: var(--vz-success); }
-    .is-stat--info &      { background: rgba(var(--vz-info-rgb), 0.1);    color: var(--vz-info); }
-    .is-stat--warning &   { background: rgba(var(--vz-warning-rgb), 0.1); color: var(--vz-warning); }
-    .is-stat--danger &    { background: rgba(var(--vz-danger-rgb), 0.1);  color: var(--vz-danger); }
-    .is-stat--secondary & { background: rgba(0, 0, 0, 0.05);             color: var(--vz-secondary-color); }
+    .is-stat--primary &   { background: rgba(var(--legience-accent-rgb), 0.1); color: var(--legience-accent); }
+    .is-stat--success &   { background: rgba(var(--legience-success-rgb), 0.1); color: var(--legience-success); }
+    .is-stat--info &      { background: rgba(var(--legience-info-rgb), 0.1);    color: var(--legience-info); }
+    .is-stat--warning &   { background: rgba(var(--legience-warning-rgb), 0.1); color: var(--legience-warning); }
+    .is-stat--danger &    { background: rgba(var(--legience-danger-rgb), 0.1);  color: var(--legience-danger); }
+    .is-stat--secondary & { background: rgba(0, 0, 0, 0.05);             color: var(--legience-text-muted); }
   }
 
   &__label {
@@ -60,7 +60,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     line-height: 1;
     margin-bottom: 2px;
   }
@@ -69,7 +69,7 @@
     display: block;
     font-size: 1.125rem;
     font-weight: 700;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     font-feature-settings: "tnum";
     line-height: 1.2;
   }
@@ -77,7 +77,7 @@
 
 // ─── Shared Card Chrome ──────────────────────
 .is-card {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.625rem;
   overflow: hidden;
 
@@ -86,7 +86,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
   }
 
   &__badge {
@@ -99,7 +99,7 @@
     font-size: 0.875rem;
     flex-shrink: 0;
 
-    &--primary { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
+    &--primary { background: rgba(var(--legience-accent-rgb), 0.1); color: var(--legience-accent); }
   }
 }
 
@@ -112,7 +112,7 @@
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 0.875rem;
   }
 
@@ -133,13 +133,13 @@
   font-weight: 700;
 
   &--on {
-    background: rgba(var(--vz-success-rgb), 0.12);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.12);
+    color: var(--legience-success);
   }
 
   &--off {
     background: rgba(0, 0, 0, 0.04);
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     opacity: 0.5;
   }
 }
@@ -150,7 +150,7 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: var(--vz-danger);
+  color: var(--legience-danger);
 
   i { font-size: 0.875rem; }
 }
@@ -160,7 +160,7 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: var(--vz-success);
+  color: var(--legience-success);
 
   i { font-size: 0.875rem; }
 }
@@ -173,8 +173,8 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--vz-secondary-color);
-      border-bottom: 2px solid var(--vz-border-color);
+      color: var(--legience-text-muted);
+      border-bottom: 2px solid var(--legience-border-hairline);
       border-top: none;
       background: transparent;
       padding: 0.625rem 0.5rem;
@@ -185,7 +185,7 @@
       font-size: 0.8125rem;
       vertical-align: middle;
       padding: 0.625rem 0.5rem;
-      border-bottom: 1px solid rgba(var(--vz-border-color), 0.5);
+      border-bottom: 1px solid rgba(var(--legience-border-hairline), 0.5);
     }
   }
 }
@@ -194,7 +194,7 @@
   transition: background 0.15s ease;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.02);
+    background: rgba(var(--legience-accent-rgb), 0.02);
   }
 
   &:last-child td {
@@ -202,7 +202,7 @@
   }
 
   &.is-row--warn {
-    background: rgba(var(--vz-warning-rgb), 0.04);
+    background: rgba(var(--legience-warning-rgb), 0.04);
   }
 }
 

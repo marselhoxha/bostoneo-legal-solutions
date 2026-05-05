@@ -15,8 +15,8 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--vz-secondary-color);
-      border-bottom: 2px solid var(--vz-border-color);
+      color: var(--legience-text-muted);
+      border-bottom: 2px solid var(--legience-border-hairline);
       padding: 0.875rem 1rem;
     }
   }
@@ -26,12 +26,12 @@
       transition: background-color 0.15s ease;
 
       &:hover {
-        background-color: rgba(var(--vz-primary-rgb), 0.03);
+        background-color: rgba(var(--legience-accent-rgb), 0.03);
       }
 
       td {
         padding: 1rem;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
         vertical-align: middle;
       }
     }
@@ -64,8 +64,8 @@
   transition: all 0.15s ease;
 
   &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.03);
-    border-color: var(--vz-primary) !important;
+    background-color: rgba(var(--legience-accent-rgb), 0.03);
+    border-color: var(--legience-accent) !important;
   }
 
   &.border-primary {
@@ -104,23 +104,23 @@
 
 // Button Styles
 .btn-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  color: var(--legience-info);
   border: none;
 
   &:hover {
-    background-color: var(--vz-info);
+    background-color: var(--legience-info);
     color: #fff;
   }
 }
 
 .btn-soft-danger {
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
-  color: var(--vz-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
+  color: var(--legience-danger);
   border: none;
 
   &:hover {
-    background-color: var(--vz-danger);
+    background-color: var(--legience-danger);
     color: #fff;
   }
 }
@@ -131,8 +131,8 @@
     cursor: pointer;
 
     &:checked {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
     }
   }
 }

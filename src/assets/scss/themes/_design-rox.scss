@@ -1,0 +1,23 @@
+// =====================================================
+// Refero "Rox" design system — barrel file.
+//
+// The original 3462-line monolith was split into modular partials so
+// changes are reviewable and merge-friendly. Each partial is byte-equivalent
+// to the corresponding line range of the previous monolith — no semantic
+// changes were introduced during the split.
+//
+// Activation: <html data-design="rox"> (set in app.component.ts at bootstrap
+// in production; toggleable in dev via the design-switcher).
+//
+// Module order matters — later modules override earlier ones via the
+// CSS cascade. Foundation (tokens + Phase 1 components) loads first;
+// dashboard (the most specific overrides) loads last.
+// =====================================================
+
+@import 'rox/foundation';     // Tokens + Phase 1 components (cards, buttons, forms, tables, modals, etc.)
+@import 'rox/domain';         // Legal module + universal patterns + global hardcoded overrides
+@import 'rox/dark-mode';      // Dark mode (sections 14 + 18)
+@import 'rox/pages';          // Welcome banner, auth, extended coverage, AI workspace
+@import 'rox/polish';         // Charts, third-party plugin polish, polish-enhancements
+@import 'rox/dashboard';         // Attorney dashboard Tier 3 components + dark touchups
+@import 'rox/layout-overrides';  // Page-content padding fix for redesigned topbar

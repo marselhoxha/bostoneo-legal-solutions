@@ -345,6 +345,16 @@ export class SuperAdminService {
   }
 
   /**
+   * V63 — set a user's beta opt-in for the new attorney-facing PI view (P4+).
+   * Affected user picks up the change on their next session refresh.
+   */
+  toggleUserBetaAttorneyView(id: number, enabled: boolean): Observable<void> {
+    return this.http.put<ApiResponse<void>>(
+      `${this.apiUrl}/users/${id}/toggle-beta-attorney-view`, { enabled }
+    ).pipe(map(() => void 0));
+  }
+
+  /**
    * Resend verification email
    */
   resendVerificationEmail(id: number): Observable<void> {

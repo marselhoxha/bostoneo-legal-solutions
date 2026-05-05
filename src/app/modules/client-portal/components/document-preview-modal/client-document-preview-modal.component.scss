@@ -1,7 +1,7 @@
 // Client Document Preview Modal Styles
 
 .modal-header {
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   padding: 1rem 1.25rem;
 
   .file-icon-wrapper {
@@ -10,13 +10,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
     border-radius: 0.5rem;
   }
 
   .modal-title {
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .file-meta {
@@ -25,7 +25,7 @@
 }
 
 .modal-body {
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
   min-height: 400px;
 }
 
@@ -62,7 +62,7 @@
 
 // Image Preview
 .image-preview {
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
   overflow: auto;
   max-height: 70vh;
   display: flex;
@@ -89,7 +89,7 @@
 
 // Office Document Preview
 .office-preview {
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   padding: 2rem;
 
   .office-icon-container {
@@ -115,13 +115,13 @@
 
 // Button styling
 .btn-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
   border: none;
 
   &:hover:not(:disabled) {
-    background-color: rgba(var(--vz-secondary-rgb), 0.2);
-    color: var(--vz-secondary);
+    background-color: rgba(var(--legience-secondary-rgb), 0.2);
+    color: var(--legience-secondary);
   }
 
   &:disabled {
@@ -131,13 +131,13 @@
 }
 
 .btn-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   border: none;
 
   &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.2);
-    color: var(--vz-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.2);
+    color: var(--legience-accent);
   }
 }
 

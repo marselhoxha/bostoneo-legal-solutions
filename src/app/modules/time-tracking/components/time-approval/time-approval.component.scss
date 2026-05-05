@@ -9,12 +9,12 @@
   }
   
   .card-header {
-    background: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.05) 0%, rgba(var(--vz-primary-rgb), 0.05) 100%);
-    border-bottom: 1px solid var(--vz-border-color);
+    background: linear-gradient(135deg, rgba(var(--legience-info-rgb), 0.05) 0%, rgba(var(--legience-accent-rgb), 0.05) 100%);
+    border-bottom: 1px solid var(--legience-border-hairline);
     
     .avatar-sm .avatar-title {
-      background: linear-gradient(135deg, var(--vz-info), var(--vz-primary));
-      box-shadow: 0 2px 8px rgba(var(--vz-info-rgb), 0.3);
+      background: linear-gradient(135deg, var(--legience-info), var(--legience-accent));
+      box-shadow: 0 2px 8px rgba(var(--legience-info-rgb), 0.3);
     }
     
     .card-title {
@@ -30,7 +30,7 @@
   .form-label {
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     margin-bottom: 0.5rem;
     
     i {
@@ -40,14 +40,14 @@
   
   .form-select,
   .form-control {
-    border: 1px solid var(--vz-border-color);
-    border-radius: var(--vz-border-radius);
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: var(--legience-radius);
     transition: all 0.3s ease;
     font-size: 0.875rem;
     
     &:focus {
-      border-color: rgba(var(--vz-primary-rgb), 0.5);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+      border-color: rgba(var(--legience-accent-rgb), 0.5);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
     }
     
     &.form-select-sm,
@@ -59,13 +59,13 @@
   
   .input-group {
     .input-group-text {
-      background-color: var(--vz-light);
-      border-color: var(--vz-border-color);
-      color: var(--vz-secondary);
+      background-color: var(--legience-bg-card-hover);
+      border-color: var(--legience-border-hairline);
+      color: var(--legience-secondary);
       font-weight: 500;
       
       &.bg-light {
-        background-color: var(--vz-light) !important;
+        background-color: var(--legience-bg-card-hover) !important;
       }
     }
   }
@@ -123,7 +123,7 @@
   th {
     font-weight: 600;
     font-size: 0.875rem;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--legience-border-hairline, #dee2e6);
   }
   
   td {
@@ -146,13 +146,13 @@
   border-radius: 0.2rem;
   
   &.btn-success:hover {
-    background-color: #198754;
-    border-color: #198754;
+    background-color: var(--legience-success, #198754);
+    border-color: var(--legience-success, #198754);
   }
   
   &.btn-danger:hover {
-    background-color: #dc3545;
-    border-color: #dc3545;
+    background-color: var(--legience-danger, #dc3545);
+    border-color: var(--legience-danger, #dc3545);
   }
   
   &.btn-info:hover {
@@ -165,8 +165,8 @@
   cursor: pointer;
   
   &:checked {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
+    background-color: var(--legience-accent, #0d6efd);
+    border-color: var(--legience-accent, #0d6efd);
   }
 }
 
@@ -234,9 +234,9 @@
   --vz-danger-rgb: 220, 53, 69;
   --vz-light: #f8f9fa;
   --vz-dark: #212529;
-  --vz-border-color: #dee2e6;
+  --vz-border-color: var(--legience-border-hairline, #dee2e6);
   --vz-border-color-light: #e9ecef;
-  --vz-body-color: #495057;
+  --vz-body-color: var(--legience-text-secondary, #495057);
   --vz-secondary: #6c757d;
   --vz-box-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
   --vz-border-radius: 0.375rem;
@@ -267,7 +267,7 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--vz-primary), var(--vz-info));
+      background: linear-gradient(90deg, var(--legience-accent), var(--legience-info));
     }
     
     &:hover {
@@ -300,7 +300,7 @@
     
     &.warning-card {
       background: linear-gradient(135deg, #fff3cd 0%, #f8d7da 100%);
-      border-left: 4px solid var(--vz-warning);
+      border-left: 4px solid var(--legience-warning);
       
       .avatar-title {
         background: linear-gradient(135deg, #ffc107, #fd7e14);
@@ -309,7 +309,7 @@
     
     &.success-card {
       background: linear-gradient(135deg, #d1e7dd 0%, #d4edda 100%);
-      border-left: 4px solid var(--vz-success);
+      border-left: 4px solid var(--legience-success);
       
       .avatar-title {
         background: linear-gradient(135deg, #198754, #20c997);
@@ -318,7 +318,7 @@
     
     &.danger-card {
       background: linear-gradient(135deg, #f8d7da 0%, #f5c2c7 100%);
-      border-left: 4px solid var(--vz-danger);
+      border-left: 4px solid var(--legience-danger);
       
       .avatar-title {
         background: linear-gradient(135deg, #dc3545, #e74c3c);
@@ -327,7 +327,7 @@
     
     &.info-card {
       background: linear-gradient(135deg, #cff4fc 0%, #b6effb 100%);
-      border-left: 4px solid var(--vz-info);
+      border-left: 4px solid var(--legience-info);
       
       .avatar-title {
         background: linear-gradient(135deg, #0dcaf0, #17a2b8);
@@ -371,7 +371,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.8), rgba(var(--vz-info-rgb), 0.8));
+      background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.8), rgba(var(--legience-info-rgb), 0.8));
       color: white;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
@@ -388,16 +388,16 @@
     }
     
     .card-header {
-      background: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.05) 0%, rgba(var(--vz-primary-rgb), 0.05) 100%);
-      border-bottom: 1px solid var(--vz-border-color);
+      background: linear-gradient(135deg, rgba(var(--legience-info-rgb), 0.05) 0%, rgba(var(--legience-accent-rgb), 0.05) 100%);
+      border-bottom: 1px solid var(--legience-border-hairline);
       
       .avatar-sm .avatar-title {
-        background: linear-gradient(135deg, var(--vz-info), var(--vz-primary));
-        box-shadow: 0 2px 8px rgba(var(--vz-info-rgb), 0.3);
+        background: linear-gradient(135deg, var(--legience-info), var(--legience-accent));
+        box-shadow: 0 2px 8px rgba(var(--legience-info-rgb), 0.3);
       }
       
       .card-title {
-        color: var(--vz-dark);
+        color: var(--legience-dark);
         font-weight: 600;
         font-size: 1.125rem;
       }
@@ -410,7 +410,7 @@
     .form-label {
       font-weight: 600;
       font-size: 0.875rem;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       margin-bottom: 0.5rem;
       
       i {
@@ -420,14 +420,14 @@
     
     .form-select,
     .form-control {
-      border: 1px solid var(--vz-border-color);
-      border-radius: var(--vz-border-radius);
+      border: 1px solid var(--legience-border-hairline);
+      border-radius: var(--legience-radius);
       transition: all 0.3s ease;
       font-size: 0.875rem;
       
       &:focus {
-        border-color: rgba(var(--vz-primary-rgb), 0.5);
-        box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+        border-color: rgba(var(--legience-accent-rgb), 0.5);
+        box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
       }
       
       &.form-select-sm,
@@ -439,13 +439,13 @@
     
     .input-group {
       .input-group-text {
-        background-color: var(--vz-light);
-        border-color: var(--vz-border-color);
-        color: var(--vz-secondary);
+        background-color: var(--legience-bg-card-hover);
+        border-color: var(--legience-border-hairline);
+        color: var(--legience-secondary);
         font-weight: 500;
         
         &.bg-light {
-          background-color: var(--vz-light) !important;
+          background-color: var(--legience-bg-card-hover) !important;
         }
       }
     }
@@ -472,39 +472,39 @@
   /* Enhanced Table Styling with Velzon Theme */
   .approval-table {
     .card-header {
-      background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.05) 100%);
-      border-bottom: 1px solid var(--vz-border-color);
+      background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.05) 0%, rgba(var(--legience-info-rgb), 0.05) 100%);
+      border-bottom: 1px solid var(--legience-border-hairline);
       
       .card-title {
-        color: var(--vz-dark);
+        color: var(--legience-dark);
         font-weight: 600;
         font-size: 1.125rem;
         
         i {
-          background: linear-gradient(135deg, var(--vz-primary), var(--vz-info));
+          background: linear-gradient(135deg, var(--legience-accent), var(--legience-info));
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
       }
       
       .badge {
-        background: rgba(var(--vz-primary-rgb), 0.1);
-        color: var(--vz-primary);
-        border: 1px solid rgba(var(--vz-primary-rgb), 0.2);
+        background: rgba(var(--legience-accent-rgb), 0.1);
+        color: var(--legience-accent);
+        border: 1px solid rgba(var(--legience-accent-rgb), 0.2);
         font-weight: 500;
       }
     }
     
     .table {
       margin-bottom: 0;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       min-width: 1000px; /* Ensure minimum width for proper layout */
       
       thead {
         th {
-          background-color: var(--vz-light);
-          border-bottom: 2px solid var(--vz-border-color);
-          color: var(--vz-body-color);
+          background-color: var(--legience-bg-card-hover);
+          border-bottom: 2px solid var(--legience-border-hairline);
+          color: var(--legience-text-secondary);
           font-weight: 600;
           font-size: 0.8125rem;
           text-transform: uppercase;
@@ -528,8 +528,8 @@
             transition: all 0.2s ease;
             
             &:hover {
-              background-color: rgba(var(--vz-primary-rgb), 0.05);
-              color: var(--vz-primary);
+              background-color: rgba(var(--legience-accent-rgb), 0.05);
+              color: var(--legience-accent);
             }
           }
         }
@@ -542,36 +542,36 @@
           
           &.table-row-enhanced {
             &:hover {
-              background: rgba(var(--vz-primary-rgb), 0.03);
+              background: rgba(var(--legience-accent-rgb), 0.03);
               box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
               transform: scale(1.001);
             }
           }
           
           &.bg-warning-subtle {
-            background: rgba(var(--vz-warning-rgb), 0.08) !important;
-            border-left: 4px solid var(--vz-warning);
+            background: rgba(var(--legience-warning-rgb), 0.08) !important;
+            border-left: 4px solid var(--legience-warning);
             
             &:hover {
-              background: rgba(var(--vz-warning-rgb), 0.12) !important;
+              background: rgba(var(--legience-warning-rgb), 0.12) !important;
             }
           }
           
           &.bg-success-subtle {
-            background: rgba(var(--vz-success-rgb), 0.08) !important;
-            border-left: 4px solid var(--vz-success);
+            background: rgba(var(--legience-success-rgb), 0.08) !important;
+            border-left: 4px solid var(--legience-success);
             
             &:hover {
-              background: rgba(var(--vz-success-rgb), 0.12) !important;
+              background: rgba(var(--legience-success-rgb), 0.12) !important;
             }
           }
           
           &.bg-danger-subtle {
-            background: rgba(var(--vz-danger-rgb), 0.08) !important;
-            border-left: 4px solid var(--vz-danger);
+            background: rgba(var(--legience-danger-rgb), 0.08) !important;
+            border-left: 4px solid var(--legience-danger);
             
             &:hover {
-              background: rgba(var(--vz-danger-rgb), 0.12) !important;
+              background: rgba(var(--legience-danger-rgb), 0.12) !important;
             }
           }
         }
@@ -580,7 +580,7 @@
           vertical-align: middle;
           padding: 0.75rem;
           border-bottom: 1px solid var(--vz-border-color-light);
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           
           &:first-child {
             padding-left: 1rem;
@@ -592,7 +592,7 @@
           
           .fw-medium {
             font-weight: 500;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
           }
           
           .text-truncate {
@@ -606,8 +606,8 @@
     }
     
     .card-footer {
-      background: var(--vz-light);
-      border-top: 1px solid var(--vz-border-color);
+      background: var(--legience-bg-card-hover);
+      border-top: 1px solid var(--legience-border-hairline);
       
       .d-flex {
         gap: 1.5rem;
@@ -645,7 +645,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, var(--vz-primary), var(--vz-info));
+      background: linear-gradient(135deg, var(--legience-accent), var(--legience-info));
       color: white;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
@@ -665,8 +665,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
+      background: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
       
       i {
         font-size: 2rem;
@@ -692,39 +692,39 @@
     }
     
     &.bg-warning-subtle {
-      background: rgba(var(--vz-warning-rgb), 0.1);
-      color: var(--vz-warning);
-      border: 1px solid rgba(var(--vz-warning-rgb), 0.2);
+      background: rgba(var(--legience-warning-rgb), 0.1);
+      color: var(--legience-warning);
+      border: 1px solid rgba(var(--legience-warning-rgb), 0.2);
     }
     
     &.bg-success-subtle {
-      background: rgba(var(--vz-success-rgb), 0.1);
-      color: var(--vz-success);
-      border: 1px solid rgba(var(--vz-success-rgb), 0.2);
+      background: rgba(var(--legience-success-rgb), 0.1);
+      color: var(--legience-success);
+      border: 1px solid rgba(var(--legience-success-rgb), 0.2);
     }
     
     &.bg-danger-subtle {
-      background: rgba(var(--vz-danger-rgb), 0.1);
-      color: var(--vz-danger);
-      border: 1px solid rgba(var(--vz-danger-rgb), 0.2);
+      background: rgba(var(--legience-danger-rgb), 0.1);
+      color: var(--legience-danger);
+      border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
     }
     
     &.bg-info-subtle {
-      background: rgba(var(--vz-info-rgb), 0.1);
-      color: var(--vz-info);
-      border: 1px solid rgba(var(--vz-info-rgb), 0.2);
+      background: rgba(var(--legience-info-rgb), 0.1);
+      color: var(--legience-info);
+      border: 1px solid rgba(var(--legience-info-rgb), 0.2);
     }
     
     &.bg-primary-subtle {
-      background: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
-      border: 1px solid rgba(var(--vz-primary-rgb), 0.2);
+      background: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
+      border: 1px solid rgba(var(--legience-accent-rgb), 0.2);
     }
     
     &.bg-secondary-subtle {
-      background: rgba(var(--vz-secondary-rgb), 0.1);
-      color: var(--vz-secondary);
-      border: 1px solid rgba(var(--vz-secondary-rgb), 0.2);
+      background: rgba(var(--legience-secondary-rgb), 0.1);
+      color: var(--legience-secondary);
+      border: 1px solid rgba(var(--legience-secondary-rgb), 0.2);
     }
   }
 
@@ -777,12 +777,12 @@
     }
     
     &.btn-outline-danger {
-      border-color: rgba(var(--vz-danger-rgb), 0.3);
-      color: var(--vz-danger);
+      border-color: rgba(var(--legience-danger-rgb), 0.3);
+      color: var(--legience-danger);
       
       &:hover {
-        background: rgba(var(--vz-danger-rgb), 0.1);
-        border-color: var(--vz-danger);
+        background: rgba(var(--legience-danger-rgb), 0.1);
+        border-color: var(--legience-danger);
       }
     }
   }
@@ -793,14 +793,14 @@
     border-radius: 0.25rem;
     
     &:checked {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
-      box-shadow: 0 2px 4px rgba(var(--vz-primary-rgb), 0.3);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
+      box-shadow: 0 2px 4px rgba(var(--legience-accent-rgb), 0.3);
     }
     
     &:focus {
-      border-color: rgba(var(--vz-primary-rgb), 0.5);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+      border-color: rgba(var(--legience-accent-rgb), 0.5);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
     }
   }
 
@@ -900,12 +900,12 @@
       width: 80px;
       height: 80px;
       margin: 0 auto;
-      background: linear-gradient(135deg, var(--vz-light), #e9ecef);
+      background: linear-gradient(135deg, var(--legience-bg-card-hover), #e9ecef);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--vz-secondary);
+      color: var(--legience-secondary);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       
       i {
@@ -914,13 +914,13 @@
     }
     
     h5 {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       font-weight: 600;
       margin-top: 1.5rem;
     }
     
     p {
-      color: var(--vz-secondary);
+      color: var(--legience-secondary);
       max-width: 400px;
       margin: 0 auto;
     }
@@ -928,15 +928,15 @@
 
   /* Enhanced Footer */
   .card-footer {
-    background: var(--vz-light);
-    border-top: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card-hover);
+    border-top: 1px solid var(--legience-border-hairline);
     padding: 1rem 1.5rem;
     
     small {
       font-weight: 500;
       
       &.text-muted {
-        color: var(--vz-secondary) !important;
+        color: var(--legience-secondary) !important;
       }
     }
   }
@@ -944,12 +944,12 @@
   /* Enhanced Page Header */
   .page-title-box {
     h4 {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       font-weight: 600;
     }
     
     p {
-      color: var(--vz-secondary);
+      color: var(--legience-secondary);
       font-size: 0.9rem;
     }
   }
@@ -962,13 +962,13 @@
     font-weight: 500;
     
     &.trend-positive {
-      background: rgba(var(--vz-success-rgb), 0.1);
-      color: var(--vz-success);
+      background: rgba(var(--legience-success-rgb), 0.1);
+      color: var(--legience-success);
     }
     
     &.trend-negative {
-      background: rgba(var(--vz-danger-rgb), 0.1);
-      color: var(--vz-danger);
+      background: rgba(var(--legience-danger-rgb), 0.1);
+      color: var(--legience-danger);
     }
   }
 
@@ -976,7 +976,7 @@
   .progress {
     height: 0.5rem;
     border-radius: 0.25rem;
-    background: rgba(var(--vz-secondary-rgb), 0.1);
+    background: rgba(var(--legience-secondary-rgb), 0.1);
     
     .progress-bar {
       border-radius: 0.25rem;
@@ -1028,7 +1028,7 @@
     --vz-dark: #212529;
     --vz-border-color: #404347;
     --vz-border-color-light: #373b3e;
-    --vz-body-color: #adb5bd;
+    --vz-body-color: var(--legience-text-muted, #adb5bd);
     --vz-secondary: #6c757d;
     
     .card-enhanced {
@@ -1066,13 +1066,13 @@
 /* Additional Animation Classes */
 @keyframes pulse-glow {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0.4);
+    box-shadow: 0 0 0 0 rgba(var(--legience-accent-rgb), 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(var(--vz-primary-rgb), 0);
+    box-shadow: 0 0 0 10px rgba(var(--legience-accent-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0);
+    box-shadow: 0 0 0 0 rgba(var(--legience-accent-rgb), 0);
   }
 }
 
@@ -1130,7 +1130,7 @@
   animation: slideIn 0.6s ease-out;
   
   h4 {
-    background: linear-gradient(135deg, var(--vz-primary), var(--vz-info));
+    background: linear-gradient(135deg, var(--legience-accent), var(--legience-info));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1145,7 +1145,7 @@
     
     .breadcrumb-item {
       &.active {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
         font-weight: 600;
       }
       
@@ -1154,7 +1154,7 @@
         transition: color 0.3s ease;
         
         &:hover {
-          color: var(--vz-primary);
+          color: var(--legience-accent);
         }
       }
     }
@@ -1165,7 +1165,7 @@
 .stats-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--vz-border-color-light);
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   animation: slideIn 0.6s ease-out;
   position: relative;
   overflow: hidden;
@@ -1184,7 +1184,7 @@
   &:hover {
     transform: translateY(-8px);
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-    border-color: var(--vz-primary);
+    border-color: var(--legience-accent);
     
     &::before {
       left: 100%;
@@ -1228,7 +1228,7 @@
   
   &.warning-stat {
     .stat-icon::after {
-      background: radial-gradient(circle, rgba(var(--vz-warning-rgb), 0.2), transparent);
+      background: radial-gradient(circle, rgba(var(--legience-warning-rgb), 0.2), transparent);
     }
     
     &:hover .stat-icon::after {
@@ -1238,7 +1238,7 @@
   
   &.success-stat {
     .stat-icon::after {
-      background: radial-gradient(circle, rgba(var(--vz-success-rgb), 0.2), transparent);
+      background: radial-gradient(circle, rgba(var(--legience-success-rgb), 0.2), transparent);
     }
     
     &:hover .stat-icon::after {
@@ -1248,7 +1248,7 @@
   
   &.info-stat {
     .stat-icon::after {
-      background: radial-gradient(circle, rgba(var(--vz-info-rgb), 0.2), transparent);
+      background: radial-gradient(circle, rgba(var(--legience-info-rgb), 0.2), transparent);
     }
     
     &:hover .stat-icon::after {
@@ -1258,7 +1258,7 @@
   
   &.primary-stat {
     .stat-icon::after {
-      background: radial-gradient(circle, rgba(var(--vz-primary-rgb), 0.2), transparent);
+      background: radial-gradient(circle, rgba(var(--legience-accent-rgb), 0.2), transparent);
     }
     
     &:hover .stat-icon::after {
@@ -1269,10 +1269,10 @@
 
 /* === ENHANCED FILTERS BAR === */
 .filters-bar {
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border: 1px solid var(--vz-border-color-light);
-  border-radius: var(--vz-border-radius-lg);
-  box-shadow: var(--vz-box-shadow-sm);
+  border-radius: var(--legience-radius-lg);
+  box-shadow: var(--legience-shadow-sm);
   animation: slideIn 0.8s ease-out;
   position: relative;
   overflow: hidden;
@@ -1284,8 +1284,8 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--vz-primary), var(--vz-info), var(--vz-success));
-    border-radius: var(--vz-border-radius-lg) var(--vz-border-radius-lg) 0 0;
+    background: linear-gradient(90deg, var(--legience-accent), var(--legience-info), var(--legience-success));
+    border-radius: var(--legience-radius-lg) var(--legience-radius-lg) 0 0;
   }
   
   .form-label {
@@ -1297,37 +1297,37 @@
   }
   
   .form-select, .form-control {
-    border: 2px solid var(--vz-border-color);
-    border-radius: var(--vz-border-radius);
+    border: 2px solid var(--legience-border-hairline);
+    border-radius: var(--legience-radius);
     transition: all 0.3s ease;
     font-weight: 500;
     
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
     }
     
     &:hover {
-      border-color: var(--vz-primary);
+      border-color: var(--legience-accent);
     }
   }
   
   .input-group-text {
-    border: 2px solid var(--vz-border-color);
+    border: 2px solid var(--legience-border-hairline);
     border-right: none;
     background: var(--vz-gray-50);
     transition: all 0.3s ease;
   }
   
   .input-group:focus-within .input-group-text {
-    border-color: var(--vz-primary);
-    background: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
+    border-color: var(--legience-accent);
+    background: rgba(var(--legience-accent-rgb), 0.1);
+    color: var(--legience-accent);
   }
   
   .btn {
     font-weight: 600;
-    border-radius: var(--vz-border-radius);
+    border-radius: var(--legience-radius);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -1359,13 +1359,13 @@
 /* === PROFESSIONAL TABLE STYLING === */
 .data-table {
   animation: fadeIn 1s ease-out;
-  border-radius: var(--vz-border-radius-lg);
+  border-radius: var(--legience-radius-lg);
   overflow: hidden;
-  box-shadow: var(--vz-box-shadow);
+  box-shadow: var(--legience-shadow);
   
   .table-header {
     background: linear-gradient(135deg, var(--vz-gray-50), var(--vz-gray-100));
-    border-bottom: 2px solid var(--vz-border-color);
+    border-bottom: 2px solid var(--legience-border-hairline);
     
     .table-title {
       font-weight: 700;
@@ -1378,7 +1378,7 @@
     }
     
     .entries-badge {
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       color: white;
       font-weight: 600;
       padding: 0.25rem 0.75rem;
@@ -1399,11 +1399,11 @@
     .select-all-checkbox {
       .form-check-input {
         transform: scale(1.2);
-        border: 2px solid var(--vz-border-color);
+        border: 2px solid var(--legience-border-hairline);
         
         &:checked {
-          background-color: var(--vz-primary);
-          border-color: var(--vz-primary);
+          background-color: var(--legience-accent);
+          border-color: var(--legience-accent);
         }
       }
       
@@ -1420,7 +1420,7 @@
     
     thead th {
       background: var(--vz-gray-50);
-      border-bottom: 2px solid var(--vz-border-color);
+      border-bottom: 2px solid var(--legience-border-hairline);
       color: var(--vz-gray-800);
       font-weight: 700;
       font-size: 0.875rem;
@@ -1442,29 +1442,29 @@
       }
       
       &.bg-warning-subtle {
-        background: rgba(var(--vz-warning-rgb), 0.1);
-        border-left: 4px solid var(--vz-warning);
+        background: rgba(var(--legience-warning-rgb), 0.1);
+        border-left: 4px solid var(--legience-warning);
         
         &:hover {
-          background: rgba(var(--vz-warning-rgb), 0.15);
+          background: rgba(var(--legience-warning-rgb), 0.15);
         }
       }
       
       &.bg-success-subtle {
-        background: rgba(var(--vz-success-rgb), 0.1);
-        border-left: 4px solid var(--vz-success);
+        background: rgba(var(--legience-success-rgb), 0.1);
+        border-left: 4px solid var(--legience-success);
         
         &:hover {
-          background: rgba(var(--vz-success-rgb), 0.15);
+          background: rgba(var(--legience-success-rgb), 0.15);
         }
       }
       
       &.bg-danger-subtle {
-        background: rgba(var(--vz-danger-rgb), 0.1);
-        border-left: 4px solid var(--vz-danger);
+        background: rgba(var(--legience-danger-rgb), 0.1);
+        border-left: 4px solid var(--legience-danger);
         
         &:hover {
-          background: rgba(var(--vz-danger-rgb), 0.15);
+          background: rgba(var(--legience-danger-rgb), 0.15);
         }
       }
     }
@@ -1486,7 +1486,7 @@
     .avatar-title {
       font-size: 1.1rem;
       font-weight: 700;
-      background: linear-gradient(135deg, var(--vz-primary), var(--vz-info));
+      background: linear-gradient(135deg, var(--legience-accent), var(--legience-info));
       border: 3px solid white;
       box-shadow: 0 4px 8px rgba(0,0,0,0.15);
       transition: all 0.3s ease;
@@ -1531,11 +1531,11 @@
 }
 
 .time-badge {
-  background: var(--vz-info);
+  background: var(--legience-info);
   color: white;
   font-weight: 600;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--vz-border-radius);
+  border-radius: var(--legience-radius);
   font-size: 0.75rem;
   display: inline-flex;
   align-items: center;
@@ -1544,20 +1544,20 @@
 
 .billable-badge {
   &.billable {
-    background: rgba(var(--vz-success-rgb), 0.15);
-    color: var(--vz-success);
-    border: 1px solid rgba(var(--vz-success-rgb), 0.3);
+    background: rgba(var(--legience-success-rgb), 0.15);
+    color: var(--legience-success);
+    border: 1px solid rgba(var(--legience-success-rgb), 0.3);
   }
   
   &.non-billable {
-    background: rgba(var(--vz-secondary-rgb), 0.15);
-    color: var(--vz-secondary);
-    border: 1px solid rgba(var(--vz-secondary-rgb), 0.3);
+    background: rgba(var(--legience-secondary-rgb), 0.15);
+    color: var(--legience-secondary);
+    border: 1px solid rgba(var(--legience-secondary-rgb), 0.3);
   }
   
   font-weight: 600;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--vz-border-radius);
+  border-radius: var(--legience-radius);
   font-size: 0.75rem;
   display: inline-flex;
   align-items: center;
@@ -1569,7 +1569,7 @@
   font-family: var(--vz-font-monospace);
   font-weight: 800;
   font-size: 1.25rem;
-  color: var(--vz-success);
+  color: var(--legience-success);
   text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
@@ -1577,7 +1577,7 @@
   font-family: var(--vz-font-monospace);
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--vz-info);
+  color: var(--legience-info);
 }
 
 .rate-display {
@@ -1589,8 +1589,8 @@
 /* === ACTION BUTTONS === */
 .action-buttons {
   .btn-group {
-    box-shadow: var(--vz-box-shadow-sm);
-    border-radius: var(--vz-border-radius);
+    box-shadow: var(--legience-shadow-sm);
+    border-radius: var(--legience-radius);
     overflow: hidden;
     
     .btn {
@@ -1599,25 +1599,25 @@
       position: relative;
       
       &.btn-success {
-        background: linear-gradient(135deg, var(--vz-success), #20c997);
+        background: linear-gradient(135deg, var(--legience-success), #20c997);
         border: none;
         
         &:hover {
-          background: linear-gradient(135deg, #20c997, var(--vz-success));
+          background: linear-gradient(135deg, #20c997, var(--legience-success));
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(var(--vz-success-rgb), 0.4);
+          box-shadow: 0 4px 8px rgba(var(--legience-success-rgb), 0.4);
         }
       }
       
       &.btn-outline-danger {
-        border: 2px solid var(--vz-danger);
-        color: var(--vz-danger);
+        border: 2px solid var(--legience-danger);
+        color: var(--legience-danger);
         
         &:hover {
-          background: var(--vz-danger);
+          background: var(--legience-danger);
           color: white;
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(var(--vz-danger-rgb), 0.4);
+          box-shadow: 0 4px 8px rgba(var(--legience-danger-rgb), 0.4);
         }
       }
       
@@ -1675,12 +1675,12 @@
     .btn {
       font-weight: 600;
       padding: 0.75rem 2rem;
-      border-radius: var(--vz-border-radius-lg);
+      border-radius: var(--legience-radius-lg);
       transition: all 0.3s ease;
       
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(var(--vz-primary-rgb), 0.3);
+        box-shadow: 0 8px 16px rgba(var(--legience-accent-rgb), 0.3);
       }
     }
   }
@@ -1689,7 +1689,7 @@
 /* === PROFESSIONAL FOOTER === */
 .table-footer {
   background: linear-gradient(135deg, var(--vz-gray-50), white);
-  border-top: 2px solid var(--vz-border-color);
+  border-top: 2px solid var(--legience-border-hairline);
   padding: 1.5rem;
   
   .footer-stats {
@@ -1712,9 +1712,9 @@
       }
       
       &.text-muted { color: var(--vz-gray-600) !important; }
-      &.text-info { color: var(--vz-info) !important; }
-      &.text-warning { color: var(--vz-warning) !important; }
-      &.text-success { color: var(--vz-success) !important; }
+      &.text-info { color: var(--legience-info) !important; }
+      &.text-warning { color: var(--legience-warning) !important; }
+      &.text-success { color: var(--legience-success) !important; }
     }
   }
   
@@ -1768,16 +1768,16 @@
 /* === DARK THEME SUPPORT === */
 [data-bs-theme="dark"] {
   .stats-card {
-    background: var(--vz-dark);
+    background: var(--legience-dark);
     border-color: var(--vz-border-color-dark);
     
     &:hover {
-      border-color: var(--vz-primary);
+      border-color: var(--legience-accent);
     }
   }
   
   .filters-bar {
-    background: var(--vz-dark);
+    background: var(--legience-dark);
     border-color: var(--vz-border-color-dark);
   }
   
@@ -1803,7 +1803,7 @@
   }
   
   .table-footer {
-    background: linear-gradient(135deg, var(--vz-gray-800), var(--vz-dark));
+    background: linear-gradient(135deg, var(--vz-gray-800), var(--legience-dark));
   }
 }
 

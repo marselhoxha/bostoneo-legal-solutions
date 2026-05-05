@@ -19,6 +19,13 @@ import { RouterModule } from '@angular/router';
 import { PermissionDebuggerComponent } from 'src/app/shared/components/permission-debugger/permission-debugger.component';
 import { OrganizationManagementModule } from 'src/app/modules/organization-management/organization-management.module';
 import { BackgroundTasksIndicatorComponent } from 'src/app/modules/legal/components/ai-assistant/ai-workspace/background-tasks-indicator/background-tasks-indicator.component';
+import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
+         Clock, FolderOpen, LayoutDashboard, Folder, Calendar, CheckSquare,
+         Wrench, Users, DollarSign, Headphones, PenTool, Briefcase,
+         X, ChevronDown, Building2, BarChart2, Settings, Megaphone,
+         FileText, CalendarCheck, MessageCircle, UserCog,
+         BookOpen, Receipt, ScrollText, Square } from 'lucide-angular';
+import { AiQuickDrawerComponent } from './ai-quick-drawer/ai-quick-drawer.component';
 
 @NgModule({
   declarations: [
@@ -28,7 +35,8 @@ import { BackgroundTasksIndicatorComponent } from 'src/app/modules/legal/compone
     HorizontalComponent,
     HorizontalTopbarComponent,
     SidebarComponent,
-    SidebarMenuComponent
+    SidebarMenuComponent,
+    AiQuickDrawerComponent
   ],
   imports: [
     CommonModule,
@@ -41,7 +49,14 @@ import { BackgroundTasksIndicatorComponent } from 'src/app/modules/legal/compone
     TranslateModule,
     PermissionDebuggerComponent,
     OrganizationManagementModule,
-    BackgroundTasksIndicatorComponent
+    BackgroundTasksIndicatorComponent,
+    LucideAngularModule.pick({
+      Search, Bell, MessageSquare, Moon, Sun, Sparkles, Clock, FolderOpen,
+      LayoutDashboard, Folder, Calendar, CheckSquare, Wrench, Users,
+      DollarSign, Headphones, PenTool, Briefcase, X, ChevronDown,
+      Building2, BarChart2, Settings, Megaphone, FileText, CalendarCheck,
+      MessageCircle, UserCog, BookOpen, Receipt, ScrollText, Square
+    })
   ],
   exports: [
     LayoutComponent

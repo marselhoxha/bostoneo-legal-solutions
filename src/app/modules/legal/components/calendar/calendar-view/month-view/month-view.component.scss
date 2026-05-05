@@ -2,7 +2,7 @@
   width: 100%;
   height: 100%;
   padding: 1rem;
-  background-color: #fff;
+  background-color: var(--legience-bg-card, #fff);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
@@ -16,7 +16,7 @@
     h2 {
       margin: 0;
       font-size: 1.25rem;
-      color: #333;
+      color: var(--legience-text-primary, #333);
     }
 
     button {
@@ -68,7 +68,7 @@
       border: 1px solid #e0e0e0;
       padding: 0.5rem;
       min-height: 100px;
-      background-color: #fff;
+      background-color: var(--legience-bg-card, #fff);
       position: relative;
 
       &.today {

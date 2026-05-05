@@ -1,0 +1,188 @@
+// =====================================================
+// Legience semantic tokens (Tier 2)
+//
+// Tier 1 = theme primitives (--vz-*, --bs-*) defined by Velzon and overridden
+//   by Rox under [data-design="rox"].
+// Tier 2 (this file) = semantic tokens that components reference.
+//
+// Components MUST use only Tier 2 tokens (--legience-*). When the active theme
+// changes, Tier 1 values shift; Tier 2 picks up the new values automatically
+// because each Tier 2 token is defined as `var(--vz-*)`.
+//
+// This decouples our components from Velzon's variable namespace permanently:
+// when we eventually remove Velzon (Phase 2), we only re-point Tier 2 tokens
+// here — every component file stays untouched.
+//
+// Naming convention: --legience-{category}-{role}[-{state}]
+//   bg-page, bg-card, bg-card-hover
+//   text-primary, text-secondary, text-muted, text-subtle
+//   border-hairline, border-subtle
+//   accent, success, warning, danger, info
+//   shadow-sm, shadow-md, shadow-lg
+//   radius-sm, radius, radius-lg
+//
+// Loaded near the end of styles.scss (after Velzon and Rox themes have
+// defined their Tier 1 tokens) so the var() references resolve correctly.
+// =====================================================
+
+:root {
+  // ── SURFACES ───────────────────────────────────────────────
+  // Every token has a hardcoded fallback because Velzon's CSS-vars-from-SCSS
+  // pipeline doesn't emit `--vz-*` on every layout/route. When the upstream
+  // is empty, the consumer would silently get an unset value with no error.
+  // The fallback ensures the token always resolves. Dark-mode overrides
+  // below redefine surfaces and text for dark contexts.
+  --legience-bg-page:        var(--vz-body-bg, #f5f5f4);            // page background
+  // No fallback on bg-card: when --vz-card-bg is empty, the token resolves
+  // to "" and consumers fall back to their own default (typically transparent
+  // or inherited). Adding a hardcoded fallback white here would force every
+  // card to a white surface, which the design doesn't want — cards rely on
+  // hairline borders + soft shadows for definition, not a filled background.
+  --legience-bg-card:        var(--vz-card-bg);                      // card surface (raised)
+  --legience-bg-card-hover:  var(--vz-light, #f5f5f4);               // soft hover surface
+  --legience-bg-subtle:      var(--vz-tertiary-bg, #ececea);         // disabled / inactive surface
+
+  // ── TEXT ───────────────────────────────────────────────────
+  --legience-text-primary:   var(--vz-heading-color, #0c0a09);       // headings, prominent labels
+  --legience-text-secondary: var(--vz-body-color, #44403c);          // body copy
+  // Hardcoded #57534d — bumped from `var(--vz-secondary-color)` (≈ #a6a09b,
+  // too light) so subtext reads clearly on light surfaces. Dark-mode flips
+  // to #b8b3ae below for dark surfaces.
+  --legience-text-muted:     #57534d;                                // captions, metadata
+  --legience-text-subtle:    var(--vz-text-muted, #78716c);          // de-emphasised hints — fallback bumped from #a6a09b
+
+  // ── BORDERS ────────────────────────────────────────────────
+  --legience-border-hairline: var(--vz-border-color, #e7e5e4);
+  --legience-border-subtle:   var(--vz-border-color-translucent, rgba(0, 0, 0, 0.08));
+
+  // ── BRAND / SEMANTIC ACCENTS ──────────────────────────────
+  // Hardcoded fallbacks match the values Rox already defines at root level
+  // (rox/_foundation.scss lines 23-37). When --vz-* upstream is set, the
+  // resolved value is identical; when empty, fallback kicks in.
+  --legience-accent:          var(--vz-primary, #0b64e9);
+  --legience-accent-rgb:      var(--vz-primary-rgb, 11, 100, 233);
+  --legience-accent-hover:    var(--vz-primary, #0b64e9);
+  --legience-accent-soft:     rgba(var(--vz-primary-rgb, 11, 100, 233), 0.10);
+  --legience-success:         var(--vz-success, #16a34a);
+  --legience-success-rgb:     var(--vz-success-rgb, 22, 163, 74);
+  --legience-success-soft:    rgba(var(--vz-success-rgb, 22, 163, 74), 0.10);
+  --legience-warning:         var(--vz-warning, #f9b703);
+  --legience-warning-rgb:     var(--vz-warning-rgb, 249, 183, 3);
+  --legience-warning-soft:    rgba(var(--vz-warning-rgb, 249, 183, 3), 0.10);
+  --legience-danger:          var(--vz-danger, #f24149);
+  --legience-danger-rgb:      var(--vz-danger-rgb, 242, 65, 73);
+  --legience-danger-soft:     rgba(var(--vz-danger-rgb, 242, 65, 73), 0.10);
+  --legience-info:            var(--vz-info, #6b4aff);
+  --legience-info-rgb:        var(--vz-info-rgb, 107, 74, 255);
+  --legience-info-soft:       rgba(var(--vz-info-rgb, 107, 74, 255), 0.10);
+
+  // Secondary — Velzon's purple-grey, used on neutral buttons/badges where
+  // the message is "secondary action, not the primary CTA". No clean Rox
+  // semantic equivalent; preserves Velzon's value with a hex fallback.
+  --legience-secondary:       var(--vz-secondary, #74788d);
+  --legience-secondary-rgb:   var(--vz-secondary-rgb, 116, 120, 141);
+  --legience-secondary-soft:  rgba(var(--vz-secondary-rgb, 116, 120, 141), 0.10);
+
+  // Dark primitive — emphasized labels in light mode, dark surfaces in dark
+  // mode (overridden below). Distinct from text-primary because some Velzon
+  // patterns use --vz-dark for surface elements (avatar bg, sidebar headers).
+  --legience-dark:            var(--vz-dark, #0c0a09);
+  --legience-dark-rgb:        var(--vz-dark-rgb, 12, 10, 9);
+
+  // Form input surface — typically white in light mode, off-black in dark
+  // (handled by Velzon's --vz-input-bg cascade).
+  --legience-bg-input:        var(--vz-input-bg, #ffffff);
+
+  // RGB triplets for translucent overlays — needed for rgba() calculations
+  // where the consumer wants `rgba(var(--legience-X-rgb), 0.x)`.
+  --legience-bg-card-hover-rgb:   var(--vz-light-rgb, 245, 245, 244);
+  --legience-border-hairline-rgb: 231, 229, 228;  // matches #e7e5e4 stone-200
+
+  // Bootstrap 5.3 subtle-bg variant for accent buttons / badges. The default
+  // Velzon value is a faint blue tint; fallback approximates with our accent
+  // soft.
+  --legience-accent-bg-subtle: var(--vz-primary-bg-subtle, rgba(11, 100, 233, 0.08));
+
+  // ── CATEGORY SEED COLORS ──────────────────────────────────
+  // Used by avatar-color-hash and KPI category icons. These do NOT change
+  // with theme — they're a curated palette for visual variety, not theme
+  // tokens. Mapped here so component files reference them via Legience
+  // names rather than raw hex.
+  --legience-cat-blue:        #2563eb;
+  --legience-cat-blue-rgb:    37, 99, 235;
+  --legience-cat-blue-soft:   rgba(37, 99, 235, 0.10);
+  --legience-cat-orange:      #f97006;
+  --legience-cat-orange-rgb:  249, 112, 6;
+  --legience-cat-orange-soft: rgba(249, 112, 6, 0.10);
+  --legience-cat-green:       #16a34a;
+  --legience-cat-green-rgb:   22, 163, 74;
+  --legience-cat-green-soft:  rgba(22, 163, 74, 0.10);
+  --legience-cat-violet:      #6f42c1;
+  --legience-cat-violet-rgb:  111, 66, 193;
+  --legience-cat-violet-soft: rgba(111, 66, 193, 0.10);
+  --legience-cat-pink:        #ec4899;
+  --legience-cat-pink-rgb:    236, 72, 153;
+  --legience-cat-pink-soft:   rgba(236, 72, 153, 0.10);
+  --legience-cat-teal:        #14b8a6;
+  --legience-cat-teal-rgb:    20, 184, 166;
+  --legience-cat-teal-soft:   rgba(20, 184, 166, 0.10);
+
+  // ── SHADOWS ────────────────────────────────────────────────
+  // Match the PI case detail's shadow treatment — very subtle (~0.04 alpha
+  // on the small shadow). The PI design relies on hairline borders for card
+  // definition, not heavy shadows. Keeps the look clean and consistent.
+  --legience-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --legience-shadow:    0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --legience-shadow-md: 0 4px 12px -4px rgba(0, 0, 0, 0.10);
+  --legience-shadow-lg: 0 8px 24px -8px rgba(0, 0, 0, 0.14);
+
+  // ── RADIUS ─────────────────────────────────────────────────
+  --legience-radius-sm: 4px;   // chips, badges, tiny pills
+  --legience-radius:    8px;   // cards, buttons, inputs (Rox default)
+  --legience-radius-lg: 12px;  // hero cards, large surfaces
+  --legience-radius-pill: 999px;
+
+  // ── TYPOGRAPHY ─────────────────────────────────────────────
+  --legience-font-sans:  var(--vz-font-sans-serif, 'Geist', system-ui, -apple-system, sans-serif);
+}
+
+// ── DARK-MODE OVERRIDES ───────────────────────────────────────
+// When the dark-mode toggle is active, certain Tier 2 tokens shift to
+// preserve contrast on dark surfaces. The Tier 1 vars (--vz-*) already
+// shift via Bootstrap's data-bs-theme — these are the additions where
+// the dark fallback isn't quite right or needs a different rule.
+[data-bs-theme="dark"] {
+  // No bg-card fallback here either — same rationale as light mode.
+  // Cards inherit / use hairlines + shadows for definition.
+  --legience-bg-card-hover:   rgba(255, 255, 255, 0.04);
+  --legience-bg-subtle:       var(--vz-tertiary-bg, #292524);
+
+  // Text — flip to light values for dark surfaces. Light-mode fallbacks
+  // would render dark text on dark cards, illegible.
+  --legience-text-primary:    var(--vz-heading-color, #ffffff);
+  --legience-text-secondary:  var(--vz-body-color, #d4d2d1);
+  --legience-text-muted:      #b8b3ae;
+  --legience-text-subtle:     var(--vz-text-muted, #78716c);
+
+  // Borders — translucent white instead of dark stone
+  --legience-border-hairline: rgba(255, 255, 255, 0.08);
+  --legience-border-subtle:   rgba(255, 255, 255, 0.05);
+
+  // Accent — brighter blue for dark contrast (accessibility / readability)
+  --legience-accent:          var(--vz-primary, #5b9dff);
+  --legience-accent-rgb:      var(--vz-primary-rgb, 91, 157, 255);
+  --legience-accent-soft:     rgba(var(--vz-primary-rgb, 91, 157, 255), 0.14);
+
+  // Phase 6 dark overrides — flip dark/secondary tokens for dark surfaces.
+  --legience-dark:            var(--vz-dark, #f5f5f4);     // flips to near-white in dark
+  --legience-dark-rgb:        var(--vz-dark-rgb, 245, 245, 244);
+  --legience-bg-input:        var(--vz-input-bg, #1c1917); // dark input surface
+  --legience-bg-card-hover-rgb:   var(--vz-light-rgb, 28, 25, 23);
+  --legience-border-hairline-rgb: 41, 37, 36;              // matches dark border
+  --legience-accent-bg-subtle:    var(--vz-primary-bg-subtle, rgba(91, 157, 255, 0.14));
+
+  --legience-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.20);
+  --legience-shadow:    0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px -1px rgba(0, 0, 0, 0.20);
+  --legience-shadow-md: 0 4px 12px -4px rgba(0, 0, 0, 0.30);
+  --legience-shadow-lg: 0 8px 24px -8px rgba(0, 0, 0, 0.40);
+}

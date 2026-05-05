@@ -22,7 +22,7 @@
     }
 
     &.has-files {
-      border-color: #0ab39c;
+      border-color: var(--legience-success, #0ab39c);
     }
 
     .drop-zone-content {
@@ -95,9 +95,9 @@
   .bg-secondary-subtle { background-color: rgba(108, 117, 125, 0.1) !important; }
 
   .text-primary { color: #3577f1 !important; }
-  .text-success { color: #0ab39c !important; }
+  .text-success { color: var(--legience-success, #0ab39c) !important; }
   .text-danger { color: #d63939 !important; }
   .text-warning { color: #f59f00 !important; }
-  .text-info { color: #299cdb !important; }
-  .text-secondary { color: #6c757d !important; }
+  .text-info { color: var(--legience-info, #299cdb) !important; }
+  .text-secondary { color: var(--legience-text-muted, #6c757d) !important; }
 }

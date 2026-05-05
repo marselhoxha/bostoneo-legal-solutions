@@ -17,7 +17,7 @@
   gap: 1rem;
   padding: 1rem 0 1.25rem;
   margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 
   &__left {
     .sa-header__label {
@@ -40,9 +40,9 @@
 // ─── Stats Row (eSignatures pattern) ─────────────
 .stats-row {
   display: flex;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-radius: 12px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
@@ -50,7 +50,7 @@
 .stat-item {
   flex: 1;
   padding: 1.25rem 1.5rem;
-  border-right: 1px solid var(--vz-border-color);
+  border-right: 1px solid var(--legience-border-hairline);
   transition: all 0.2s ease;
 
   &:last-child {
@@ -67,19 +67,19 @@
 }
 
 .stat-item:nth-child(1) {
-  background: rgba(var(--vz-primary-rgb), 0.08);
+  background: rgba(var(--legience-accent-rgb), 0.08);
 }
 
 .stat-item:nth-child(2) {
-  background: rgba(var(--vz-info-rgb), 0.08);
+  background: rgba(var(--legience-info-rgb), 0.08);
 }
 
 .stat-item:nth-child(3) {
-  background: rgba(var(--vz-success-rgb), 0.08);
+  background: rgba(var(--legience-success-rgb), 0.08);
 }
 
 .stat-item:nth-child(4) {
-  background: rgba(var(--vz-warning-rgb), 0.08);
+  background: rgba(var(--legience-warning-rgb), 0.08);
 }
 
 .stat-header {
@@ -93,7 +93,7 @@
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .stat-indicator {
@@ -106,23 +106,23 @@
   font-size: 0.75rem;
 
   &-primary {
-    background: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
+    background: rgba(var(--legience-accent-rgb), 0.1);
+    color: var(--legience-accent);
   }
 
   &-info {
-    background: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+    background: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
   }
 
   &-success {
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
 
   &-warning {
-    background: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
   }
 }
 
@@ -140,7 +140,7 @@
 .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   line-height: 1;
   font-feature-settings: "tnum";
 }
@@ -157,8 +157,8 @@
   gap: 0.75rem;
   padding: 0.875rem 1rem;
   border-radius: 0.625rem;
-  border: 1px solid var(--vz-border-color);
-  background: var(--vz-card-bg);
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-card);
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
@@ -188,7 +188,7 @@
   &__val {
     font-size: 1.125rem;
     font-weight: 700;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     font-feature-settings: "tnum";
     line-height: 1.2;
   }
@@ -196,7 +196,7 @@
   &__lbl {
     font-size: 0.625rem;
     font-weight: 600;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     line-height: 1;
@@ -209,7 +209,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
   }
 
   &__bar-fill {
@@ -218,17 +218,17 @@
   }
 
   // Color variants
-  &--primary .sa-vital-tile__icon { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
-  &--success .sa-vital-tile__icon { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
-  &--info    .sa-vital-tile__icon { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
-  &--warning .sa-vital-tile__icon { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
-  &--danger  .sa-vital-tile__icon { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+  &--primary .sa-vital-tile__icon { background: rgba(var(--legience-accent-rgb), 0.12); color: var(--legience-accent); }
+  &--success .sa-vital-tile__icon { background: rgba(var(--legience-success-rgb), 0.12); color: var(--legience-success); }
+  &--info    .sa-vital-tile__icon { background: rgba(var(--legience-info-rgb), 0.12);    color: var(--legience-info); }
+  &--warning .sa-vital-tile__icon { background: rgba(var(--legience-warning-rgb), 0.12); color: var(--legience-warning); }
+  &--danger  .sa-vital-tile__icon { background: rgba(var(--legience-danger-rgb), 0.12);  color: var(--legience-danger); }
 
-  &--primary { border-left: 3px solid var(--vz-primary); }
-  &--success { border-left: 3px solid var(--vz-success); }
-  &--info    { border-left: 3px solid var(--vz-info); }
-  &--warning { border-left: 3px solid var(--vz-warning); }
-  &--danger  { border-left: 3px solid var(--vz-danger); }
+  &--primary { border-left: 3px solid var(--legience-accent); }
+  &--success { border-left: 3px solid var(--legience-success); }
+  &--info    { border-left: 3px solid var(--legience-info); }
+  &--warning { border-left: 3px solid var(--legience-warning); }
+  &--danger  { border-left: 3px solid var(--legience-danger); }
 }
 
 // ─── Alert Items ──────────────────────────────
@@ -237,7 +237,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.625rem 0;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 
   &:last-child {
     border-bottom: none;
@@ -259,20 +259,20 @@
     flex-shrink: 0;
 
     &--danger {
-      background: rgba(var(--vz-danger-rgb), 0.1);
-      color: var(--vz-danger);
+      background: rgba(var(--legience-danger-rgb), 0.1);
+      color: var(--legience-danger);
     }
     &--warning {
-      background: rgba(var(--vz-warning-rgb), 0.1);
-      color: var(--vz-warning);
+      background: rgba(var(--legience-warning-rgb), 0.1);
+      color: var(--legience-warning);
     }
     &--info {
-      background: rgba(var(--vz-info-rgb), 0.1);
-      color: var(--vz-info);
+      background: rgba(var(--legience-info-rgb), 0.1);
+      color: var(--legience-info);
     }
     &--secondary {
-      background: rgba(var(--vz-secondary-rgb), 0.1);
-      color: var(--vz-secondary-color);
+      background: rgba(var(--legience-secondary-rgb), 0.1);
+      color: var(--legience-text-muted);
     }
   }
 }
@@ -284,17 +284,17 @@
   border-radius: 50%;
   display: inline-block;
 
-  &--success { background: var(--vz-success); }
-  &--info { background: var(--vz-info); }
+  &--success { background: var(--legience-success); }
+  &--info { background: var(--legience-info); }
   &--warning {
-    background: var(--vz-warning);
+    background: var(--legience-warning);
     animation: pulse-glow 2s ease-in-out infinite;
   }
   &--danger {
-    background: var(--vz-danger);
+    background: var(--legience-danger);
     animation: pulse-glow 1.5s ease-in-out infinite;
   }
-  &--secondary { background: var(--vz-secondary-color); }
+  &--secondary { background: var(--legience-text-muted); }
 }
 
 @keyframes pulse-glow {
@@ -304,10 +304,10 @@
 
 // ─── Card Chrome (matching audit-log pattern) ──
 .sa-card {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.625rem;
   overflow: hidden;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 
   &__header {
@@ -315,7 +315,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
   }
 
   &__badge {
@@ -328,11 +328,11 @@
     font-size: 0.875rem;
     flex-shrink: 0;
 
-    &--primary { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
-    &--success { background: rgba(var(--vz-success-rgb), 0.1); color: var(--vz-success); }
-    &--info    { background: rgba(var(--vz-info-rgb), 0.1);    color: var(--vz-info); }
-    &--danger  { background: rgba(var(--vz-danger-rgb), 0.1);  color: var(--vz-danger); }
-    &--warning { background: rgba(var(--vz-warning-rgb), 0.1); color: var(--vz-warning); }
+    &--primary { background: rgba(var(--legience-accent-rgb), 0.1); color: var(--legience-accent); }
+    &--success { background: rgba(var(--legience-success-rgb), 0.1); color: var(--legience-success); }
+    &--info    { background: rgba(var(--legience-info-rgb), 0.1);    color: var(--legience-info); }
+    &--danger  { background: rgba(var(--legience-danger-rgb), 0.1);  color: var(--legience-danger); }
+    &--warning { background: rgba(var(--legience-warning-rgb), 0.1); color: var(--legience-warning); }
   }
 }
 
@@ -350,12 +350,12 @@
   flex-shrink: 0;
   letter-spacing: 0.02em;
 
-  &--primary   { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
-  &--success   { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
-  &--danger    { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
-  &--info      { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
-  &--warning   { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
-  &--secondary { background: rgba(0, 0, 0, 0.06); color: var(--vz-secondary-color); }
+  &--primary   { background: rgba(var(--legience-accent-rgb), 0.12); color: var(--legience-accent); }
+  &--success   { background: rgba(var(--legience-success-rgb), 0.12); color: var(--legience-success); }
+  &--danger    { background: rgba(var(--legience-danger-rgb), 0.12);  color: var(--legience-danger); }
+  &--info      { background: rgba(var(--legience-info-rgb), 0.12);    color: var(--legience-info); }
+  &--warning   { background: rgba(var(--legience-warning-rgb), 0.12); color: var(--legience-warning); }
+  &--secondary { background: rgba(0, 0, 0, 0.06); color: var(--legience-text-muted); }
 }
 
 // ─── Entity Icons ───────────────────────────────
@@ -369,15 +369,15 @@
   font-size: 0.8125rem;
   flex-shrink: 0;
 
-  &--primary   { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
-  &--success   { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
-  &--info      { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
-  &--warning   { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
-  &--danger    { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
-  &--secondary { background: rgba(0, 0, 0, 0.06);               color: var(--vz-secondary-color); }
+  &--primary   { background: rgba(var(--legience-accent-rgb), 0.12); color: var(--legience-accent); }
+  &--success   { background: rgba(var(--legience-success-rgb), 0.12); color: var(--legience-success); }
+  &--info      { background: rgba(var(--legience-info-rgb), 0.12);    color: var(--legience-info); }
+  &--warning   { background: rgba(var(--legience-warning-rgb), 0.12); color: var(--legience-warning); }
+  &--danger    { background: rgba(var(--legience-danger-rgb), 0.12);  color: var(--legience-danger); }
+  &--secondary { background: rgba(0, 0, 0, 0.06);               color: var(--legience-text-muted); }
   &--purple    { background: rgba(108, 92, 231, 0.12);          color: #6c5ce7; }
   &--teal      { background: rgba(0, 184, 148, 0.12);           color: #00b894; }
-  &--indigo    { background: rgba(85, 110, 230, 0.12);          color: #556ee6; }
+  &--indigo    { background: rgba(85, 110, 230, 0.12);          color: var(--legience-accent, #556ee6); }
   &--pink      { background: rgba(232, 62, 140, 0.12);          color: #e83e8c; }
 }
 
@@ -387,26 +387,26 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.125rem 0.5rem;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   border-radius: 5px;
   font-size: 0.75rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
 
   i {
     font-size: 0.6875rem;
     opacity: 0.7;
   }
 
-  &--primary   { background: rgba(var(--vz-primary-rgb), 0.1);   color: var(--vz-primary);   i { color: var(--vz-primary); } }
-  &--success   { background: rgba(var(--vz-success-rgb), 0.1);   color: var(--vz-success);   i { color: var(--vz-success); } }
-  &--info      { background: rgba(var(--vz-info-rgb), 0.1);      color: var(--vz-info);      i { color: var(--vz-info); } }
-  &--warning   { background: rgba(var(--vz-warning-rgb), 0.1);   color: var(--vz-warning);   i { color: var(--vz-warning); } }
-  &--secondary { background: rgba(0, 0, 0, 0.05);                color: var(--vz-secondary-color); i { color: var(--vz-secondary-color); } }
+  &--primary   { background: rgba(var(--legience-accent-rgb), 0.1);   color: var(--legience-accent);   i { color: var(--legience-accent); } }
+  &--success   { background: rgba(var(--legience-success-rgb), 0.1);   color: var(--legience-success);   i { color: var(--legience-success); } }
+  &--info      { background: rgba(var(--legience-info-rgb), 0.1);      color: var(--legience-info);      i { color: var(--legience-info); } }
+  &--warning   { background: rgba(var(--legience-warning-rgb), 0.1);   color: var(--legience-warning);   i { color: var(--legience-warning); } }
+  &--secondary { background: rgba(0, 0, 0, 0.05);                color: var(--legience-text-muted); i { color: var(--legience-text-muted); } }
   &--purple    { background: rgba(108, 92, 231, 0.1);            color: #6c5ce7;   i { color: #6c5ce7; } }
   &--teal      { background: rgba(0, 184, 148, 0.1);             color: #00b894;   i { color: #00b894; } }
-  &--indigo    { background: rgba(85, 110, 230, 0.1);            color: #556ee6;   i { color: #556ee6; } }
+  &--indigo    { background: rgba(85, 110, 230, 0.1);            color: var(--legience-accent, #556ee6);   i { color: var(--legience-accent, #556ee6); } }
   &--pink      { background: rgba(232, 62, 140, 0.1);            color: #e83e8c;   i { color: #e83e8c; } }
-  &--platform  { background: rgba(85, 110, 230, 0.08);           color: #556ee6;   i { color: #556ee6; } border: 1px dashed rgba(85, 110, 230, 0.25); }
+  &--platform  { background: rgba(85, 110, 230, 0.08);           color: var(--legience-accent, #556ee6);   i { color: var(--legience-accent, #556ee6); } border: 1px dashed rgba(85, 110, 230, 0.25); }
 }
 
 // ─── Table Row Hover ────────────────────────────
@@ -414,7 +414,7 @@
   transition: background 0.15s ease;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.02);
+    background: rgba(var(--legience-accent-rgb), 0.02);
   }
 
   &:last-child td {
@@ -428,11 +428,11 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
   transition: background 0.15s ease;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.02);
+    background: rgba(var(--legience-accent-rgb), 0.02);
   }
 
   &--last {
@@ -448,8 +448,8 @@
     justify-content: center;
     font-size: 0.875rem;
     flex-shrink: 0;
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
 
   .min-width-0 {
@@ -480,8 +480,8 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--vz-secondary-color);
-      border-bottom: 2px solid var(--vz-border-color);
+      color: var(--legience-text-muted);
+      border-bottom: 2px solid var(--legience-border-hairline);
       border-top: none;
       background: transparent;
       padding: 0.625rem 0.75rem;
@@ -492,7 +492,7 @@
       font-size: 0.8125rem;
       vertical-align: middle;
       padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid rgba(var(--vz-border-color), 0.5);
+      border-bottom: 1px solid rgba(var(--legience-border-hairline), 0.5);
     }
   }
 
@@ -510,7 +510,7 @@
 
   .stat-item {
     flex: 1 1 50%;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     &:nth-child(2) {
       border-right: none;
@@ -548,7 +548,7 @@
   .stat-item {
     flex: 1 1 100%;
     border-right: none;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     &:last-child {
       border-bottom: none;

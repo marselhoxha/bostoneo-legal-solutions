@@ -8,33 +8,37 @@
 // CSS Custom Properties - Using Velzon variables directly with fallbacks
 // ============================================================================
 body {
-  // Core Colors with fallbacks
-  --msg-bg: var(--vz-secondary-bg, #f3f3f9);
-  --msg-bg-rgb: var(--vz-secondary-bg-rgb, 243, 243, 249);
-  --msg-card-bg: var(--vz-card-bg, #ffffff);
-  --msg-body-bg: var(--vz-body-bg, #f3f3f9);
-  --msg-border: var(--vz-border-color, #e9ebec);
+  // Core Colors — sourced from Legience Tier 2 tokens (theme-aware: light/dark
+  // overrides flip automatically). Hex fallbacks keep the design alive even
+  // if the token chain is broken.
+  --msg-bg: var(--legience-bg-page, #f5f5f4);
+  --msg-bg-rgb: var(--vz-secondary-bg-rgb, 245, 245, 244);
+  --msg-card-bg: var(--legience-bg-card, #ffffff);
+  --msg-body-bg: var(--legience-bg-page, #f5f5f4);
+  --msg-border: var(--legience-border-hairline, #e7e5e4);
   --msg-border-rgb: 0, 0, 0;
-  --msg-hover: var(--vz-tertiary-bg, #eff2f7);
-  --msg-active: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.08);
-  --msg-text: var(--vz-body-color, #212529);
-  --msg-text-muted: var(--vz-secondary-color, #878a99);
-  --msg-heading: var(--vz-heading-color, #495057);
-  --msg-input-bg: var(--vz-input-bg, #ffffff);
+  --msg-hover: var(--legience-bg-card-hover, #f5f5f4);
+  --msg-active: rgba(var(--legience-accent-rgb, 11, 100, 233), 0.08);
+  --msg-text: var(--legience-text-secondary, #44403c);
+  --msg-text-muted: var(--legience-text-muted, #57534d);
+  --msg-heading: var(--legience-text-primary, #0c0a09);
+  --msg-input-bg: var(--legience-bg-card, #ffffff);
 
-  // Brand Palette with fallbacks
-  --msg-primary: var(--vz-primary, #405189);
-  --msg-primary-rgb: var(--vz-primary-rgb, 64, 81, 137);
-  --msg-secondary: var(--vz-secondary, #3577f1);
-  --msg-secondary-rgb: var(--vz-secondary-rgb, 53, 119, 241);
-  --msg-success: var(--vz-success, #0ab39c);
-  --msg-success-rgb: var(--vz-success-rgb, 10, 179, 156);
-  --msg-info: var(--vz-info, #299cdb);
-  --msg-info-rgb: var(--vz-info-rgb, 41, 156, 219);
-  --msg-warning: var(--vz-warning, #f7b84b);
-  --msg-warning-rgb: var(--vz-warning-rgb, 247, 184, 75);
-  --msg-danger: var(--vz-danger, #f06548);
-  --msg-danger-rgb: var(--vz-danger-rgb, 240, 101, 72);
+  // Brand Palette — Rox accent + semantic colors. `--msg-secondary` retains
+  // the Velzon var since Legience has no semantic "secondary" yet; falls
+  // back to the Rox-blue accent so it stays in the theme family.
+  --msg-primary: var(--legience-accent, #0b64e9);
+  --msg-primary-rgb: var(--legience-accent-rgb, 11, 100, 233);
+  --msg-secondary: var(--legience-secondary, var(--legience-accent, #0b64e9));
+  --msg-secondary-rgb: var(--legience-secondary-rgb, 11, 100, 233);
+  --msg-success: var(--legience-success, #16a34a);
+  --msg-success-rgb: var(--legience-success-rgb, 22, 163, 74);
+  --msg-info: var(--legience-info, #6b4aff);
+  --msg-info-rgb: var(--legience-info-rgb, 107, 74, 255);
+  --msg-warning: var(--legience-warning, #f9b703);
+  --msg-warning-rgb: var(--legience-warning-rgb, 249, 183, 3);
+  --msg-danger: var(--legience-danger, #f24149);
+  --msg-danger-rgb: var(--legience-danger-rgb, 242, 65, 73);
 
   // Shadows
   --msg-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -252,7 +256,7 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: var(--msg-radius-xl);
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   box-shadow: var(--msg-shadow);
   border: 1px solid var(--msg-border);
   height: calc(100vh - 135px); // Maximized height - no page header
@@ -383,11 +387,11 @@ body {
   }
 
   &.btn-new-message {
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     color: #fff;
 
     &:hover {
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       opacity: 0.9;
       color: #fff;
     }
@@ -448,7 +452,7 @@ body {
   top: calc(100% + 4px);
   left: 0;
   min-width: 180px;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border: 1px solid var(--msg-border);
   border-radius: var(--msg-radius-lg);
   box-shadow: var(--msg-shadow-lg);
@@ -792,7 +796,7 @@ body {
     border-radius: 50% !important;
     transition: all 0.2s ease;
     color: #fff;
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     box-shadow: none;
     text-transform: uppercase;
     position: relative;
@@ -826,7 +830,7 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid var(--vz-card-bg, #fff);
+  border: 2px solid var(--legience-bg-card, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1073,7 +1077,7 @@ body {
 // User Chat Area
 // ============================================================================
 .user-chat {
-  background: var(--vz-secondary-bg);
+  background: var(--legience-bg-card);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -1099,7 +1103,7 @@ body {
     transform: translateX(100%);
     z-index: 1050;
     transition: all var(--msg-transition-smooth);
-    background: var(--vz-secondary-bg);
+    background: var(--legience-bg-card);
 
     &.user-chat-show {
       visibility: visible;
@@ -1156,7 +1160,7 @@ body {
   align-items: center;
   gap: var(--msg-space-3);
   padding: 12px 16px;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-radius: var(--msg-radius-lg);
   border: 1px solid var(--msg-border);
   transition: all var(--msg-transition);
@@ -1295,7 +1299,7 @@ body {
   i { font-size: 14px; }
 
   &:hover {
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
     border-color: var(--msg-primary);
     color: var(--msg-primary);
   }
@@ -1307,7 +1311,7 @@ body {
 .user-chat-topbar {
   padding: 16px 20px;
   min-height: 68px;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-bottom: 1px solid var(--msg-border);
   position: sticky;
   top: 0;
@@ -1415,7 +1419,7 @@ body {
       align-items: center;
       justify-content: center;
       clip-path: none !important;
-      background: var(--vz-primary) !important;
+      background: var(--legience-accent) !important;
       box-shadow: none;
       text-transform: uppercase;
       transition: all 0.2s ease;
@@ -1433,7 +1437,7 @@ body {
     position: absolute;
     bottom: 0;
     right: 0;
-    border-color: var(--vz-card-bg, #fff);
+    border-color: var(--legience-bg-card, #fff);
   }
 }
 
@@ -1524,8 +1528,8 @@ body {
   letter-spacing: 0.3px;
 
   &.status-open {
-    background: rgba(var(--vz-success-rgb), 0.15);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.15);
+    color: var(--legience-success);
   }
 
   &.status-closed {
@@ -1556,7 +1560,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: var(--msg-space-5);
-  background: var(--vz-secondary-bg);
+  background: var(--legience-bg-card);
   position: relative;
   overscroll-behavior: contain;
   min-height: 0; // Critical for flex scroll
@@ -1660,7 +1664,7 @@ body {
     display: inline-block;
     position: relative;
     padding: var(--msg-space-2) var(--msg-space-4);
-    background: var(--vz-secondary-bg);
+    background: var(--legience-bg-card);
     border: 1px solid var(--msg-border);
     border-radius: var(--msg-radius-full);
     font-size: 0.6875rem;
@@ -1781,7 +1785,7 @@ body {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     color: #fff;
     box-shadow: none;
     text-transform: uppercase;
@@ -1827,7 +1831,7 @@ body {
 // Team message from another attorney (shows on left but different styling)
 .message-item.team-message {
   .message-sender-name {
-    color: var(--vz-info);
+    color: var(--legience-info);
   }
 }
 
@@ -1982,7 +1986,7 @@ body {
 // Chat Input Section
 // ============================================================================
 .chat-input-section {
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-top: 1px solid var(--msg-border);
   padding: var(--msg-space-4) var(--msg-space-5);
   flex-shrink: 0; // Prevent compression on mobile
@@ -2381,7 +2385,7 @@ body {
 .client-panel {
   width: 340px;
   min-width: 340px;
-  background: var(--vz-secondary-bg);
+  background: var(--legience-bg-card);
   border-left: 1px solid var(--msg-border);
   display: flex;
   flex-direction: column;
@@ -2407,7 +2411,7 @@ body {
     justify-content: space-between;
     padding: 18px 20px;
     border-bottom: 1px solid var(--msg-border);
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
     position: sticky;
     top: 0;
     z-index: 5;
@@ -2432,7 +2436,7 @@ body {
       height: 32px;
       border-radius: 8px;
       border: 1px solid var(--msg-border);
-      background: var(--vz-tertiary-bg);
+      background: var(--legience-bg-subtle);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2445,9 +2449,9 @@ body {
       }
 
       &:hover {
-        background: rgba(var(--vz-danger-rgb), 0.1);
-        border-color: var(--vz-danger);
-        color: var(--vz-danger);
+        background: rgba(var(--legience-danger-rgb), 0.1);
+        border-color: var(--legience-danger);
+        color: var(--legience-danger);
       }
     }
   }
@@ -2471,7 +2475,7 @@ body {
 .client-info-section {
   text-align: center;
   padding: 28px 20px;
-  background: linear-gradient(180deg, var(--vz-card-bg) 0%, var(--vz-secondary-bg) 100%);
+  background: linear-gradient(180deg, var(--legience-bg-card) 0%, var(--legience-bg-card) 100%);
   border-bottom: 1px solid var(--msg-border);
   position: relative;
 
@@ -2483,7 +2487,7 @@ body {
     left: 20px;
     right: 20px;
     height: 3px;
-    background: linear-gradient(90deg, var(--vz-primary), var(--vz-info));
+    background: linear-gradient(90deg, var(--legience-accent), var(--legience-info));
     border-radius: 0 0 3px 3px;
   }
 
@@ -2514,7 +2518,7 @@ body {
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       color: #fff;
       transition: transform 0.3s ease;
 
@@ -2552,8 +2556,8 @@ body {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
     border-radius: var(--msg-radius-full);
     font-size: 0.875rem;
     font-weight: 500;
@@ -2565,7 +2569,7 @@ body {
     i { font-size: 16px; }
 
     &:hover {
-      background: var(--vz-success);
+      background: var(--legience-success);
       color: #fff;
       transform: scale(1.02);
     }
@@ -2592,33 +2596,33 @@ body {
       i { font-size: 18px; }
 
       &.call {
-        background: rgba(var(--vz-success-rgb), 0.1);
-        color: var(--vz-success);
+        background: rgba(var(--legience-success-rgb), 0.1);
+        color: var(--legience-success);
 
         &:hover {
-          background: var(--vz-success);
+          background: var(--legience-success);
           color: #fff;
           transform: scale(1.1);
         }
       }
 
       &.email {
-        background: rgba(var(--vz-info-rgb), 0.1);
-        color: var(--vz-info);
+        background: rgba(var(--legience-info-rgb), 0.1);
+        color: var(--legience-info);
 
         &:hover {
-          background: var(--vz-info);
+          background: var(--legience-info);
           color: #fff;
           transform: scale(1.1);
         }
       }
 
       &.portal {
-        background: rgba(var(--vz-primary-rgb), 0.1);
-        color: var(--vz-primary);
+        background: rgba(var(--legience-accent-rgb), 0.1);
+        color: var(--legience-accent);
 
         &:hover {
-          background: var(--vz-primary);
+          background: var(--legience-accent);
           color: #fff;
           transform: scale(1.1);
         }
@@ -2665,7 +2669,7 @@ body {
   display: flex;
   align-items: center;
   padding: 14px 16px;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-radius: var(--msg-radius-lg);
   border: 1px solid var(--msg-border);
   cursor: pointer;
@@ -2675,7 +2679,7 @@ body {
 
   &:hover {
     border-color: var(--msg-primary);
-    box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.1);
+    box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.1);
     transform: translateY(-2px);
 
     .case-icon {
@@ -2688,7 +2692,7 @@ body {
     width: 42px;
     height: 42px;
     border-radius: var(--msg-radius);
-    background: rgba(var(--vz-primary-rgb), 0.1);
+    background: rgba(var(--legience-accent-rgb), 0.1);
     color: var(--msg-primary);
     display: flex;
     align-items: center;
@@ -2750,7 +2754,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-radius: var(--msg-radius-lg);
   border: 1px solid var(--msg-border);
   overflow: hidden;
@@ -2805,7 +2809,7 @@ body {
     align-items: center;
     gap: 8px;
     padding: 16px 10px;
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
     border: 1px solid var(--msg-border);
     border-radius: var(--msg-radius-lg);
     font-size: 0.75rem;
@@ -2819,7 +2823,7 @@ body {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: rgba(var(--vz-primary-rgb), 0.1);
+      background: rgba(var(--legience-accent-rgb), 0.1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2834,7 +2838,7 @@ body {
     &:hover {
       border-color: var(--msg-primary);
       transform: translateY(-3px);
-      box-shadow: 0 6px 16px rgba(var(--vz-primary-rgb), 0.12);
+      box-shadow: 0 6px 16px rgba(var(--legience-accent-rgb), 0.12);
 
       .action-icon {
         background: var(--msg-primary);
@@ -2845,20 +2849,20 @@ body {
 
     // Color variants
     &.call .action-icon {
-      background: rgba(var(--vz-success-rgb), 0.1);
-      i { color: var(--vz-success); }
+      background: rgba(var(--legience-success-rgb), 0.1);
+      i { color: var(--legience-success); }
     }
     &.call:hover .action-icon {
-      background: var(--vz-success);
+      background: var(--legience-success);
       i { color: #fff; }
     }
 
     &.email .action-icon {
-      background: rgba(var(--vz-info-rgb), 0.1);
-      i { color: var(--vz-info); }
+      background: rgba(var(--legience-info-rgb), 0.1);
+      i { color: var(--legience-info); }
     }
     &.email:hover .action-icon {
-      background: var(--vz-info);
+      background: var(--legience-info);
       i { color: #fff; }
     }
   }
@@ -2925,7 +2929,7 @@ body {
   pointer-events: auto;
   background-clip: padding-box;
   outline: 0;
-  background-color: var(--vz-secondary-bg, var(--vz-card-bg, #fff)) !important;
+  background-color: var(--legience-bg-card, var(--legience-bg-card, #fff)) !important;
 }
 
 .messages-page .modal-backdrop {
@@ -2947,14 +2951,14 @@ body {
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  background: var(--vz-secondary-bg, var(--vz-card-bg)) !important;
+  background: var(--legience-bg-card, var(--legience-bg-card)) !important;
   border: none;
 
   // Header with gradient accent
   .modal-header {
     padding: 16px 20px;
-    background: var(--vz-secondary-bg, var(--vz-card-bg));
-    border-bottom: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card, var(--legience-bg-card));
+    border-bottom: 1px solid var(--legience-border-hairline);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2968,7 +2972,7 @@ body {
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--vz-primary) 0%, var(--vz-success) 50%, var(--vz-info) 100%);
+      background: linear-gradient(90deg, var(--legience-accent) 0%, var(--legience-success) 50%, var(--legience-info) 100%);
     }
 
     @media (max-width: 575.98px) {
@@ -2990,7 +2994,7 @@ body {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.3);
+      box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.3);
 
       i {
         font-size: 20px;
@@ -3000,7 +3004,7 @@ body {
   }
 
   .modal-title {
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     font-size: 1.125rem;
     font-weight: 700;
     margin-bottom: 0;
@@ -3008,14 +3012,14 @@ body {
   }
 
   .text-muted {
-    color: var(--vz-secondary-color) !important;
+    color: var(--legience-text-muted) !important;
   }
 
   .btn-close-modal {
     width: 36px;
     height: 36px;
     border: none;
-    background: var(--vz-tertiary-bg);
+    background: var(--legience-bg-subtle);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -3026,20 +3030,20 @@ body {
 
     i {
       font-size: 22px;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
 
     &:hover {
-      background: rgba(var(--vz-danger-rgb), 0.1);
+      background: rgba(var(--legience-danger-rgb), 0.1);
       transform: rotate(90deg);
 
-      i { color: var(--vz-danger); }
+      i { color: var(--legience-danger); }
     }
   }
 
   .modal-body {
     padding: 20px;
-    background: var(--vz-secondary-bg, var(--vz-card-bg));
+    background: var(--legience-bg-card, var(--legience-bg-card));
 
     @media (max-width: 575.98px) {
       padding: 16px;
@@ -3048,8 +3052,8 @@ body {
 
   .modal-footer {
     padding: 14px 20px;
-    background: var(--vz-secondary-bg, var(--vz-card-bg));
-    border-top: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card, var(--legience-bg-card));
+    border-top: 1px solid var(--legience-border-hairline);
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -3067,12 +3071,12 @@ body {
       transition: all 0.2s ease;
 
       &.btn-light {
-        background: var(--vz-tertiary-bg);
-        border: 1px solid var(--vz-border-color);
-        color: var(--vz-body-color);
+        background: var(--legience-bg-subtle);
+        border: 1px solid var(--legience-border-hairline);
+        color: var(--legience-text-secondary);
 
         &:hover {
-          background: var(--vz-tertiary-bg);
+          background: var(--legience-bg-subtle);
           opacity: 0.9;
         }
       }
@@ -3080,11 +3084,11 @@ body {
       &.btn-primary {
         background: linear-gradient(135deg, var(--vz-primary) 0%, color-mix(in srgb, var(--vz-primary) 85%, black) 100%);
         border: none;
-        box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.3);
+        box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.3);
 
         &:hover {
           transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(var(--vz-primary-rgb), 0.4);
+          box-shadow: 0 6px 16px rgba(var(--legience-accent-rgb), 0.4);
         }
 
         &:disabled {
@@ -3126,19 +3130,19 @@ body {
   gap: 6px;
   font-weight: 600;
   font-size: 0.8125rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   margin-bottom: 6px;
 
   .required {
-    color: var(--vz-danger);
+    color: var(--legience-danger);
     font-size: 0.875rem;
   }
 
   .optional {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-weight: 400;
     font-size: 0.6875rem;
-    background: var(--vz-tertiary-bg);
+    background: var(--legience-bg-subtle);
     padding: 2px 6px;
     border-radius: 4px;
   }
@@ -3148,26 +3152,26 @@ body {
 .modal-modern .form-select {
   border-radius: 8px;
   padding: 10px 14px;
-  border: 1px solid var(--vz-border-color);
-  background: var(--vz-input-bg);
-  color: var(--vz-body-color);
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-input);
+  color: var(--legience-text-secondary);
   font-size: 0.875rem;
   transition: all 0.2s ease;
   width: 100%;
 
   &:hover {
-    border-color: var(--vz-border-color);
+    border-color: var(--legience-border-hairline);
   }
 
   &:focus {
-    background: var(--vz-secondary-bg);
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+    background: var(--legience-bg-card);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.1);
     outline: none;
   }
 
   &::placeholder {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
   }
 }
 
@@ -3181,8 +3185,8 @@ body {
   padding-right: 40px;
 
   option {
-    background: var(--vz-secondary-bg);
-    color: var(--vz-body-color);
+    background: var(--legience-bg-card);
+    color: var(--legience-text-secondary);
     padding: 8px;
   }
 }
@@ -3195,7 +3199,7 @@ body {
 
 .form-hint {
   font-size: 0.75rem;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   margin-top: 4px;
   margin-bottom: 0;
   display: none; // Hide the hint to save space
@@ -3210,38 +3214,38 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
-    background: var(--vz-input-bg);
+    background: var(--legience-bg-input);
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      border-color: var(--vz-primary);
+      border-color: var(--legience-accent);
     }
 
     .selected-value {
       font-size: 0.875rem;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       background: transparent;
 
       &.placeholder {
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
         opacity: 0.7;
       }
     }
 
     i {
       font-size: 18px;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       transition: transform 0.2s ease;
     }
   }
 
   &.open {
     .select-trigger {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.1);
 
       i {
         transform: rotate(180deg);
@@ -3254,8 +3258,8 @@ body {
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    background: var(--vz-secondary-bg);
-    border: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     z-index: 1000;
@@ -3267,12 +3271,12 @@ body {
     align-items: center;
     gap: 8px;
     padding: 10px 12px;
-    border-bottom: 1px solid var(--vz-border-color);
-    background: var(--vz-tertiary-bg);
+    border-bottom: 1px solid var(--legience-border-hairline);
+    background: var(--legience-bg-subtle);
 
     i {
       font-size: 16px;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
 
     .search-input {
@@ -3280,11 +3284,11 @@ body {
       border: none;
       background: transparent;
       font-size: 0.875rem;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       outline: none;
 
       &::placeholder {
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
       }
     }
   }
@@ -3302,18 +3306,18 @@ body {
     transition: background 0.15s ease;
 
     &:hover {
-      background: var(--vz-tertiary-bg);
+      background: var(--legience-bg-subtle);
     }
 
     .option-name {
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
     }
 
     .option-email {
       font-size: 0.75rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
   }
 
@@ -3321,7 +3325,7 @@ body {
     padding: 16px 12px;
     text-align: center;
     font-size: 0.8125rem;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
   }
 }
 
@@ -3529,7 +3533,7 @@ body {
 
     .chat-conversation {
       padding: 0;
-      background: #fff;
+      background: var(--legience-bg-card, #fff);
     }
   }
 }
@@ -3539,7 +3543,7 @@ body {
 // ============================================================================
 @media (prefers-contrast: high) {
   .messages-page {
-    --msg-border: var(--vz-heading-color);
+    --msg-border: var(--legience-text-primary);
 
     .message-bubble {
       border-width: 2px;

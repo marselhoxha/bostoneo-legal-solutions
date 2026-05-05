@@ -14,9 +14,9 @@
 
 // CKEditor toolbar
 .ck.ck-toolbar {
-  border: 1px solid var(--vz-border-color) !important;
+  border: 1px solid var(--legience-border-hairline) !important;
   border-bottom: none !important;
-  background: var(--vz-light) !important;
+  background: var(--legience-bg-card-hover) !important;
   border-radius: 0.5rem 0.5rem 0 0 !important;
   padding: 0.5rem !important;
 }
@@ -24,7 +24,7 @@
 // CKEditor editable area
 .ck.ck-editor__editable_inline {
   flex: 1;
-  border: 1px solid var(--vz-border-color) !important;
+  border: 1px solid var(--legience-border-hairline) !important;
   border-radius: 0 0 0.5rem 0.5rem !important;
   font-family: var(--vz-body-font-family);
   font-size: 14px;
@@ -33,13 +33,13 @@
   line-height: 1.8;
 
   &.ck-focused {
-    border-color: var(--vz-primary) !important;
+    border-color: var(--legience-accent) !important;
     box-shadow: none !important;
   }
 
   // Placeholder styling
   &.ck-editor__editable.ck-placeholder::before {
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     font-style: italic;
     opacity: 0.5;
   }
@@ -96,24 +96,24 @@
     margin: 0.75rem 0;
 
     th, td {
-      border: 1px solid var(--vz-border-color);
+      border: 1px solid var(--legience-border-hairline);
       padding: 0.5rem 0.75rem;
       font-size: 13px;
     }
 
     th {
-      background: var(--vz-light);
+      background: var(--legience-bg-card-hover);
       font-weight: 600;
     }
 
     tr:nth-child(even) td {
-      background: rgba(var(--vz-light-rgb), 0.3);
+      background: rgba(var(--legience-bg-card-hover-rgb), 0.3);
     }
   }
 
   // Link styling
   a {
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     text-decoration: underline;
 
     &:hover {
@@ -139,34 +139,34 @@
 
   // Blockquote
   blockquote {
-    border-left: 4px solid var(--vz-primary);
+    border-left: 4px solid var(--legience-accent);
     padding: 0.75rem 1rem;
     margin: 1rem 0;
-    background: rgba(var(--vz-primary-rgb), 0.05);
+    background: rgba(var(--legience-accent-rgb), 0.05);
     font-style: italic;
   }
 
   // Horizontal rule
   hr {
     border: none;
-    border-top: 2px solid var(--vz-border-color);
+    border-top: 2px solid var(--legience-border-hairline);
     margin: 1.5rem 0;
   }
 
   // Legal-specific classes (preserved by GeneralHtmlSupport)
   .legal-link {
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     text-decoration: underline;
     cursor: pointer;
   }
 
   .citation-verified {
-    color: var(--vz-success);
+    color: var(--legience-success);
   }
 
   .legal-amount {
     font-weight: 600;
-    color: var(--vz-dark, #212529);
+    color: var(--legience-dark, #212529);
   }
 
   .legal-term {
@@ -181,22 +181,22 @@
 }
 
 .ck.ck-editor__editable_inline::-webkit-scrollbar-track {
-  background: rgba(var(--vz-secondary-rgb), 0.1);
+  background: rgba(var(--legience-secondary-rgb), 0.1);
   border-radius: 4px;
 }
 
 .ck.ck-editor__editable_inline::-webkit-scrollbar-thumb {
-  background: rgba(var(--vz-secondary-rgb), 0.3);
+  background: rgba(var(--legience-secondary-rgb), 0.3);
   border-radius: 4px;
 
   &:hover {
-    background: rgba(var(--vz-secondary-rgb), 0.5);
+    background: rgba(var(--legience-secondary-rgb), 0.5);
   }
 }
 
 // Read-only mode styling
 .ck.ck-editor__editable.ck-read-only {
-  background: rgba(var(--vz-light-rgb), 0.3);
+  background: rgba(var(--legience-bg-card-hover-rgb), 0.3);
   cursor: not-allowed;
 }
 
@@ -220,21 +220,21 @@
 // Dark mode support
 [data-layout-mode="dark"] {
   .ck.ck-toolbar {
-    background: var(--vz-input-bg) !important;
+    background: var(--legience-bg-input) !important;
     border-color: var(--vz-input-border) !important;
   }
 
   .ck.ck-editor__editable_inline {
-    background: var(--vz-input-bg) !important;
+    background: var(--legience-bg-input) !important;
     border-color: var(--vz-input-border) !important;
-    color: var(--vz-body-color) !important;
+    color: var(--legience-text-secondary) !important;
 
     &.ck-focused {
-      border-color: var(--vz-primary) !important;
+      border-color: var(--legience-accent) !important;
     }
   }
 
   .ck.ck-toolbar .ck-button {
-    color: var(--vz-body-color) !important;
+    color: var(--legience-text-secondary) !important;
   }
 }

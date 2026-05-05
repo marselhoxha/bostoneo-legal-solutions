@@ -22,8 +22,8 @@
   align-items: center;
   gap: 1rem;
   padding: 0.65rem 0.9rem;
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   flex-wrap: wrap;
 
@@ -32,20 +32,20 @@
     align-items: center;
     gap: 0.4rem;
     font-size: 0.9rem;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
 
     .crumb-link {
-      color: var(--vz-body-color-muted, #878a99);
+      color: var(--legience-text-muted, #878a99);
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 0.3rem;
       transition: color 0.12s ease;
-      &:hover { color: var(--vz-primary); }
+      &:hover { color: var(--legience-accent); }
     }
 
-    .crumb-sep { font-size: 1rem; color: var(--vz-body-color-muted, #878a99); }
-    strong { color: var(--vz-heading-color); font-weight: 600; }
+    .crumb-sep { font-size: 1rem; color: var(--legience-text-muted, #878a99); }
+    strong { color: var(--legience-text-primary); font-weight: 600; }
   }
 
   .topbar-actions {
@@ -61,10 +61,10 @@
   align-items: center;
   justify-content: center;
   padding: 0.65rem 0.9rem;
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
-  color: var(--vz-body-color-muted, #878a99);
+  color: var(--legience-text-muted, #878a99);
   font-size: 0.85rem;
 }
 
@@ -84,8 +84,8 @@
 .editor-main {
   grid-column: 1;
   grid-row: 1;
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   padding: 0.5rem;
   min-height: 560px;
@@ -122,8 +122,8 @@
 }
 
 .side-section {
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   padding: 0.9rem 1rem;
 
@@ -135,15 +135,15 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--vz-body-color-muted, #878a99);
+    color: var(--legience-text-muted, #878a99);
     margin-bottom: 0.7rem;
 
-    i { font-size: 1rem; color: var(--vz-primary); }
+    i { font-size: 1rem; color: var(--legience-accent); }
 
     .count-badge {
       margin-left: auto;
-      background: rgba(var(--vz-primary-rgb), 0.12);
-      color: var(--vz-primary);
+      background: rgba(var(--legience-accent-rgb), 0.12);
+      color: var(--legience-accent);
       border-radius: 999px;
       padding: 0.1rem 0.55rem;
       font-size: 0.72rem;
@@ -165,11 +165,11 @@
 
     label {
       font-size: 0.78rem;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       font-weight: 500;
       margin: 0;
 
-      .req { color: var(--vz-danger, #dc3545); margin-left: 0.15rem; }
+      .req { color: var(--legience-danger, #dc3545); margin-left: 0.15rem; }
     }
   }
 
@@ -188,13 +188,13 @@
 
     .form-check-label {
       font-size: 0.85rem;
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
       font-weight: 500;
     }
 
     .hint {
       font-size: 0.75rem;
-      color: var(--vz-body-color-muted, #878a99);
+      color: var(--legience-text-muted, #878a99);
     }
   }
 }
@@ -214,14 +214,14 @@
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.35rem 0.55rem;
-    background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.08);
-    border: 1px solid rgba(var(--vz-info-rgb, 41, 156, 219), 0.22);
+    background: rgba(var(--legience-info-rgb, 41, 156, 219), 0.08);
+    border: 1px solid rgba(var(--legience-info-rgb, 41, 156, 219), 0.22);
     border-radius: 6px;
 
     .det-name {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 0.74rem;
-      color: var(--vz-info, #299cdb);
+      color: var(--legience-info, #299cdb);
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -230,7 +230,7 @@
 
     .det-count {
       font-size: 0.7rem;
-      color: var(--vz-body-color-muted, #878a99);
+      color: var(--legience-text-muted, #878a99);
       font-weight: 600;
       flex-shrink: 0;
     }
@@ -240,11 +240,11 @@
 .det-empty {
   text-align: center;
   padding: 0.75rem 0.4rem;
-  color: var(--vz-body-color-muted, #878a99);
+  color: var(--legience-text-muted, #878a99);
 
   i {
     font-size: 1.6rem;
-    color: var(--vz-info, #299cdb);
+    color: var(--legience-info, #299cdb);
     opacity: 0.55;
     display: block;
     margin-bottom: 0.35rem;
@@ -256,8 +256,8 @@
     line-height: 1.35;
 
     code {
-      background: var(--vz-tertiary-bg);
-      color: var(--vz-heading-color);
+      background: var(--legience-bg-subtle);
+      color: var(--legience-text-primary);
       padding: 0.05rem 0.3rem;
       border-radius: 3px;
       font-size: 0.72rem;
@@ -275,8 +275,8 @@
   align-items: center;
   gap: 1rem;
   padding: 0.6rem 0.9rem;
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   flex-wrap: wrap;
 
@@ -285,12 +285,12 @@
     align-items: center;
     gap: 0.4rem;
     font-size: 0.82rem;
-    color: var(--vz-body-color-muted, #878a99);
+    color: var(--legience-text-muted, #878a99);
 
     i { font-size: 1rem; }
 
     &.unsaved {
-      color: var(--vz-warning, #f7b84b);
+      color: var(--legience-warning, #f7b84b);
     }
   }
 
@@ -338,26 +338,26 @@
     ::ng-deep .ck.ck-editor__main > .ck-editor__editable,
     ::ng-deep .ck.ck-editor__main > .ck-editor__editable.ck-focused,
     ::ng-deep .ck-content {
-      background: var(--vz-secondary-bg) !important;
-      color: var(--vz-body-color) !important;
-      border-color: var(--vz-border-color) !important;
+      background: var(--legience-bg-card) !important;
+      color: var(--legience-text-secondary) !important;
+      border-color: var(--legience-border-hairline) !important;
     }
 
     ::ng-deep .ck.ck-toolbar,
     ::ng-deep .ck.ck-toolbar__items,
     ::ng-deep .ck.ck-sticky-panel__content {
-      background: var(--vz-tertiary-bg) !important;
-      border-color: var(--vz-border-color) !important;
+      background: var(--legience-bg-subtle) !important;
+      border-color: var(--legience-border-hairline) !important;
     }
 
     ::ng-deep .ck.ck-button {
-      color: var(--vz-body-color) !important;
+      color: var(--legience-text-secondary) !important;
       &:hover:not(.ck-disabled) {
-        background: rgba(var(--vz-primary-rgb), 0.12) !important;
+        background: rgba(var(--legience-accent-rgb), 0.12) !important;
       }
       &.ck-on {
-        background: rgba(var(--vz-primary-rgb), 0.18) !important;
-        color: var(--vz-primary) !important;
+        background: rgba(var(--legience-accent-rgb), 0.18) !important;
+        color: var(--legience-accent) !important;
       }
     }
   }

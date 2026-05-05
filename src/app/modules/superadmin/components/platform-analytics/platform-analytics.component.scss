@@ -17,7 +17,7 @@
   gap: 1rem;
   padding: 1rem 0 1.25rem;
   margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 
   &__left {
     .sa-header__label {
@@ -44,8 +44,8 @@
   gap: 0.75rem;
   padding: 0.875rem 1rem;
   border-radius: 0.625rem;
-  border: 1px solid var(--vz-border-color);
-  background: var(--vz-card-bg);
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-card);
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
@@ -75,7 +75,7 @@
   &__val {
     font-size: 1.125rem;
     font-weight: 700;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     font-feature-settings: "tnum";
     line-height: 1.2;
   }
@@ -83,7 +83,7 @@
   &__lbl {
     font-size: 0.625rem;
     font-weight: 600;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     line-height: 1;
@@ -91,25 +91,25 @@
   }
 
   // Color variants
-  &--primary .sa-vital-tile__icon { background: rgba(var(--vz-primary-rgb), 0.12); color: var(--vz-primary); }
-  &--success .sa-vital-tile__icon { background: rgba(var(--vz-success-rgb), 0.12); color: var(--vz-success); }
-  &--info    .sa-vital-tile__icon { background: rgba(var(--vz-info-rgb), 0.12);    color: var(--vz-info); }
-  &--warning .sa-vital-tile__icon { background: rgba(var(--vz-warning-rgb), 0.12); color: var(--vz-warning); }
-  &--danger  .sa-vital-tile__icon { background: rgba(var(--vz-danger-rgb), 0.12);  color: var(--vz-danger); }
+  &--primary .sa-vital-tile__icon { background: rgba(var(--legience-accent-rgb), 0.12); color: var(--legience-accent); }
+  &--success .sa-vital-tile__icon { background: rgba(var(--legience-success-rgb), 0.12); color: var(--legience-success); }
+  &--info    .sa-vital-tile__icon { background: rgba(var(--legience-info-rgb), 0.12);    color: var(--legience-info); }
+  &--warning .sa-vital-tile__icon { background: rgba(var(--legience-warning-rgb), 0.12); color: var(--legience-warning); }
+  &--danger  .sa-vital-tile__icon { background: rgba(var(--legience-danger-rgb), 0.12);  color: var(--legience-danger); }
 
-  &--primary { border-left: 3px solid var(--vz-primary); }
-  &--success { border-left: 3px solid var(--vz-success); }
-  &--info    { border-left: 3px solid var(--vz-info); }
-  &--warning { border-left: 3px solid var(--vz-warning); }
-  &--danger  { border-left: 3px solid var(--vz-danger); }
+  &--primary { border-left: 3px solid var(--legience-accent); }
+  &--success { border-left: 3px solid var(--legience-success); }
+  &--info    { border-left: 3px solid var(--legience-info); }
+  &--warning { border-left: 3px solid var(--legience-warning); }
+  &--danger  { border-left: 3px solid var(--legience-danger); }
 }
 
 // ─── Card Chrome (matching dashboard pattern) ──
 .sa-card {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.625rem;
   overflow: hidden;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 
   &__header {
@@ -117,7 +117,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
   }
 
   &__badge {
@@ -130,11 +130,11 @@
     font-size: 0.875rem;
     flex-shrink: 0;
 
-    &--primary { background: rgba(var(--vz-primary-rgb), 0.1); color: var(--vz-primary); }
-    &--success { background: rgba(var(--vz-success-rgb), 0.1); color: var(--vz-success); }
-    &--info    { background: rgba(var(--vz-info-rgb), 0.1);    color: var(--vz-info); }
-    &--danger  { background: rgba(var(--vz-danger-rgb), 0.1);  color: var(--vz-danger); }
-    &--warning { background: rgba(var(--vz-warning-rgb), 0.1); color: var(--vz-warning); }
+    &--primary { background: rgba(var(--legience-accent-rgb), 0.1); color: var(--legience-accent); }
+    &--success { background: rgba(var(--legience-success-rgb), 0.1); color: var(--legience-success); }
+    &--info    { background: rgba(var(--legience-info-rgb), 0.1);    color: var(--legience-info); }
+    &--danger  { background: rgba(var(--legience-danger-rgb), 0.1);  color: var(--legience-danger); }
+    &--warning { background: rgba(var(--legience-warning-rgb), 0.1); color: var(--legience-warning); }
   }
 }
 

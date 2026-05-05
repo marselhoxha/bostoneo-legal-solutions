@@ -29,8 +29,8 @@
     font-weight: 500;
     
     &.btn-secondary {
-      background-color: #6c757d;
-      border-color: #6c757d;
+      background-color: var(--legience-text-muted, #6c757d);
+      border-color: var(--legience-text-muted, #6c757d);
       
       &:hover {
         background-color: #545b62;

@@ -55,6 +55,8 @@ src/environments/environment.staging.ts
 
 # Markdown Files
 *.md
+# Allow design artifacts (specs, plans, audits) under docs/superpowers/ to be tracked
+!docs/superpowers/**/*.md
 
 # Environment Variables and API Keys
 .env
@@ -95,3 +97,13 @@ mockups/
 *.tfstate
 *.tfstate.backup
 crash.log
+
+# Rox theme integration baselines (large PNGs, regenerated as needed)
+docs/superpowers/baselines/
+
+# Tooling local state — never committed
+.claude/
+.codex/
+.superpowers/
+.playwright-mcp/
+.graphifyignore

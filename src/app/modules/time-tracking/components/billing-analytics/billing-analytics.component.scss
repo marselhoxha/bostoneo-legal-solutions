@@ -42,8 +42,8 @@
   th {
     font-weight: 600;
     font-size: 0.875rem;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
+    color: var(--legience-text-secondary, #495057);
+    border-bottom: 2px solid var(--legience-border-hairline, #dee2e6);
   }
   
   td {

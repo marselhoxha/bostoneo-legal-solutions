@@ -290,7 +290,7 @@ $warning: #ffc107 !default;
     
     .char-counter {
       font-size: 12px;
-      color: #212529;
+      color: var(--legience-text-secondary, #212529);
       
       &.text-warning {
         color: $warning !important;
@@ -477,7 +477,7 @@ $warning: #ffc107 !default;
         
         .timer-sublabel {
           font-size: 12px;
-          color: #212529;
+          color: var(--legience-text-secondary, #212529);
           font-weight: 500;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -567,7 +567,7 @@ $warning: #ffc107 !default;
         }
         
         .entry-date {
-          color: #212529;
+          color: var(--legience-text-secondary, #212529);
           font-size: 12px;
         }
       }

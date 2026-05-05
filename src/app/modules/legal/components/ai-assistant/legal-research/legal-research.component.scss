@@ -3,7 +3,8 @@
 // Import flatpickr styles
 @import 'flatpickr/dist/flatpickr.min.css';
 
-// Velzon Theme Variables (using existing theme colors)
+// Velzon Theme Variables (using existing theme colors) — kept as bare hex;
+// SCSS color functions (lighten/darken/mix) can't operate on var() expressions.
 $primary-color: #405189;
 $success-color: #0ab39c;
 $info-color: #299cdb;
@@ -144,7 +145,7 @@ $gray-700: #495057;
 
       &:focus {
         border-color: rgba($primary-color, 0.3);
-        background-color: #fff;
+        background-color: var(--legience-bg-card, #fff);
       }
     }
 
@@ -159,10 +160,10 @@ $gray-700: #495057;
 
       .dropdown-item {
         padding: 0.5rem 1rem;
-        color: #495057;
+        color: var(--legience-text-secondary, #495057);
 
         &:hover {
-          background-color: #f3f6f9;
+          background-color: var(--legience-bg-card-hover, #f3f6f9);
           color: $primary-color;
         }
       }
@@ -183,7 +184,7 @@ $gray-700: #495057;
       .card-title {
         font-size: 0.9375rem;
         font-weight: 600;
-        color: #495057;
+        color: var(--legience-text-secondary, #495057);
       }
     }
 
@@ -219,31 +220,31 @@ $gray-700: #495057;
 
   // Badge Styles - Velzon Soft Badges
   .badge-soft-primary {
-    color: #405189;
+    color: var(--legience-accent, #405189);
     background-color: rgba(64, 81, 137, 0.18);
     border: 1px solid rgba(64, 81, 137, 0.1);
   }
 
   .badge-soft-success {
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
     background-color: rgba(10, 179, 156, 0.18);
     border: 1px solid rgba(10, 179, 156, 0.1);
   }
 
   .badge-soft-info {
-    color: #299cdb;
+    color: var(--legience-info, #299cdb);
     background-color: rgba(41, 156, 219, 0.18);
     border: 1px solid rgba(41, 156, 219, 0.1);
   }
 
   .badge-soft-warning {
-    color: #f7b84b;
+    color: var(--legience-warning, #f7b84b);
     background-color: rgba(247, 184, 75, 0.18);
     border: 1px solid rgba(247, 184, 75, 0.1);
   }
 
   .badge-soft-danger {
-    color: #f06548;
+    color: var(--legience-danger, #f06548);
     background-color: rgba(240, 101, 72, 0.18);
     border: 1px solid rgba(240, 101, 72, 0.1);
   }
@@ -287,14 +288,14 @@ $gray-700: #495057;
 
   // Button Styles - Velzon Soft Buttons
   .btn-soft-primary {
-    color: #405189;
+    color: var(--legience-accent, #405189);
     background-color: rgba(64, 81, 137, 0.1);
     border-color: transparent;
 
     &:hover {
       color: #fff;
-      background-color: #405189;
-      border-color: #405189;
+      background-color: var(--legience-accent, #405189);
+      border-color: var(--legience-accent, #405189);
     }
   }
 
@@ -311,38 +312,38 @@ $gray-700: #495057;
   }
 
   .btn-soft-success {
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
     background-color: rgba(10, 179, 156, 0.1);
     border-color: transparent;
 
     &:hover {
       color: #fff;
-      background-color: #0ab39c;
-      border-color: #0ab39c;
+      background-color: var(--legience-success, #0ab39c);
+      border-color: var(--legience-success, #0ab39c);
     }
   }
 
   .btn-soft-info {
-    color: #299cdb;
+    color: var(--legience-info, #299cdb);
     background-color: rgba(41, 156, 219, 0.1);
     border-color: transparent;
 
     &:hover {
       color: #fff;
-      background-color: #299cdb;
-      border-color: #299cdb;
+      background-color: var(--legience-info, #299cdb);
+      border-color: var(--legience-info, #299cdb);
     }
   }
 
   .btn-soft-danger {
-    color: #f06548;
+    color: var(--legience-danger, #f06548);
     background-color: rgba(240, 101, 72, 0.1);
     border-color: transparent;
 
     &:hover {
       color: #fff;
-      background-color: #f06548;
-      border-color: #f06548;
+      background-color: var(--legience-danger, #f06548);
+      border-color: var(--legience-danger, #f06548);
     }
   }
 
@@ -396,21 +397,21 @@ $gray-700: #495057;
       thead th {
         font-weight: 600;
         font-size: 0.8125rem;
-        color: #878a99;
-        background-color: #f3f6f9;
-        border-bottom: 1px solid #e9ebec;
+        color: var(--legience-text-muted, #878a99);
+        background-color: var(--legience-bg-card-hover, #f3f6f9);
+        border-bottom: 1px solid var(--legience-border-hairline, #e9ebec);
         padding: 0.75rem;
       }
 
       tbody td {
         padding: 0.75rem;
         vertical-align: middle;
-        color: #495057;
+        color: var(--legience-text-secondary, #495057);
         font-size: 0.875rem;
       }
 
       &.table-hover tbody tr:hover {
-        background-color: #f3f6f9;
+        background-color: var(--legience-bg-card-hover, #f3f6f9);
       }
     }
   }
@@ -422,7 +423,7 @@ $gray-700: #495057;
 
     &.alert-danger {
       background-color: rgba(240, 101, 72, 0.1);
-      border-left-color: #f06548;
+      border-left-color: var(--legience-danger, #f06548);
       color: #b73e2c;
     }
   }
@@ -548,12 +549,12 @@ $gray-700: #495057;
 
     h5 {
       font-size: 1rem;
-      color: #495057;
+      color: var(--legience-text-secondary, #495057);
       font-weight: 600;
     }
 
     p {
-      color: #878a99;
+      color: var(--legience-text-muted, #878a99);
       font-size: 0.8125rem;
     }
   }
@@ -598,7 +599,7 @@ $gray-700: #495057;
 
   // Flatpickr Customization for Velzon
   .flatpickr-input {
-    background-color: #fff;
+    background-color: var(--legience-bg-card, #fff);
 
     &:focus {
       border-color: #a0a7c5;
@@ -607,7 +608,7 @@ $gray-700: #495057;
   }
 
   input[data-provider="flatpickr"] {
-    background-color: #fff;
+    background-color: var(--legience-bg-card, #fff);
   }
 
   // Subtle Backgrounds - Velzon Pattern
@@ -630,7 +631,7 @@ $gray-700: #495057;
       .modal-title {
         font-size: 1.125rem;
         font-weight: 600;
-        color: #495057;
+        color: var(--legience-text-secondary, #495057);
       }
     }
 

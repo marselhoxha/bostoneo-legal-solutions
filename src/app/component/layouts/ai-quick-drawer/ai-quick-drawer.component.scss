@@ -1,0 +1,120 @@
+.ai-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.30);
+  z-index: 1080;
+  animation: fadeIn 0.2s ease;
+}
+
+.ai-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  background: #ffffff;
+  border-left: 1px solid var(--legience-border-hairline);
+  box-shadow: -8px 0 24px -8px rgba(0, 0, 0, 0.10);
+  z-index: 1090;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Geist', system-ui, sans-serif;
+
+  &.open { transform: translateX(0); }
+}
+
+.ai-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+}
+
+.ai-drawer-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-primary);
+
+  i-lucide {
+    color: var(--legience-accent);
+    stroke-width: 2;
+  }
+}
+
+.ai-drawer-close {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--legience-text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  &:hover {
+    background: rgba(28, 25, 23, 0.05);
+    color: var(--legience-text-primary);
+  }
+}
+
+.ai-drawer-context {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 18px;
+  background: rgba(11, 100, 233, 0.04);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  font-size: 13px;
+}
+
+.ai-drawer-context-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-muted);
+  font-weight: 600;
+}
+
+.ai-drawer-context-value {
+  color: var(--legience-text-primary);
+  font-weight: 500;
+}
+
+.ai-drawer-body {
+  flex: 1;
+  padding: 24px 18px;
+  overflow-y: auto;
+}
+
+.ai-drawer-placeholder {
+  font-size: 13.5px;
+  font-weight: 300;
+  color: var(--legience-text-secondary);
+  line-height: 1.6;
+  letter-spacing: -0.008em;
+}
+
+[data-bs-theme="dark"] {
+  .ai-drawer {
+    box-shadow: -8px 0 24px -8px rgba(0, 0, 0, 0.40);
+  }
+  .ai-drawer-context {
+    background: rgba(11, 100, 233, 0.10);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

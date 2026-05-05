@@ -16,7 +16,7 @@
 // NAV PILLS
 // ============================================
 .nav-custom-pills {
-  background: rgba(var(--vz-light-rgb), 0.5);
+  background: rgba(var(--legience-bg-card-hover-rgb), 0.5);
   padding: 4px;
   border-radius: 8px;
   gap: 4px;
@@ -26,20 +26,20 @@
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 500;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     background: transparent;
     border: none;
     transition: all 0.2s ease;
 
     &:hover:not(.active) {
-      color: var(--vz-primary);
-      background: rgba(var(--vz-primary-rgb), 0.08);
+      color: var(--legience-accent);
+      background: rgba(var(--legience-accent-rgb), 0.08);
     }
 
     &.active {
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       color: #fff;
-      box-shadow: 0 2px 4px rgba(var(--vz-primary-rgb), 0.2);
+      box-shadow: 0 2px 4px rgba(var(--legience-accent-rgb), 0.2);
 
       .badge {
         background: rgba(255, 255, 255, 0.2) !important;
@@ -63,20 +63,20 @@
   }
 
   .card {
-    background: var(--vz-light);
-    border: 1px solid var(--vz-border-color) !important;
+    background: var(--legience-bg-card-hover);
+    border: 1px solid var(--legience-border-hairline) !important;
     border-radius: 12px !important;
     overflow: hidden;
     transition: all 0.25s ease;
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.08);
-      border-color: rgba(var(--vz-primary-rgb), 0.3) !important;
+      background-color: rgba(var(--legience-accent-rgb), 0.08);
+      border-color: rgba(var(--legience-accent-rgb), 0.3) !important;
       transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(var(--vz-primary-rgb), 0.12);
+      box-shadow: 0 5px 15px rgba(var(--legience-accent-rgb), 0.12);
 
       h6 {
-        color: var(--vz-primary) !important;
+        color: var(--legience-accent) !important;
       }
     }
   }
@@ -103,22 +103,22 @@
     }
 
     &.badge-primary {
-      background: linear-gradient(135deg, var(--vz-primary) 0%, #5c6bc0 100%);
+      background: linear-gradient(135deg, var(--legience-accent) 0%, #5c6bc0 100%);
       color: #fff;
     }
 
     &.badge-success {
-      background: linear-gradient(135deg, var(--vz-success) 0%, #099885 100%);
+      background: linear-gradient(135deg, var(--legience-success) 0%, #099885 100%);
       color: #fff;
     }
 
     &.badge-warning {
-      background: linear-gradient(135deg, var(--vz-warning) 0%, #e5a93a 100%);
-      color: #000;
+      background: linear-gradient(135deg, var(--legience-warning) 0%, #e5a93a 100%);
+      color: var(--legience-text-primary, #000);
     }
 
     &.badge-danger {
-      background: linear-gradient(135deg, var(--vz-danger) 0%, #d94a30 100%);
+      background: linear-gradient(135deg, var(--legience-danger) 0%, #d94a30 100%);
       color: #fff;
     }
 
@@ -128,19 +128,19 @@
     }
 
     &.badge-info {
-      background: linear-gradient(135deg, var(--vz-info) 0%, #1e7bb8 100%);
+      background: linear-gradient(135deg, var(--legience-info) 0%, #1e7bb8 100%);
       color: #fff;
     }
   }
 }
 
 // Status badges - matching Velzon theme
-.badge-primary { background: rgba(var(--vz-primary-rgb), 0.1) !important; color: var(--vz-primary) !important; }
-.badge-success { background: rgba(var(--vz-success-rgb), 0.1) !important; color: var(--vz-success) !important; }
-.badge-warning { background: rgba(var(--vz-warning-rgb), 0.1) !important; color: var(--vz-warning) !important; }
-.badge-danger { background: rgba(var(--vz-danger-rgb), 0.1) !important; color: var(--vz-danger) !important; }
-.badge-secondary { background: rgba(var(--vz-secondary-rgb), 0.1) !important; color: var(--vz-secondary) !important; }
-.badge-info { background: rgba(var(--vz-info-rgb), 0.1) !important; color: var(--vz-info) !important; }
+.badge-primary { background: rgba(var(--legience-accent-rgb), 0.1) !important; color: var(--legience-accent) !important; }
+.badge-success { background: rgba(var(--legience-success-rgb), 0.1) !important; color: var(--legience-success) !important; }
+.badge-warning { background: rgba(var(--legience-warning-rgb), 0.1) !important; color: var(--legience-warning) !important; }
+.badge-danger { background: rgba(var(--legience-danger-rgb), 0.1) !important; color: var(--legience-danger) !important; }
+.badge-secondary { background: rgba(var(--legience-secondary-rgb), 0.1) !important; color: var(--legience-secondary) !important; }
+.badge-info { background: rgba(var(--legience-info-rgb), 0.1) !important; color: var(--legience-info) !important; }
 
 // ============================================
 // MODAL STYLES - Clean Velzon Theme
@@ -185,7 +185,7 @@
 // PROGRESS STEPS - Velzon Style
 // ============================================
 .progress-wrapper {
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
 
   .step-progress {
     padding: 0 1rem;
@@ -197,7 +197,7 @@
     left: 15%;
     right: 15%;
     height: 3px;
-    background: var(--vz-border-color);
+    background: var(--legience-border-hairline);
     z-index: 0;
     border-radius: 2px;
   }
@@ -207,7 +207,7 @@
     top: 22px;
     left: 15%;
     height: 3px;
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     z-index: 1;
     border-radius: 2px;
     transition: width 0.4s ease;
@@ -228,54 +228,54 @@
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: var(--vz-card-bg);
-      border: 2px solid var(--vz-border-color);
+      background: var(--legience-bg-card);
+      border: 2px solid var(--legience-border-hairline);
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto;
       font-size: 18px;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       transition: all 0.2s ease;
     }
 
     .step-label {
       font-size: 12px;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       font-weight: 500;
       transition: all 0.2s ease;
     }
 
     &:hover:not(.active):not(.completed) {
       .step-icon {
-        border-color: var(--vz-primary);
-        color: var(--vz-primary);
+        border-color: var(--legience-accent);
+        color: var(--legience-accent);
       }
     }
 
     &.active {
       .step-icon {
-        background: var(--vz-primary);
-        border-color: var(--vz-primary);
+        background: var(--legience-accent);
+        border-color: var(--legience-accent);
         color: #fff;
-        box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+        box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.25);
       }
 
       .step-label {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
         font-weight: 600;
       }
     }
 
     &.completed {
       .step-icon {
-        background: var(--vz-success);
-        border-color: var(--vz-success);
+        background: var(--legience-success);
+        border-color: var(--legience-success);
         color: #fff;
       }
 
       .step-label {
-        color: var(--vz-success);
+        color: var(--legience-success);
       }
     }
   }
@@ -301,11 +301,11 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(var(--vz-primary-rgb), 0.2);
+    background: rgba(var(--legience-accent-rgb), 0.2);
     border-radius: 4px;
 
     &:hover {
-      background: rgba(var(--vz-primary-rgb), 0.3);
+      background: rgba(var(--legience-accent-rgb), 0.3);
     }
   }
 }
@@ -315,28 +315,28 @@
 
   .case-option-inner {
     padding: 16px;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 10px;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
     transition: all 0.25s ease;
   }
 
   &:hover .case-option-inner {
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
-    border-color: rgba(var(--vz-primary-rgb), 0.3);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
+    border-color: rgba(var(--legience-accent-rgb), 0.3);
     transform: translateX(4px);
   }
 
   &.selected .case-option-inner {
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
-    border-color: var(--vz-primary);
-    box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.12);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
+    border-color: var(--legience-accent);
+    box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.12);
   }
 
   .case-radio {
     width: 20px;
     height: 20px;
-    border: 2px solid var(--vz-border-color);
+    border: 2px solid var(--legience-border-hairline);
     border-radius: 50%;
     margin-right: 14px;
     display: flex;
@@ -344,7 +344,7 @@
     justify-content: center;
     flex-shrink: 0;
     transition: all 0.2s ease;
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
 
     .radio-indicator {
       width: 8px;
@@ -357,11 +357,11 @@
   }
 
   &.selected .case-radio {
-    border-color: var(--vz-primary);
-    background: var(--vz-primary);
+    border-color: var(--legience-accent);
+    background: var(--legience-accent);
 
     .radio-indicator {
-      background: #fff;
+      background: var(--legience-bg-card, #fff);
       transform: scale(1);
     }
   }
@@ -370,12 +370,12 @@
     h6 {
       font-size: 15px;
       font-weight: 600;
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
       margin-bottom: 4px;
     }
 
     p {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
   }
 }
@@ -404,24 +404,24 @@
 
 .date-picker-item {
   padding: 12px 8px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   text-align: center;
   cursor: pointer;
   transition: all 0.25s ease;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   position: relative;
 
   &:hover:not(.unavailable) {
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
-    border-color: rgba(var(--vz-primary-rgb), 0.3);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
+    border-color: rgba(var(--legience-accent-rgb), 0.3);
     transform: translateY(-2px);
   }
 
   &.selected {
-    background: linear-gradient(135deg, var(--vz-primary) 0%, #5c6bc0 100%);
+    background: linear-gradient(135deg, var(--legience-accent) 0%, #5c6bc0 100%);
     border-color: transparent;
-    box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+    box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.25);
     transform: translateY(-2px);
 
     .date-day-name,
@@ -435,32 +435,32 @@
   }
 
   &.weekend:not(.unavailable) {
-    background: rgba(var(--vz-danger-rgb), 0.05);
+    background: rgba(var(--legience-danger-rgb), 0.05);
 
     .date-day-name {
-      color: var(--vz-danger);
+      color: var(--legience-danger);
     }
 
     &:hover {
-      background: rgba(var(--vz-primary-rgb), 0.08);
+      background: rgba(var(--legience-accent-rgb), 0.08);
     }
   }
 
   &.unavailable {
     opacity: 0.4;
     cursor: not-allowed;
-    background: rgba(var(--vz-secondary-rgb), 0.05);
+    background: rgba(var(--legience-secondary-rgb), 0.05);
 
     &:hover {
       transform: none;
-      background: rgba(var(--vz-secondary-rgb), 0.05);
-      border-color: var(--vz-border-color);
+      background: rgba(var(--legience-secondary-rgb), 0.05);
+      border-color: var(--legience-border-hairline);
     }
 
     .date-day-name,
     .date-day-num,
     .date-month-name {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
 
     .unavailable-badge {
@@ -469,7 +469,7 @@
       right: 4px;
       width: 16px;
       height: 16px;
-      background: var(--vz-danger);
+      background: var(--legience-danger);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -486,7 +486,7 @@
     font-size: 10px;
     text-transform: uppercase;
     font-weight: 600;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     letter-spacing: 0.5px;
   }
 
@@ -495,12 +495,12 @@
     font-weight: 700;
     line-height: 1.2;
     margin: 4px 0;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .date-month-name {
     font-size: 10px;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-weight: 500;
   }
 }
@@ -537,23 +537,23 @@
 
 .time-slot-item {
   padding: 14px 12px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   text-align: center;
   cursor: pointer;
   transition: all 0.25s ease;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
 
   &:hover {
-    background-color: rgba(var(--vz-success-rgb), 0.08);
-    border-color: rgba(var(--vz-success-rgb), 0.3);
+    background-color: rgba(var(--legience-success-rgb), 0.08);
+    border-color: rgba(var(--legience-success-rgb), 0.3);
     transform: translateY(-2px);
   }
 
   &.selected {
-    background: linear-gradient(135deg, var(--vz-success) 0%, #099885 100%);
+    background: linear-gradient(135deg, var(--legience-success) 0%, #099885 100%);
     border-color: transparent;
-    box-shadow: 0 4px 12px rgba(var(--vz-success-rgb), 0.25);
+    box-shadow: 0 4px 12px rgba(var(--legience-success-rgb), 0.25);
     transform: translateY(-2px);
 
     .slot-icon,
@@ -565,7 +565,7 @@
 
   .slot-icon {
     font-size: 20px;
-    color: var(--vz-success);
+    color: var(--legience-success);
     display: block;
     margin-bottom: 6px;
   }
@@ -574,12 +574,12 @@
     font-size: 15px;
     font-weight: 600;
     display: block;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .slot-duration {
     font-size: 11px;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     display: block;
     margin-top: 4px;
     font-weight: 500;
@@ -594,14 +594,14 @@
 }
 
 .alert-soft-info {
-  background: rgba(var(--vz-info-rgb), 0.1);
-  border: 1px solid rgba(var(--vz-info-rgb), 0.2);
+  background: rgba(var(--legience-info-rgb), 0.1);
+  border: 1px solid rgba(var(--legience-info-rgb), 0.2);
   border-radius: 8px;
-  color: var(--vz-info);
+  color: var(--legience-info);
   padding: 14px 18px;
 
   strong {
-    color: var(--vz-info);
+    color: var(--legience-info);
   }
 }
 
@@ -609,12 +609,12 @@
 // BOOKING SUMMARY - Matching attorney pending requests
 // ============================================
 .booking-summary {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   overflow: hidden;
 
   .summary-header {
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     color: #fff;
     padding: 14px 18px;
     font-weight: 600;
@@ -627,14 +627,14 @@
 
   .summary-body {
     padding: 20px;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
   }
 
   .summary-label {
     font-size: 10px;
     text-transform: uppercase;
     font-weight: 600;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     letter-spacing: 0.5px;
     display: block;
     margin-bottom: 4px;
@@ -643,7 +643,7 @@
   .summary-value {
     font-size: 14px;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin-bottom: 0;
   }
 }
@@ -652,78 +652,78 @@
 // BUTTONS - Velzon soft buttons
 // ============================================
 .btn-soft-primary {
-  background: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   border: none;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover {
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     color: #fff;
   }
 }
 
 .btn-soft-secondary {
-  background: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
   border: none;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover {
-    background: var(--vz-secondary);
+    background: var(--legience-secondary);
     color: #fff;
   }
 }
 
 .btn-soft-success {
-  background: rgba(var(--vz-success-rgb), 0.1);
-  color: var(--vz-success);
+  background: rgba(var(--legience-success-rgb), 0.1);
+  color: var(--legience-success);
   border: none;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover {
-    background: var(--vz-success);
+    background: var(--legience-success);
     color: #fff;
   }
 }
 
 .btn-soft-info {
-  background: rgba(var(--vz-info-rgb), 0.1);
-  color: var(--vz-info);
+  background: rgba(var(--legience-info-rgb), 0.1);
+  color: var(--legience-info);
   border: none;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover {
-    background: var(--vz-info);
+    background: var(--legience-info);
     color: #fff;
   }
 }
 
 .btn-soft-danger {
-  background: rgba(var(--vz-danger-rgb), 0.1);
-  color: var(--vz-danger);
+  background: rgba(var(--legience-danger-rgb), 0.1);
+  color: var(--legience-danger);
   border: none;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover {
-    background: var(--vz-danger);
+    background: var(--legience-danger);
     color: #fff;
   }
 }
 
 .btn-primary {
-  background: var(--vz-primary);
+  background: var(--legience-accent);
   border: none;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+    box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.25);
     transform: translateY(-1px);
   }
 
@@ -734,12 +734,12 @@
 }
 
 .btn-info {
-  background: var(--vz-info);
+  background: var(--legience-info);
   border: none;
   font-weight: 500;
 
   &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(var(--vz-info-rgb), 0.25);
+    box-shadow: 0 4px 12px rgba(var(--legience-info-rgb), 0.25);
     transform: translateY(-1px);
   }
 }
@@ -749,21 +749,21 @@
 // ============================================
 .form-control, .form-select {
   border-radius: 6px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   padding: 10px 14px;
   font-size: 14px;
   transition: all 0.2s ease;
 
   &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.1);
   }
 }
 
 .form-label {
   font-weight: 500;
   font-size: 13px;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   margin-bottom: 6px;
 }
 
@@ -773,8 +773,8 @@
   border-radius: 10px;
 
   &:checked {
-    background-color: var(--vz-primary);
-    border-color: var(--vz-primary);
+    background-color: var(--legience-accent);
+    border-color: var(--legience-accent);
   }
 }
 
@@ -828,7 +828,7 @@
     background: rgba(255, 255, 255, 0.03);
 
     &:hover {
-      background: rgba(var(--vz-primary-rgb), 0.12);
+      background: rgba(var(--legience-accent-rgb), 0.12);
     }
   }
 
@@ -836,7 +836,7 @@
     background: rgba(255, 255, 255, 0.03);
 
     &:hover {
-      background: rgba(var(--vz-primary-rgb), 0.12);
+      background: rgba(var(--legience-accent-rgb), 0.12);
     }
   }
 
@@ -844,7 +844,7 @@
     background: rgba(255, 255, 255, 0.03);
 
     &:hover {
-      background: rgba(var(--vz-primary-rgb), 0.12);
+      background: rgba(var(--legience-accent-rgb), 0.12);
     }
   }
 }

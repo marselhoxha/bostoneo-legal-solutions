@@ -1,7 +1,7 @@
 .case-time-entries {
   // Stat Cards - Modern design with colored left border
   .stat-card {
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
@@ -82,7 +82,7 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     margin-bottom: 4px;
   }
 
@@ -90,26 +90,26 @@
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     line-height: 1.2;
   }
 
   .stat-footer {
     padding: 0.6rem 1.25rem;
     background: rgba(0, 0, 0, 0.02);
-    border-top: 1px solid var(--vz-border-color);
+    border-top: 1px solid var(--legience-border-hairline);
 
     span {
       font-size: 0.75rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       font-weight: 500;
     }
   }
 
   // Filter Card
   .filter-card {
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
   }
 
@@ -125,28 +125,28 @@
   }
 
   .status-draft {
-    background-color: rgba(var(--vz-secondary-rgb), 0.15);
-    color: var(--vz-secondary);
+    background-color: rgba(var(--legience-secondary-rgb), 0.15);
+    color: var(--legience-secondary);
   }
 
   .status-submitted {
-    background-color: rgba(var(--vz-warning-rgb), 0.15);
-    color: var(--vz-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.15);
+    color: var(--legience-warning);
   }
 
   .status-approved {
-    background-color: rgba(var(--vz-success-rgb), 0.15);
-    color: var(--vz-success);
+    background-color: rgba(var(--legience-success-rgb), 0.15);
+    color: var(--legience-success);
   }
 
   .status-rejected {
-    background-color: rgba(var(--vz-danger-rgb), 0.15);
-    color: var(--vz-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.15);
+    color: var(--legience-danger);
   }
 
   .status-invoiced {
-    background-color: rgba(var(--vz-info-rgb), 0.15);
-    color: var(--vz-info);
+    background-color: rgba(var(--legience-info-rgb), 0.15);
+    color: var(--legience-info);
   }
 
   // Billable Badge
@@ -165,21 +165,21 @@
   }
 
   .billable-yes {
-    background-color: rgba(var(--vz-success-rgb), 0.15);
-    color: var(--vz-success);
+    background-color: rgba(var(--legience-success-rgb), 0.15);
+    color: var(--legience-success);
   }
 
   .billable-no {
-    background-color: rgba(var(--vz-secondary-rgb), 0.1);
-    color: var(--vz-secondary-color);
+    background-color: rgba(var(--legience-secondary-rgb), 0.1);
+    color: var(--legience-text-muted);
   }
 
   // Hours Badge
   .hours-badge {
     display: inline-block;
     padding: 3px 10px;
-    background-color: rgba(var(--vz-primary-rgb), 0.12);
-    color: var(--vz-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.12);
+    color: var(--legience-accent);
     border-radius: 8px;
     font-weight: 600;
     font-size: 12px;
@@ -187,53 +187,53 @@
 
   // Table Container Card
   .card {
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
     box-shadow: var(--vz-card-box-shadow, none);
   }
 
   // Table
   .time-entries-table {
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
 
     .mat-mdc-header-row {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
     }
 
     .mat-mdc-header-cell {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       font-weight: 600;
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.3px;
-      border-bottom: 1px solid var(--vz-border-color);
+      border-bottom: 1px solid var(--legience-border-hairline);
     }
 
     .mat-mdc-row {
-      background: var(--vz-card-bg);
+      background: var(--legience-bg-card);
       transition: background-color 0.15s ease;
 
       &:hover {
-        background-color: var(--vz-light);
+        background-color: var(--legience-bg-card-hover);
       }
 
       &.editing-row {
-        background-color: rgba(var(--vz-warning-rgb), 0.1);
+        background-color: rgba(var(--legience-warning-rgb), 0.1);
       }
 
       &.non-billable-row {
-        background-color: rgba(var(--vz-secondary-rgb), 0.03);
+        background-color: rgba(var(--legience-secondary-rgb), 0.03);
 
         td {
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
         }
       }
     }
 
     .mat-mdc-cell {
-      color: var(--vz-body-color);
-      border-bottom: 1px solid var(--vz-border-color);
+      color: var(--legience-text-secondary);
+      border-bottom: 1px solid var(--legience-border-hairline);
       padding: 12px 16px;
       font-size: 13px;
     }
@@ -250,7 +250,7 @@
   // User Name
   .user-name {
     font-weight: 500;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
   }
 
   // Table Responsive
@@ -263,25 +263,25 @@
   // Empty State Icon
   .empty-icon {
     font-size: 4rem;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     opacity: 0.5;
   }
 
   // Form Controls - Theme-aware
   .form-control, .form-select {
-    background-color: var(--vz-input-bg-custom, var(--vz-body-bg));
-    border-color: var(--vz-input-border-custom, var(--vz-border-color));
-    color: var(--vz-body-color);
+    background-color: var(--vz-input-bg-custom, var(--legience-bg-page));
+    border-color: var(--vz-input-border-custom, var(--legience-border-hairline));
+    color: var(--legience-text-secondary);
 
     &:focus {
-      background-color: var(--vz-input-bg-custom, var(--vz-body-bg));
-      border-color: var(--vz-primary);
-      color: var(--vz-body-color);
-      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+      background-color: var(--vz-input-bg-custom, var(--legience-bg-page));
+      border-color: var(--legience-accent);
+      color: var(--legience-text-secondary);
+      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
     }
 
     &::placeholder {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
   }
 
@@ -292,14 +292,14 @@
 
   // Input Group
   .input-group-text {
-    background-color: var(--vz-light);
-    border-color: var(--vz-border-color);
-    color: var(--vz-secondary-color);
+    background-color: var(--legience-bg-card-hover);
+    border-color: var(--legience-border-hairline);
+    color: var(--legience-text-muted);
   }
 
   // Form Labels
   .form-label {
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     font-weight: 500;
     font-size: 12px;
     margin-bottom: 0.35rem;
@@ -307,12 +307,12 @@
 
   // Form Check
   .form-check-input {
-    background-color: var(--vz-input-bg-custom, var(--vz-body-bg));
-    border-color: var(--vz-border-color);
+    background-color: var(--vz-input-bg-custom, var(--legience-bg-page));
+    border-color: var(--legience-border-hairline);
 
     &:checked {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
     }
   }
 
@@ -332,52 +332,52 @@
   }
 
   .btn-outline-primary {
-    color: var(--vz-primary);
-    border-color: var(--vz-primary);
+    color: var(--legience-accent);
+    border-color: var(--legience-accent);
 
     &:hover {
-      background-color: var(--vz-primary);
+      background-color: var(--legience-accent);
       color: #fff;
     }
   }
 
   .btn-outline-secondary {
-    color: var(--vz-secondary-color);
-    border-color: var(--vz-border-color);
+    color: var(--legience-text-muted);
+    border-color: var(--legience-border-hairline);
 
     &:hover {
-      background-color: var(--vz-secondary);
-      border-color: var(--vz-secondary);
+      background-color: var(--legience-secondary);
+      border-color: var(--legience-secondary);
       color: #fff;
     }
   }
 
   .btn-outline-success {
-    color: var(--vz-success);
-    border-color: var(--vz-success);
+    color: var(--legience-success);
+    border-color: var(--legience-success);
 
     &:hover {
-      background-color: var(--vz-success);
+      background-color: var(--legience-success);
       color: #fff;
     }
   }
 
   .btn-outline-info {
-    color: var(--vz-info);
-    border-color: var(--vz-info);
+    color: var(--legience-info);
+    border-color: var(--legience-info);
 
     &:hover {
-      background-color: var(--vz-info);
+      background-color: var(--legience-info);
       color: #fff;
     }
   }
 
   .btn-outline-danger {
-    color: var(--vz-danger);
-    border-color: var(--vz-danger);
+    color: var(--legience-danger);
+    border-color: var(--legience-danger);
 
     &:hover {
-      background-color: var(--vz-danger);
+      background-color: var(--legience-danger);
       color: #fff;
     }
   }
@@ -390,7 +390,7 @@
 
     .btn {
       border-radius: 0;
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
 
       &:first-child {
         border-radius: 6px 0 0 6px;
@@ -402,49 +402,49 @@
     }
 
     .btn-outline-primary {
-      background: var(--vz-card-bg);
+      background: var(--legience-bg-card);
     }
   }
 
   // Quick Add Form Card
   .card.border-primary {
-    border-color: var(--vz-primary) !important;
+    border-color: var(--legience-accent) !important;
 
     .card-header {
-      background-color: rgba(var(--vz-primary-rgb), 0.08);
-      border-bottom: 1px solid rgba(var(--vz-primary-rgb), 0.2);
-      color: var(--vz-body-color);
+      background-color: rgba(var(--legience-accent-rgb), 0.08);
+      border-bottom: 1px solid rgba(var(--legience-accent-rgb), 0.2);
+      color: var(--legience-text-secondary);
 
       h6 {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
       }
     }
 
     .card-body {
-      background: var(--vz-card-bg);
+      background: var(--legience-bg-card);
     }
   }
 
   // Paginator
   ::ng-deep .mat-mdc-paginator {
-    background-color: var(--vz-light);
-    color: var(--vz-body-color);
-    border-top: 1px solid var(--vz-border-color);
+    background-color: var(--legience-bg-card-hover);
+    color: var(--legience-text-secondary);
+    border-top: 1px solid var(--legience-border-hairline);
 
     .mat-mdc-paginator-page-size-label,
     .mat-mdc-paginator-range-label {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
 
     .mat-mdc-select-value {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
     }
 
     .mat-mdc-icon-button {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
 
       &:disabled {
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
         opacity: 0.5;
       }
     }
@@ -457,14 +457,14 @@
 
   // Spinner
   ::ng-deep .mat-mdc-progress-spinner circle {
-    stroke: var(--vz-primary);
+    stroke: var(--legience-accent);
   }
 
   // Alert
   .alert-danger {
-    background-color: rgba(var(--vz-danger-rgb), 0.1);
-    border-color: rgba(var(--vz-danger-rgb), 0.2);
-    color: var(--vz-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
+    border-color: rgba(var(--legience-danger-rgb), 0.2);
+    color: var(--legience-danger);
   }
 }
 
@@ -473,7 +473,7 @@
   .case-time-entries {
     // Stat Cards - Dark mode enhancements
     .stat-card {
-      background: var(--vz-card-bg);
+      background: var(--legience-bg-card);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 
       &:hover {
@@ -512,38 +512,38 @@
     // Status badges - Brighter colors for dark mode
     .status-draft {
       background-color: rgba(135, 138, 153, 0.2);
-      color: #adb5bd;
+      color: var(--legience-text-muted, #adb5bd);
     }
 
     .status-submitted {
       background-color: rgba(247, 184, 75, 0.2);
-      color: #f7b84b;
+      color: var(--legience-warning, #f7b84b);
     }
 
     .status-approved {
       background-color: rgba(10, 179, 156, 0.2);
-      color: #0ab39c;
+      color: var(--legience-success, #0ab39c);
     }
 
     .status-rejected {
       background-color: rgba(240, 101, 72, 0.2);
-      color: #f06548;
+      color: var(--legience-danger, #f06548);
     }
 
     .status-invoiced {
       background-color: rgba(41, 156, 219, 0.2);
-      color: #299cdb;
+      color: var(--legience-info, #299cdb);
     }
 
     // Billable badges
     .billable-yes {
       background-color: rgba(10, 179, 156, 0.2);
-      color: #0ab39c;
+      color: var(--legience-success, #0ab39c);
     }
 
     .billable-no {
       background-color: rgba(135, 138, 153, 0.15);
-      color: #878a99;
+      color: var(--legience-text-muted, #878a99);
     }
 
     // Hours badge
@@ -606,7 +606,7 @@
 html[data-bs-theme="dark"] .case-time-entries {
   // Stat Cards - Dark mode enhancements
   .stat-card {
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 
     &:hover {
@@ -645,37 +645,37 @@ html[data-bs-theme="dark"] .case-time-entries {
   // Status badges - Brighter colors for dark mode
   .status-draft {
     background-color: rgba(135, 138, 153, 0.2);
-    color: #adb5bd;
+    color: var(--legience-text-muted, #adb5bd);
   }
 
   .status-submitted {
     background-color: rgba(247, 184, 75, 0.2);
-    color: #f7b84b;
+    color: var(--legience-warning, #f7b84b);
   }
 
   .status-approved {
     background-color: rgba(10, 179, 156, 0.2);
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
   }
 
   .status-rejected {
     background-color: rgba(240, 101, 72, 0.2);
-    color: #f06548;
+    color: var(--legience-danger, #f06548);
   }
 
   .status-invoiced {
     background-color: rgba(41, 156, 219, 0.2);
-    color: #299cdb;
+    color: var(--legience-info, #299cdb);
   }
 
   .billable-yes {
     background-color: rgba(10, 179, 156, 0.2);
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
   }
 
   .billable-no {
     background-color: rgba(135, 138, 153, 0.15);
-    color: #878a99;
+    color: var(--legience-text-muted, #878a99);
   }
 
   .hours-badge {

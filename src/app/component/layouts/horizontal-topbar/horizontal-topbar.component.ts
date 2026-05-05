@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, EventEmitter, Output, ViewChild, ElementRef, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, EventEmitter, Output, ViewChild, ElementRef, Input, HostListener } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -32,13 +32,59 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
     private rbacService: RbacService,
     private organizationService: OrganizationService
   ) {
-    // Subscribe to route changes to update active menu
+    // Subscribe to route changes to update active menu + close submenus.
+    // Blurring the active element drops the `:focus-within` trigger on the
+    // parent .lt-nav-item, which is what was keeping the dropdown open
+    // after a submenu click — `:hover` was gone but the freshly-focused
+    // submenu link kept :focus-within active until focus moved away.
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
       takeUntil(this.destroy$)
     ).subscribe(() => {
       this.initActiveMenu();
+      this.closeAllSubmenus();
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active.closest('app-horizontal-topbar')) {
+        active.blur();
+      }
     });
+  }
+
+  /**
+   * Click handler for top-level nav parents that have submenus.
+   * - Parent without link: prevent navigation, toggle submenu open state
+   * - Parent with link: let navigation happen, but close any other open
+   *   submenus and close this one (clean state on next visit)
+   * Click-outside-to-close is handled by @HostListener('document:click')
+   */
+  onParentClick(item: any, event: MouseEvent): void {
+    if (!item.link) {
+      event.preventDefault();
+      const wasOpen = !!item['_ltOpen'];
+      this.closeAllSubmenus();
+      item['_ltOpen'] = !wasOpen;
+    } else {
+      this.closeAllSubmenus();
+    }
+  }
+
+  private closeAllSubmenus(): void {
+    const walk = (items: any[]) => items?.forEach(i => {
+      i['_ltOpen'] = false;
+      if (i.subItems) walk(i.subItems);
+    });
+    walk(this.menuItems);
+  }
+
+  /**
+   * Close any open submenu when clicking outside the topbar.
+   */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('app-horizontal-topbar')) {
+      this.closeAllSubmenus();
+    }
   }
 
   ngOnInit(): void {

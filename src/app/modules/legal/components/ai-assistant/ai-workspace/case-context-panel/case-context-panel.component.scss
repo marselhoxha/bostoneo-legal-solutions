@@ -4,8 +4,8 @@
 :host { display: block; }
 
 .case-context-panel {
-  background: var(--vz-card-bg, #ffffff);
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  background: var(--legience-bg-card, #ffffff);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 10px;
   padding: 1.25rem;
 
@@ -17,7 +17,7 @@
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      background: var(--vz-light, #f3f3f9);
+      background: var(--legience-bg-card-hover, #f3f3f9);
       color: var(--vz-gray-500, #adb5bd);
       display: inline-flex;
       align-items: center;
@@ -27,14 +27,14 @@
     }
 
     h6 {
-      color: var(--vz-heading-color, #212529);
+      color: var(--legience-text-primary, #212529);
       margin-bottom: 0.4rem;
       font-weight: 600;
     }
 
     p {
       font-size: 0.8rem;
-      color: var(--vz-secondary-color, #74788d);
+      color: var(--legience-text-muted, #74788d);
       margin-bottom: 1rem;
       line-height: 1.5;
     }
@@ -62,19 +62,19 @@
       align-self: flex-end;
       padding: 0 0.25rem;
       font-size: 0.75rem;
-      color: var(--vz-body-color, #495057);
+      color: var(--legience-text-secondary, #495057);
       text-decoration: none;
 
-      &:hover { color: var(--vz-danger, #f06548); }
+      &:hover { color: var(--legience-danger, #f06548); }
     }
 
     .ctx-picker-empty {
       font-size: 0.75rem;
-      color: var(--vz-secondary-color, #74788d);
+      color: var(--legience-text-muted, #74788d);
       text-align: center;
       margin-top: 0.1rem;
 
-      a { color: var(--vz-primary, #405189); font-weight: 500; }
+      a { color: var(--legience-accent, #405189); font-weight: 500; }
     }
   }
 }
@@ -86,14 +86,14 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
   margin-bottom: 0.4rem;
 }
 
 .ctx-case-name {
   font-weight: 600;
   font-size: 1rem;
-  color: var(--vz-heading-color, #212529);
+  color: var(--legience-text-primary, #212529);
   line-height: 1.3;
   word-break: break-word;
 }
@@ -101,7 +101,7 @@
 .ctx-case-num {
   font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
   margin-top: 0.15rem;
 }
 
@@ -122,11 +122,11 @@
   white-space: nowrap;
 
   &.purple { background: #6f42c1; }
-  &.info   { background: var(--vz-info, #299cdb); }
+  &.info   { background: var(--legience-info, #299cdb); }
 }
 
 .ctx-divider {
-  border-top: 1px dashed var(--vz-border-color, #e9ebec);
+  border-top: 1px dashed var(--legience-border-hairline, #e9ebec);
   margin: 0.9rem 0;
 }
 
@@ -139,12 +139,12 @@
   gap: 0.5rem;
 
   .ctx-label {
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     flex-shrink: 0;
   }
 
   .ctx-value {
-    color: var(--vz-body-color, #212529);
+    color: var(--legience-text-secondary, #212529);
     font-weight: 500;
     text-align: right;
     word-break: break-word;
@@ -155,7 +155,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--vz-primary, #405189);
+  color: var(--legience-accent, #405189);
   font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none;
@@ -191,14 +191,14 @@
 
     h6 { color: #f3f6f9; }
 
-    p { color: #adb5bd; }
+    p { color: var(--legience-text-muted, #adb5bd); }
   }
 
-  .ctx-title { color: #adb5bd; }
+  .ctx-title { color: var(--legience-text-muted, #adb5bd); }
 
   .ctx-case-name { color: #f3f6f9; }
 
-  .ctx-case-num { color: #adb5bd; }
+  .ctx-case-num { color: var(--legience-text-muted, #adb5bd); }
 
   .ctx-badge {
     &.purple { background: rgba(111, 66, 193, 0.35); color: #d6c6f0; }
@@ -208,7 +208,7 @@
   .ctx-divider { border-top-color: #3a4048; }
 
   .ctx-row {
-    .ctx-label { color: #adb5bd; }
+    .ctx-label { color: var(--legience-text-muted, #adb5bd); }
     .ctx-value { color: #ced4da; }
   }
 
@@ -219,6 +219,6 @@
   }
 
   .case-context-panel.empty .ctx-picker-cancel { color: #ced4da; }
-  .case-context-panel.empty .ctx-picker-empty { color: #adb5bd; }
+  .case-context-panel.empty .ctx-picker-empty { color: var(--legience-text-muted, #adb5bd); }
   .case-context-panel.empty .ctx-picker-empty a { color: #85a7ec; }
 }

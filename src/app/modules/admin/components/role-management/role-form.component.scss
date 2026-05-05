@@ -5,8 +5,8 @@ mat-dialog-content {
 }
 
 .form-check-input:indeterminate {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
+  background-color: var(--legience-accent, #0d6efd);
+  border-color: var(--legience-accent, #0d6efd);
 }
 
 .accordion-button {

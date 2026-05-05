@@ -1,3 +1,12 @@
+<!--
+  V61–V63 PI workflow migration: when the case is Personal Injury AND the feature flag
+  resolves true (env.features.attorneyFacingPiView OR currentUser.betaAttorneyView),
+  render the new attorney-facing shell instead of the legacy 9-tab UI. The legacy view
+  remains accessible via the "Switch to legacy view" action in the new shell's More menu.
+-->
+<app-pi-case-detail *ngIf="useNewPiView; else legacyView" [case]="case"></app-pi-case-detail>
+
+<ng-template #legacyView>
 <!-- Page Title & Breadcrumb -->
 <div class="page-title-box d-sm-flex align-items-center justify-content-between">
   <h4 class="mb-sm-0">Case Details</h4>
@@ -1201,3 +1210,4 @@
       </div>
     </div>
   </div>
+</ng-template>

@@ -22,7 +22,7 @@
   }
 
   &.completed:not(:last-child)::after {
-    background-color: #0ab39c;
+    background-color: var(--legience-success, #0ab39c);
   }
 }
 
@@ -39,19 +39,19 @@
   transition: all 0.3s ease;
 
   &.active {
-    background-color: #405189;
+    background-color: var(--legience-accent, #405189);
     color: #fff;
   }
 
   &.completed {
-    background-color: #0ab39c;
+    background-color: var(--legience-success, #0ab39c);
     color: #fff;
   }
 
   &.pending {
-    background-color: #f3f6f9;
-    color: #878a99;
-    border: 1px solid #e9ebec;
+    background-color: var(--legience-bg-card-hover, #f3f6f9);
+    color: var(--legience-text-muted, #878a99);
+    border: 1px solid var(--legience-border-hairline, #e9ebec);
   }
 }
 
@@ -59,17 +59,17 @@
   margin-top: 0.5rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #878a99;
+  color: var(--legience-text-muted, #878a99);
   text-align: center;
   white-space: nowrap;
 
   &.active {
-    color: #405189;
+    color: var(--legience-accent, #405189);
     font-weight: 600;
   }
 
   &.completed {
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
   }
 }
 
@@ -83,7 +83,7 @@
   }
 
   &.selected {
-    border-color: #405189 !important;
+    border-color: var(--legience-accent, #405189) !important;
     box-shadow: 0 0 0 1px #405189;
   }
 }

@@ -10,7 +10,7 @@ $info: #299cdb;
 
 .case-timeline-wrapper {
   padding: 1.5rem;
-  background: linear-gradient(135deg, var(--vz-card-bg) 0%, var(--vz-card-bg) 100%);
+  background: linear-gradient(135deg, var(--legience-bg-card) 0%, var(--legience-bg-card) 100%);
   border-radius: 0.75rem;
   min-height: 200px;
 }
@@ -44,7 +44,7 @@ $info: #299cdb;
   }
 
   .loading-text {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 0.875rem;
     margin: 0;
   }
@@ -89,13 +89,13 @@ $info: #299cdb;
   }
 
   .error-title {
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     font-weight: 600;
     margin-bottom: 0.5rem;
   }
 
   .error-message {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 0.875rem;
     margin-bottom: 1.25rem;
   }
@@ -167,7 +167,7 @@ $info: #299cdb;
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: var(--vz-border-color);
+        background: var(--legience-border-hairline);
         animation: empty-dots 1.5s ease-in-out infinite;
 
         &:nth-child(1) { animation-delay: 0s; }
@@ -178,13 +178,13 @@ $info: #299cdb;
   }
 
   .empty-title {
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     font-weight: 600;
     margin-bottom: 0.5rem;
   }
 
   .empty-description {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 0.875rem;
     max-width: 300px;
     margin: 0;
@@ -206,7 +206,7 @@ $info: #299cdb;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 
   .progress-info {
     flex: 1;
@@ -224,7 +224,7 @@ $info: #299cdb;
         margin: 0;
         font-size: 1.125rem;
         font-weight: 600;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
 
         i {
           color: $primary;
@@ -237,7 +237,7 @@ $info: #299cdb;
         align-items: baseline;
         gap: 2px;
         padding: 0.25rem 0.75rem;
-        background: var(--vz-light);
+        background: var(--legience-bg-card-hover);
         border-radius: 2rem;
 
         .current-phase {
@@ -247,18 +247,18 @@ $info: #299cdb;
         }
 
         .phase-separator {
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
           font-weight: 400;
         }
 
         .total-phases {
           font-size: 0.875rem;
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
         }
 
         .phase-label {
           font-size: 0.75rem;
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
           margin-left: 4px;
         }
       }
@@ -287,7 +287,7 @@ $info: #299cdb;
         }
 
         &.remaining {
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
         }
       }
     }
@@ -308,7 +308,7 @@ $info: #299cdb;
 
         .bg-circle {
           fill: none;
-          stroke: var(--vz-light);
+          stroke: var(--legience-bg-card-hover);
           stroke-width: 8;
         }
 
@@ -332,13 +332,13 @@ $info: #299cdb;
         .number {
           font-size: 1.25rem;
           font-weight: 700;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           line-height: 1;
         }
 
         .symbol {
           font-size: 0.75rem;
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
         }
       }
 
@@ -364,7 +364,7 @@ $info: #299cdb;
 
   .progress-bar-track {
     height: 8px;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
     border-radius: 4px;
     overflow: hidden;
 
@@ -405,7 +405,7 @@ $info: #299cdb;
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: var(--vz-light);
+      background: var(--legience-bg-card-hover);
       border: 2px solid #fff;
       transform: translate(-50%, -2px);
       transition: all 0.3s ease;
@@ -428,8 +428,8 @@ $info: #299cdb;
       }
 
       &.pending {
-        background: var(--vz-light);
-        border-color: var(--vz-border-color);
+        background: var(--legience-bg-card-hover);
+        border-color: var(--legience-border-hairline);
       }
     }
   }
@@ -459,8 +459,8 @@ $info: #299cdb;
 }
 
 .phase-card {
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.75rem;
   padding: 1.25rem;
   transition: all 0.3s ease;
@@ -474,7 +474,7 @@ $info: #299cdb;
     left: 0;
     right: 0;
     height: 3px;
-    background: var(--vz-border-color);
+    background: var(--legience-border-hairline);
     transition: all 0.3s ease;
   }
 
@@ -492,7 +492,7 @@ $info: #299cdb;
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: var(--vz-light);
+      background: var(--legience-bg-card-hover);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -510,7 +510,7 @@ $info: #299cdb;
     .phase-connector {
       flex: 1;
       height: 2px;
-      background: var(--vz-border-color);
+      background: var(--legience-border-hairline);
       margin-left: 0.5rem;
       border-radius: 1px;
       transition: all 0.3s ease;
@@ -539,14 +539,14 @@ $info: #299cdb;
     .phase-title {
       font-size: 0.9375rem;
       font-weight: 600;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       margin-bottom: 0.5rem;
       line-height: 1.3;
     }
 
     .phase-description {
       font-size: 0.8125rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       line-height: 1.5;
       margin-bottom: 0.75rem;
       display: -webkit-box;
@@ -596,8 +596,8 @@ $info: #299cdb;
       }
 
       .badge-pending {
-        background: var(--vz-light);
-        color: var(--vz-secondary-color);
+        background: var(--legience-bg-card-hover);
+        color: var(--legience-text-muted);
       }
 
       .badge-skipped {
@@ -616,7 +616,7 @@ $info: #299cdb;
         align-items: center;
         gap: 0.375rem;
         font-size: 0.75rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
 
         i {
           font-size: 12px;
@@ -677,7 +677,7 @@ $info: #299cdb;
 
   // Final completed phase when case is closed - highlighted success style
   &.final-completed {
-    background: linear-gradient(135deg, var(--vz-card-bg) 0%, rgba($success, 0.08) 100%);
+    background: linear-gradient(135deg, var(--legience-bg-card) 0%, rgba($success, 0.08) 100%);
     border-color: rgba($success, 0.4);
     box-shadow: 0 4px 20px rgba($success, 0.15);
 
@@ -740,7 +740,7 @@ $info: #299cdb;
 
   .highlight-card {
     position: relative;
-    background: linear-gradient(135deg, var(--vz-card-bg) 0%, var(--vz-light) 100%);
+    background: linear-gradient(135deg, var(--legience-bg-card) 0%, var(--legience-bg-card-hover) 100%);
     border: 1px solid rgba($primary, 0.2);
     border-radius: 0.75rem;
     overflow: hidden;
@@ -797,7 +797,7 @@ $info: #299cdb;
             margin: 0;
             font-size: 1.125rem;
             font-weight: 600;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
           }
         }
 
@@ -829,7 +829,7 @@ $info: #299cdb;
 
       .highlight-description {
         font-size: 0.875rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
         line-height: 1.6;
         margin-bottom: 1.25rem;
       }
@@ -839,7 +839,7 @@ $info: #299cdb;
         align-items: center;
         gap: 0.75rem;
         padding: 1rem;
-        background: var(--vz-card-bg);
+        background: var(--legience-bg-card);
         border-radius: 0.5rem;
 
         .timeline-item {
@@ -874,7 +874,7 @@ $info: #299cdb;
             .label {
               display: block;
               font-size: 0.6875rem;
-              color: var(--vz-secondary-color);
+              color: var(--legience-text-muted);
               text-transform: uppercase;
               letter-spacing: 0.3px;
             }
@@ -882,7 +882,7 @@ $info: #299cdb;
             .date {
               font-size: 0.8125rem;
               font-weight: 600;
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
             }
           }
         }
@@ -900,7 +900,7 @@ $info: #299cdb;
     // Completed card variant
     &.completed-card {
       border-color: rgba($success, 0.3);
-      background: linear-gradient(135deg, var(--vz-card-bg) 0%, rgba($success, 0.05) 100%);
+      background: linear-gradient(135deg, var(--legience-bg-card) 0%, rgba($success, 0.05) 100%);
 
       .success-glow {
         background: radial-gradient(circle, rgba($success, 0.15) 0%, transparent 70%);
@@ -955,7 +955,7 @@ $info: #299cdb;
     .info-text {
       margin: 0;
       font-size: 0.8125rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       line-height: 1.5;
     }
   }
@@ -1057,16 +1057,16 @@ $info: #299cdb;
 // ================================
 [data-layout-mode="dark"] {
   .case-timeline-wrapper {
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
   }
 
   .progress-bar-container .progress-bar-track {
-    background: var(--vz-tertiary-bg);
+    background: var(--legience-bg-subtle);
   }
 
   .phase-card {
-    background: var(--vz-tertiary-bg);
-    border-color: var(--vz-border-color);
+    background: var(--legience-bg-subtle);
+    border-color: var(--legience-border-hairline);
 
     &:hover {
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -1074,7 +1074,7 @@ $info: #299cdb;
   }
 
   .current-phase-highlight .highlight-card {
-    background: linear-gradient(135deg, var(--vz-tertiary-bg) 0%, var(--vz-card-bg) 100%);
+    background: linear-gradient(135deg, var(--legience-bg-subtle) 0%, var(--legience-bg-card) 100%);
   }
 
   .info-banner {

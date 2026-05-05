@@ -9,17 +9,17 @@
 }
 
 .form-check-input:checked {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
 }
 
 .btn-soft-danger {
   background-color: rgba(240, 101, 72, 0.1);
-  color: #f06548;
+  color: var(--legience-danger, #f06548);
   border: none;
 
   &:hover {
-    background-color: #f06548;
+    background-color: var(--legience-danger, #f06548);
     color: #fff;
   }
 }
@@ -46,7 +46,7 @@
 
 // Organization selection list
 .border.rounded {
-  background-color: #f8f9fa;
+  background-color: var(--legience-bg-card-hover, #f8f9fa);
 
   .form-check {
     margin-bottom: 0.25rem;

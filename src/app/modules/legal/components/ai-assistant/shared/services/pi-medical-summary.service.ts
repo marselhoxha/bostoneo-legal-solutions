@@ -10,7 +10,8 @@ import {
   RedFlagItem,
   MissingRecordItem,
   TreatmentGap,
-  CompletenessMetrics
+  CompletenessMetrics,
+  DemandScenario
 } from '../models/pi-medical-summary.model';
 
 @Injectable({
@@ -147,6 +148,16 @@ export class PIMedicalSummaryService {
   }
 
   /**
+   * P5.4 — Persist the attorney's demand calculator scenario.
+   * Returns the updated summary so the caller can pick up `savedAt`.
+   */
+  updateDemandScenario(caseId: number, scenario: DemandScenario): Observable<PIMedicalSummary> {
+    return this.http.put<any>(`${this.baseUrl}/${caseId}/medical-summary/demand-scenario`, scenario).pipe(
+      map(response => response.data?.summary)
+    );
+  }
+
+  /**
    * Delete medical summary
    */
   deleteMedicalSummary(caseId: number): Observable<void> {
@@ -154,4 +165,64 @@ export class PIMedicalSummaryService {
       map(() => undefined)
     );
   }
+
+  /**
+   * P11.a — Cross-document anomaly detection. Pure rules-based scan over
+   * the case's records + scanned-doc tracking + intake fields.
+   */
+  getDocumentAnomalies(caseId: number): Observable<PIDocumentAnomaly[]> {
+    return this.http.get<any>(`${this.baseUrl}/${caseId}/medical-summary/anomalies`).pipe(
+      map(response => response.data?.anomalies || [])
+    );
+  }
+
+  /** P11.d — Retrieve saved risk register (no AI call). */
+  getSavedRiskRegister(caseId: number): Observable<PIRiskRegister | null> {
+    return this.http.get<any>(`${this.baseUrl}/${caseId}/medical-summary/risk-register`).pipe(
+      map(response => response.data?.exists ? response.data?.register : null)
+    );
+  }
+
+  /** P11.d — Generate AI risk register. ~5–10s typical latency. */
+  generateRiskRegister(caseId: number): Observable<PIRiskRegister> {
+    return this.http.post<any>(`${this.baseUrl}/${caseId}/medical-summary/risk-register`, {}).pipe(
+      map(response => response.data?.register)
+    );
+  }
+}
+
+/** P11.a — A single cross-doc anomaly entry. Mirrors backend response shape. */
+export interface PIDocumentAnomaly {
+  id: string;
+  type: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  message: string;
+  source: string;
+  recommendation: string;
+}
+
+/** P11.d — One risk factor within a tier. */
+export interface PIRiskFactor {
+  factor: string;
+  impact: '+' | '-';
+  weight: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+/** P11.d — Per-tier risk shape. preSuit uses `likelihood`, suit/trial use `risk`. */
+export interface PIRiskTier {
+  likelihood?: number;
+  risk?: number;
+  label?: 'FAVORABLE' | 'MIXED' | 'CHALLENGING' | string;
+  summary?: string;
+  factors?: PIRiskFactor[];
+}
+
+/** P11.d — Full risk register payload. */
+export interface PIRiskRegister {
+  preSuit?: PIRiskTier;
+  suit?: PIRiskTier;
+  trial?: PIRiskTier;
+  generatedAt?: string;
+  generatedByModel?: string;
 }

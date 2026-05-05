@@ -1,13 +1,13 @@
 // Auto-Fill Wizard Component Styles - Velzon Theme
 .auto-fill-wizard {
   .modal-header {
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     padding: 1rem 1.5rem;
 
     .modal-title {
       font-size: 1.125rem;
       font-weight: 500;
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
 
       i {
         font-size: 1.25rem;
@@ -21,7 +21,7 @@
   }
 
   .modal-footer {
-    border-top: 1px solid var(--vz-border-color);
+    border-top: 1px solid var(--legience-border-hairline);
     padding: 1rem 1.5rem;
     gap: 0.5rem;
   }
@@ -43,13 +43,13 @@
           text-align: center;
           font-weight: 500;
           color: var(--vz-gray-600);
-          background-color: var(--vz-light);
+          background-color: var(--legience-bg-card-hover);
           position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
-          border-right: 1px solid var(--vz-border-color);
+          border-right: 1px solid var(--legience-border-hairline);
 
           &:last-child {
             border-right: none;
@@ -69,19 +69,19 @@
           }
 
           &.active {
-            background-color: rgba(var(--vz-primary-rgb), 0.1);
-            color: var(--vz-primary);
+            background-color: rgba(var(--legience-accent-rgb), 0.1);
+            color: var(--legience-accent);
 
             .number {
-              background-color: var(--vz-primary);
+              background-color: var(--legience-accent);
             }
           }
 
           &.completed {
-            color: var(--vz-success);
+            color: var(--legience-success);
 
             .number {
-              background-color: var(--vz-success);
+              background-color: var(--legience-success);
             }
           }
         }
@@ -99,7 +99,7 @@
 
   // Cards and Selections
   .card {
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     margin-bottom: 1.5rem;
 
@@ -113,25 +113,25 @@
       }
 
       &.border-primary {
-        border-color: var(--vz-primary) !important;
+        border-color: var(--legience-accent) !important;
         border-width: 2px;
       }
 
       &.bg-soft-primary {
-        background-color: rgba(var(--vz-primary-rgb), 0.05);
+        background-color: rgba(var(--legience-accent-rgb), 0.05);
       }
     }
 
     .card-header {
-      background-color: var(--vz-light);
-      border-bottom: 1px solid var(--vz-border-color);
+      background-color: var(--legience-bg-card-hover);
+      border-bottom: 1px solid var(--legience-border-hairline);
       padding: 0.75rem 1rem;
 
       .card-title {
         font-size: 0.9375rem;
         font-weight: 500;
         margin: 0;
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
       }
     }
 
@@ -160,12 +160,12 @@
           cursor: pointer;
 
           &:hover {
-            background-color: var(--vz-light);
+            background-color: var(--legience-bg-card-hover);
           }
         }
 
         &.table-active {
-          background-color: rgba(var(--vz-primary-rgb), 0.1);
+          background-color: rgba(var(--legience-accent-rgb), 0.1);
         }
 
         td {
@@ -180,7 +180,7 @@
   .form-label {
     font-weight: 500;
     margin-bottom: 0.5rem;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .form-control,
@@ -189,12 +189,12 @@
     font-size: 0.875rem;
 
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.15);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.15);
     }
 
     &.is-invalid {
-      border-color: var(--vz-danger);
+      border-color: var(--legience-danger);
     }
   }
 
@@ -230,28 +230,28 @@
     padding: 0.35em 0.65em;
 
     &.bg-soft-primary {
-      background-color: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
+      background-color: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
     }
 
     &.bg-primary-subtle {
-      background-color: rgba(var(--vz-primary-rgb), 0.15);
-      color: var(--vz-primary);
+      background-color: rgba(var(--legience-accent-rgb), 0.15);
+      color: var(--legience-accent);
     }
 
     &.bg-info-subtle {
-      background-color: rgba(var(--vz-info-rgb), 0.15);
-      color: var(--vz-info);
+      background-color: rgba(var(--legience-info-rgb), 0.15);
+      color: var(--legience-info);
     }
 
     &.bg-success-subtle {
-      background-color: rgba(var(--vz-success-rgb), 0.15);
-      color: var(--vz-success);
+      background-color: rgba(var(--legience-success-rgb), 0.15);
+      color: var(--legience-success);
     }
 
     &.bg-secondary-subtle {
-      background-color: rgba(var(--vz-secondary-rgb), 0.15);
-      color: var(--vz-secondary);
+      background-color: rgba(var(--legience-secondary-rgb), 0.15);
+      color: var(--legience-secondary);
     }
   }
 
@@ -266,21 +266,21 @@
     }
 
     &.alert-info {
-      background-color: rgba(var(--vz-info-rgb), 0.1);
-      border: 1px solid rgba(var(--vz-info-rgb), 0.2);
-      color: var(--vz-info);
+      background-color: rgba(var(--legience-info-rgb), 0.1);
+      border: 1px solid rgba(var(--legience-info-rgb), 0.2);
+      color: var(--legience-info);
     }
 
     &.alert-success {
-      background-color: rgba(var(--vz-success-rgb), 0.1);
-      border: 1px solid rgba(var(--vz-success-rgb), 0.2);
-      color: var(--vz-success);
+      background-color: rgba(var(--legience-success-rgb), 0.1);
+      border: 1px solid rgba(var(--legience-success-rgb), 0.2);
+      color: var(--legience-success);
     }
 
     &.alert-warning {
-      background-color: rgba(var(--vz-warning-rgb), 0.1);
-      border: 1px solid rgba(var(--vz-warning-rgb), 0.2);
-      color: var(--vz-warning);
+      background-color: rgba(var(--legience-warning-rgb), 0.1);
+      border: 1px solid rgba(var(--legience-warning-rgb), 0.2);
+      color: var(--legience-warning);
     }
   }
 
@@ -291,7 +291,7 @@
     line-height: 1.5;
 
     h1, h2, h3, h4, h5, h6 {
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
       margin-top: 1rem;
       margin-bottom: 0.5rem;
     }
@@ -360,7 +360,7 @@
   .table-responsive::-webkit-scrollbar-track,
   .case-selection-list::-webkit-scrollbar-track,
   .document-preview-content::-webkit-scrollbar-track {
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
   }
 
   &::-webkit-scrollbar-thumb,
@@ -382,33 +382,33 @@
   .auto-fill-wizard {
     .modal-header,
     .modal-footer {
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
     }
 
     .wizard .stepper-header ol li {
       background-color: var(--vz-gray-800);
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
 
       &.active {
-        background-color: rgba(var(--vz-primary-rgb), 0.2);
+        background-color: rgba(var(--legience-accent-rgb), 0.2);
       }
     }
 
     .card {
       background-color: var(--vz-card-bg-custom);
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
 
       .card-header {
         background-color: var(--vz-gray-800);
-        border-color: var(--vz-border-color);
+        border-color: var(--legience-border-hairline);
       }
     }
 
     .table {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
 
       thead th {
-        color: var(--vz-light);
+        color: var(--legience-bg-card-hover);
       }
 
       tbody tr:hover {
@@ -418,14 +418,14 @@
 
     .form-control,
     .form-select {
-      background-color: var(--vz-input-bg);
+      background-color: var(--legience-bg-input);
       border-color: var(--vz-input-border);
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
     }
 
     .document-preview-content {
       background-color: var(--vz-gray-800);
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
     }
   }
 }

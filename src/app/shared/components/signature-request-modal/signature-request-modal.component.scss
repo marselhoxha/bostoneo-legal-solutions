@@ -1,16 +1,16 @@
 .template-card {
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
 
   &:hover {
-    border-color: var(--vz-primary);
+    border-color: var(--legience-accent);
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   }
 
   &.border-primary {
     border-width: 2px;
-    background-color: rgba(var(--vz-primary-rgb), 0.05);
+    background-color: rgba(var(--legience-accent-rgb), 0.05);
   }
 }
 
@@ -20,13 +20,13 @@
 }
 
 .alert-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  border-color: rgba(var(--vz-info-rgb), 0.2);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  border-color: rgba(var(--legience-info-rgb), 0.2);
+  color: var(--legience-info);
 }
 
 .card-header.bg-light {
-  background-color: var(--vz-light) !important;
+  background-color: var(--legience-bg-card-hover) !important;
 }
 
 .form-check-label {

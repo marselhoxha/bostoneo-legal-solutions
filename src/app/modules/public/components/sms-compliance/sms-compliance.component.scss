@@ -10,7 +10,7 @@
 }
 
 .compliance-content {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 48px;
@@ -51,19 +51,19 @@
     top: 44px;
     width: 2px;
     height: calc(100% - 20px);
-    background: #e9ecef;
+    background: var(--legience-bg-subtle, #e9ecef);
   }
 }
 
 // Consent demo box
 .consent-demo {
-  background: #f8f9fa;
-  border: 2px dashed #dee2e6 !important;
+  background: var(--legience-bg-card-hover, #f8f9fa);
+  border: 2px dashed var(--legience-border-hairline, #dee2e6) !important;
 }
 
 // Message samples
 .message-sample {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   transition: all 0.2s ease;
 
   &:hover {
@@ -109,14 +109,14 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: #f8f9fa;
+    background: var(--legience-bg-card-hover, #f8f9fa);
   }
 }
 
 // Print styles
 @media print {
   .compliance-page-wrapper {
-    background: #fff;
+    background: var(--legience-bg-card, #fff);
     padding: 20px;
   }
 
@@ -133,7 +133,7 @@
 
   .card-header {
     background: #f0f0f0 !important;
-    color: #000 !important;
+    color: var(--legience-text-primary, #000) !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

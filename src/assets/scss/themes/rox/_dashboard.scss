@@ -1,0 +1,519 @@
+// ============================================================
+// 26. ATTORNEY DASHBOARD — Tier 3 + Action Cockpit components
+//   Aligns the new dashboard surfaces (focus card, KPI tiles, AI insights,
+//   risk alerts, cross-matter, comm health, empty states) with Rox tokens
+//   so Velzon's default card/shadow/border treatment doesn't bleed
+//   through. Each component gets: hairline border, Rox-spec radius,
+//   neutralised shadow, Geist font weights/letter-spacing.
+// ============================================================
+:root[data-design="rox"] {
+
+  // ── DASHBOARD FOCUS CARD ────────────────────────────────────────
+  // The focus card already uses CSS vars but Velzon's heavier shadow
+  // bleeds through. Anchor it with Rox's hairline border + soft shadow.
+  .dashboard-focus-card {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+
+    .focus-headline {
+      font-family: 'Geist', system-ui, sans-serif;
+      letter-spacing: -0.018em;
+    }
+
+    .focus-eye {
+      letter-spacing: 0.10em;
+    }
+
+    .focus-pill {
+      border-color: var(--rox-border-hairline) !important;
+      box-shadow: none !important;
+    }
+
+    .focus-btn-pri {
+      box-shadow: rgba(11, 100, 233, 0.15) 0 1px 2px 0 !important;
+
+      &:hover {
+        box-shadow: rgba(11, 100, 233, 0.20) 0 2px 4px 0 !important;
+      }
+    }
+  }
+
+  // ── KPI TILE STACK ──────────────────────────────────────────────
+  // Rox: hairline border, 8px radius, Geist typography, hover lifts to
+  // a soft Rox blue tint instead of the harsher Velzon shadow.
+  .kpi-tile {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+
+    &:hover {
+      border-color: rgba(11, 100, 233, 0.30) !important;
+      box-shadow: rgba(11, 100, 233, 0.10) 0 4px 12px -4px !important;
+    }
+  }
+
+  .kpi-tile-label {
+    font-family: 'Geist', system-ui, sans-serif;
+    letter-spacing: 0.06em;
+    color: var(--legience-text-muted) !important;
+    font-weight: 600;
+  }
+
+  .kpi-tile-value {
+    font-family: 'Geist', system-ui, sans-serif;
+    letter-spacing: -0.022em;
+    color: var(--rox-text-primary) !important;
+    font-weight: 700;
+  }
+
+  .kpi-tile-arrow { color: var(--legience-text-muted) !important; }
+  .kpi-tile:hover .kpi-tile-arrow { color: #0b64e9 !important; }
+
+  // ── AI INSIGHTS CARDS ───────────────────────────────────────────
+  // Three or four side-by-side cards. Velzon's default shadow is too heavy
+  // and there's a fight on border-radius. Rox: 8px radius, hairline border,
+  // accent left rail kept (it's the whole point of these cards).
+  .ai-insights-grid { gap: 16px !important; }
+
+  .ai-insight-card {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+
+    &:hover {
+      box-shadow: rgba(0, 0, 0, 0.06) 0 4px 12px -4px !important;
+    }
+  }
+
+  .ai-insight-label {
+    font-family: 'Geist', system-ui, sans-serif;
+    letter-spacing: 0.10em;
+    font-weight: 700;
+  }
+
+  .ai-insight-body {
+    font-family: 'Geist', system-ui, sans-serif;
+    color: var(--legience-text-secondary) !important;
+
+    strong { color: var(--rox-text-primary) !important; font-weight: 600; }
+  }
+
+  // ── RISK ALERTS BAND ────────────────────────────────────────────
+  .risk-alerts-band {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+
+    .risk-alerts-title {
+      font-family: 'Geist', system-ui, sans-serif;
+      color: var(--rox-text-primary) !important;
+      letter-spacing: -0.005em;
+    }
+
+    .risk-alert-item {
+      border-top-color: var(--rox-border-hairline) !important;
+    }
+
+    .risk-alert-title {
+      font-family: 'Geist', system-ui, sans-serif;
+      color: var(--rox-text-primary) !important;
+    }
+
+    .risk-alert-desc {
+      color: var(--legience-text-secondary) !important;
+    }
+
+    // Rail-narrow risk band: list items align with the title (no big
+    // left-pad that loses width inside the col-xxl-4)
+    .risk-alerts-list {
+      padding-left: 0 !important;
+    }
+  }
+
+  // ── CROSS-MATTER INTELLIGENCE ───────────────────────────────────
+  .cross-matter-intel {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+
+    .cmi-header h4 {
+      font-family: 'Geist', system-ui, sans-serif;
+      letter-spacing: -0.012em;
+      color: var(--rox-text-primary) !important;
+    }
+
+    .cmi-summary { color: var(--legience-text-secondary) !important; }
+
+    .cmi-matter-pill {
+      border-color: var(--rox-border-hairline) !important;
+      background: var(--rox-bg-hover) !important;
+      color: var(--rox-text-primary) !important;
+    }
+
+    .cmi-btn-pri { box-shadow: none !important; }
+  }
+
+  // ── CLIENT COMMUNICATION HEALTH ─────────────────────────────────
+  .client-comm-health {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+
+    .cch-title {
+      font-family: 'Geist', system-ui, sans-serif;
+      color: var(--rox-text-primary) !important;
+      letter-spacing: 0.05em;
+    }
+
+    .cch-item { border-top-color: var(--rox-border-hairline) !important; }
+    .cch-name { color: var(--rox-text-primary) !important; font-family: 'Geist', system-ui, sans-serif; }
+    .cch-last { color: var(--legience-text-muted) !important; }
+  }
+
+  // ── COMPACT EMPTY STATES ────────────────────────────────────────
+  .schedule-empty-inline,
+  .urgent-empty-inline {
+    border-color: var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+
+    strong {
+      font-family: 'Geist', system-ui, sans-serif;
+      color: var(--rox-text-primary) !important;
+      letter-spacing: -0.005em;
+    }
+
+    span { color: var(--legience-text-secondary) !important; }
+  }
+ 
+
+  // ── VELZON CARD NEUTRALISATION (the bleed-through fix) ──────────
+  // Velzon's default `.card` ships with a chunky shadow + 0.25rem
+  // border-radius that fight Rox's hairline-borders aesthetic. Neutralise
+  // those defaults under Rox so any nested .card (e.g. inside our hero or
+  // body rows) inherits Rox treatment automatically without needing
+  // per-component overrides.
+  .card {
+    border: 1px solid var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--legience-shadow-sm) !important;
+  }
+
+  .card-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--rox-border-hairline) !important;
+    padding: 14px 18px !important;
+
+    .card-title {
+      font-family: 'Geist', system-ui, sans-serif;
+      letter-spacing: -0.012em;
+      font-weight: 600;
+      color: var(--rox-text-primary) !important;
+    }
+  }
+
+  // Bootstrap row vertical rhythm — give rows breathing room so the
+  // dashboard sections don't all crash into each other vertically.
+  .row + .row { margin-top: 0; }
+
+  // ── UNIFIED CARD SURFACE ───────────────────────────────────
+  // Every non-hero dashboard card uses the same flat surface as the
+  // .risk-alerts-band card. The hero focus card keeps its gradient
+  // (defined in the component SCSS) — it's intentionally distinct.
+  // Everything else matches the Risk Alert card's flat treatment so
+  // the system reads as one consistent set of surfaces.
+  app-attorney-dashboard .card,
+  app-attorney-dashboard .ai-insight-card,
+  app-attorney-dashboard .risk-alerts-band,
+  app-attorney-dashboard .cross-matter-intel,
+  app-attorney-dashboard .client-comm-health,
+  app-attorney-dashboard .kpi-tile {
+    background: var(--legience-bg-card) !important;
+  }
+
+  // (Removed: BAR 2 horizontal-nav defensive override block. Bar 2 now uses
+  // .lt-nav-* classes which Velzon's .navbar-nav .nav-link rules can't
+  // match, so the override is no longer needed. Active-state styling lives
+  // in horizontal-topbar.component.scss with the new .lt-nav-link.active
+  // selector.)
+}
+
+// ============================================================
+// 27. DASHBOARD DARK-MODE TOUCHUPS — keep the same components
+//   readable on dark surfaces. Hairline borders shift to a translucent
+//   white; backgrounds drop their light-mode gradients.
+// ============================================================
+:root[data-design="rox"][data-bs-theme="dark"] {
+  .dashboard-focus-card,
+  .kpi-tile,
+  .ai-insight-card,
+  .risk-alerts-band,
+  .cross-matter-intel,
+  .client-comm-health,
+  .card {
+    border-color: rgba(245, 245, 244, 0.08) !important;
+    box-shadow: rgba(0, 0, 0, 0.20) 0 1px 2px 0 !important;
+  }
+
+  .schedule-empty-inline {
+    background: rgba(245, 245, 244, 0.03) !important;
+  }
+
+  .urgent-empty-inline {
+    background: rgba(22, 163, 74, 0.08) !important;
+  }
+
+  // ── UNIFIED CARD SURFACE (dark mode) ──────────────────────
+  // Mirror the light-mode unified rule. Every non-hero card uses the
+  // flat dark card surface (matches the Risk Alert card). The hero
+  // focus card keeps its dark gradient (set below) — distinct on
+  // purpose.
+  app-attorney-dashboard .card,
+  app-attorney-dashboard .ai-insight-card,
+  app-attorney-dashboard .risk-alerts-band,
+  app-attorney-dashboard .cross-matter-intel,
+  app-attorney-dashboard .client-comm-health,
+  app-attorney-dashboard .kpi-tile {
+    background: var(--legience-bg-card) !important;
+  }
+
+  // ── HERO FOCUS CARD — dark mode visual treatment ───────────
+  // The hero is the ONLY dashboard card with a gradient. Every other
+  // card uses the flat surface (set in the unified rule above). The
+  // hero's gradient gives it visual identity as the day's command
+  // centre. Decorative radial pseudos stay suppressed in dark mode
+  // because they create a metallic shimmer on dark bg.
+  .dashboard-focus-card {
+    background: linear-gradient(135deg, #141414 0%, rgba(37, 99, 235, 0.12) 100%) !important;
+
+    &::before { display: none !important; }
+    &::after  { display: none !important; }
+
+    .focus-eye {
+      color: #5b9dff !important;
+      .eye-icon {
+        background: rgba(91, 157, 255, 0.18) !important;
+        color: #5b9dff !important;
+      }
+    }
+
+    .focus-headline {
+      color: #ffffff !important;
+      .accent {
+        background: none !important;
+        -webkit-background-clip: unset !important;
+        background-clip: unset !important;
+        -webkit-text-fill-color: #5b9dff !important;
+        color: #5b9dff !important;
+      }
+    }
+
+    .focus-desc {
+      color: rgba(255, 255, 255, 0.78) !important;
+      font-weight: 300 !important;
+      // Drop the bolded portion from 600 → 400 so the whole briefing
+      // reads as one slim line. Emphasis still lands via the white
+      // colour against the 78%-white base — colour contrast does the
+      // hierarchy work, weight stays uniformly light.
+      strong { color: #ffffff !important; font-weight: 400 !important; }
+    }
+
+    .focus-pill {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+      color: rgba(255, 255, 255, 0.80) !important;
+
+      .pill-icon { color: #5b9dff !important; }
+      strong { color: #ffffff !important; }
+    }
+
+    // ── Today's pulse pills (dark mode) ────────────────────────────
+    // Lives here (in the global Rox dark-mode block) instead of the
+    // component SCSS because Angular's view-encapsulation attribute
+    // gets attached to the LAST simple selector only, leaving the
+    // component-level dark-mode rule at the SAME effective specificity
+    // as the light-mode rule when the cascade evaluates them under
+    // certain build configs. This `:root[data-design][data-bs-theme]`
+    // chain cleanly outranks anything inside the component CSS.
+    //
+    // Solid dark stone surface + visible warm border so the chip reads
+    // as a discrete element above the navy hero gradient, not a watery
+    // overlay. Bright blue icon + white number give the data scan-able
+    // hierarchy at a glance.
+    .focus-pulse-pill {
+      background: #1c1917 !important;
+      border-color: rgba(245, 245, 244, 0.12) !important;
+      color: #d4d2d1 !important;
+
+      i {
+        color: #5b9dff !important;
+        font-weight: 500 !important;
+      }
+      strong {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+      }
+
+      // Urgent variant — red-tinted surface + amber-red accents
+      &.has-urgent {
+        background: rgba(var(--legience-danger-rgb), 0.18) !important;
+        border-color: rgba(var(--legience-danger-rgb), 0.45) !important;
+        color: #ffd1d1 !important;
+
+        i { color: #ff8a8a !important; }
+        strong { color: #ff8a8a !important; }
+      }
+
+      // Pending variant — amber-tinted surface for pending appts
+      &.has-pending {
+        background: rgba(var(--legience-warning-rgb), 0.18) !important;
+        border-color: rgba(var(--legience-warning-rgb), 0.45) !important;
+        color: #ffe9b8 !important;
+
+        i { color: #ffc24d !important; }
+        strong { color: #ffc24d !important; }
+      }
+    }
+
+    .focus-btn-pri {
+      background: #2563eb !important;
+      border-color: #2563eb !important;
+      color: #ffffff !important;
+
+      &:hover { background: #1d4ed8 !important; border-color: #1d4ed8 !important; }
+    }
+
+    .focus-btn-soft {
+      background: transparent !important;
+      color: rgba(255, 255, 255, 0.90) !important;
+      border-color: rgba(255, 255, 255, 0.18) !important;
+
+      i { color: rgba(255, 255, 255, 0.70) !important; }
+
+      &:hover {
+        border-color: #5b9dff !important;
+        color: #5b9dff !important;
+        i { color: #5b9dff !important; }
+      }
+    }
+  }
+
+  // ── LEGIENCE TOPBAR — dark-mode treatment (.lt-* namespace) ─────────
+  // No `!important` needed — .lt-* classes don't fight any other rules,
+  // they're our own. Specificity here just lifts these above the
+  // component-encapsulated defaults from topbar.component.scss for the
+  // dark-mode delta.
+  .lt-bar-row {
+    background: linear-gradient(135deg, #141414 0%, rgba(37, 99, 235, 0.10) 100%);
+    border-bottom-color: rgba(245, 245, 244, 0.08);
+
+    &::before {
+      background: radial-gradient(circle, rgba(91, 157, 255, 0.10) 0%, transparent 60%);
+    }
+  }
+
+  .lt-brand-firm { color: #a8a29e; }
+
+  .lt-context {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+
+    strong { color: #5b9dff; }
+    .lt-context-num { color: #a8a29e; }
+    i-lucide, i-lucide svg { color: #5b9dff; }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(91, 157, 255, 0.40);
+    }
+  }
+
+  .lt-search {
+    background: #1c1917;
+    border-color: #44403c;
+    color: #a8a29e;
+
+    .lt-search-text { color: #a8a29e; }
+    i-lucide, i-lucide svg { color: #a8a29e; }
+
+    &:hover { border-color: #5b9dff; }
+  }
+
+  .lt-kbd {
+    background: rgba(255, 255, 255, 0.06);
+    color: #d4d2d1;
+  }
+
+  // Ask Legience button keeps its blue gradient (already dark-mode friendly).
+
+  .lt-timer {
+    background: rgba(22, 163, 74, 0.14);
+    border-color: rgba(22, 163, 74, 0.35);
+    color: #6ee7b7;
+
+    .lt-timer-pulse { background: #6ee7b7; }
+    i-lucide, i-lucide svg { color: #6ee7b7; }
+  }
+
+  .lt-cluster {
+    border-left-color: rgba(245, 245, 244, 0.10);
+  }
+
+  .lt-icon-btn {
+    color: #a8a29e;
+
+    &:hover,
+    &:focus {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+    }
+  }
+
+  .lt-icon-badge,
+  .lt-icon-dot {
+    box-shadow: 0 0 0 1.5px #141414;
+  }
+
+  .lt-user-btn:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .lt-user-name { color: #ffffff; }
+  .lt-user-role { color: #a8a29e; }
+  .lt-user-status { border-color: #141414; }
+
+  // ── BAR 2 horizontal nav — dark mode ────────────────────────────────
+  app-horizontal-topbar .lt-nav-link {
+    color: #a8a29e;
+
+    &:hover { color: #ffffff; }
+
+    &.active,
+    &.router-link-active {
+      color: #5b9dff;
+      &::after { background: #5b9dff; }
+
+      .lt-nav-chev { color: #5b9dff; }
+    }
+
+    .lt-nav-chev { color: #6b6764; }
+  }
+
+  app-horizontal-topbar .lt-nav-dropdown {
+    background: var(--legience-bg-card);
+    border-color: rgba(245, 245, 244, 0.08);
+
+    .nav-link {
+      color: #d4d2d1;
+
+      &:hover, &:focus {
+        background: rgba(255, 255, 255, 0.04);
+        color: #ffffff;
+      }
+    }
+  }
+}
+
+

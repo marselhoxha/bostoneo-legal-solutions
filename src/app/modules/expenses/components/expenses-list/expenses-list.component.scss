@@ -24,8 +24,8 @@
   margin-bottom: 0;
   
   .page-link {
-    color: #495057;
-    border-color: #dee2e6;
+    color: var(--legience-text-secondary, #495057);
+    border-color: var(--legience-border-hairline, #dee2e6);
     
     &:focus {
       box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);

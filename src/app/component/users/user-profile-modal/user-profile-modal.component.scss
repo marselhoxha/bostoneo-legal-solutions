@@ -45,7 +45,7 @@
   }
   
   &::-webkit-scrollbar-thumb {
-    background: var(--vz-primary);
+    background: var(--legience-accent);
     border-radius: 3px;
   }
   
@@ -87,17 +87,17 @@
 .badge {
   &.bg-success-subtle {
     background-color: rgba(25, 135, 84, 0.1) !important;
-    color: #198754 !important;
+    color: var(--legience-success, #198754) !important;
   }
   
   &.bg-danger-subtle {
     background-color: rgba(220, 53, 69, 0.1) !important;
-    color: #dc3545 !important;
+    color: var(--legience-danger, #dc3545) !important;
   }
   
   &.bg-warning-subtle {
     background-color: rgba(255, 193, 7, 0.1) !important;
-    color: #ffc107 !important;
+    color: var(--legience-warning, #ffc107) !important;
   }
   
   &.bg-info-subtle {
@@ -107,12 +107,12 @@
   
   &.bg-primary-subtle {
     background-color: rgba(13, 110, 253, 0.1) !important;
-    color: #0d6efd !important;
+    color: var(--legience-accent, #0d6efd) !important;
   }
   
   &.bg-secondary-subtle {
     background-color: rgba(108, 117, 125, 0.1) !important;
-    color: #6c757d !important;
+    color: var(--legience-text-muted, #6c757d) !important;
   }
 }
 
@@ -141,19 +141,19 @@
 
 // Account status indicators
 .text-success {
-  color: #198754 !important;
+  color: var(--legience-success, #198754) !important;
 }
 
 .text-danger {
-  color: #dc3545 !important;
+  color: var(--legience-danger, #dc3545) !important;
 }
 
 .text-warning {
-  color: #ffc107 !important;
+  color: var(--legience-warning, #ffc107) !important;
 }
 
 .text-muted {
-  color: #6c757d !important;
+  color: var(--legience-text-muted, #6c757d) !important;
 }
 
 // Loading and error states
@@ -198,7 +198,7 @@
 // Links styling
 a {
   text-decoration: none;
-  color: var(--vz-primary);
+  color: var(--legience-accent);
   transition: color 0.2s ease;
   
   &:hover {

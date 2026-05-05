@@ -48,7 +48,7 @@
 
 // Text colors
 .text-primary {
-  color: #556ee6 !important;
+  color: var(--legience-accent, #556ee6) !important;
 }
 
 .text-success {
@@ -135,10 +135,10 @@
 
 .btn-soft-primary {
   background-color: rgba(85, 110, 230, 0.1);
-  color: #556ee6;
+  color: var(--legience-accent, #556ee6);
   
   &:hover {
-    background-color: #556ee6;
+    background-color: var(--legience-accent, #556ee6);
   }
 }
 
@@ -162,14 +162,14 @@
 
 // Progress bar
 .progress {
-  background-color: #e9ecef;
+  background-color: var(--legience-bg-subtle, #e9ecef);
   
   &.bg-soft-primary {
     background-color: rgba(85, 110, 230, 0.1) !important;
   }
   
   .progress-bar {
-    background-color: #556ee6;
+    background-color: var(--legience-accent, #556ee6);
   }
 }
 

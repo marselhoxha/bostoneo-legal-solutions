@@ -13,7 +13,7 @@
     top: 1.25rem;
     bottom: 1.5rem;
     width: 3px;
-    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.2) 100%);
     border-radius: 2px;
   }
 
@@ -22,23 +22,23 @@
   h4 {
     font-size: 1.5rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin: 0;
   }
 }
 
 // ==================== Organization Header Card ====================
 .org-header {
-  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.05) 100%);
-  border-left: 4px solid var(--vz-primary);
+  background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.05) 0%, rgba(var(--legience-info-rgb), 0.05) 100%);
+  border-left: 4px solid var(--legience-accent);
 }
 
 // ==================== Stats Row ====================
 .stats-row {
   display: flex;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-radius: 12px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   margin: 1.5rem 0;
   overflow: hidden;
 }
@@ -46,7 +46,7 @@
 .stat-item {
   flex: 1;
   padding: 1.25rem 1.5rem;
-  border-right: 1px solid var(--vz-border-color);
+  border-right: 1px solid var(--legience-border-hairline);
   transition: all 0.2s ease;
 
   &:last-child {
@@ -59,19 +59,19 @@
 }
 
 .stat-item:nth-child(1) {
-  background: rgba(var(--vz-primary-rgb), 0.08);
+  background: rgba(var(--legience-accent-rgb), 0.08);
 }
 
 .stat-item:nth-child(2) {
-  background: rgba(var(--vz-info-rgb), 0.08);
+  background: rgba(var(--legience-info-rgb), 0.08);
 }
 
 .stat-item:nth-child(3) {
-  background: rgba(var(--vz-success-rgb), 0.08);
+  background: rgba(var(--legience-success-rgb), 0.08);
 }
 
 .stat-item:nth-child(4) {
-  background: rgba(var(--vz-warning-rgb), 0.08);
+  background: rgba(var(--legience-warning-rgb), 0.08);
 }
 
 .stat-header {
@@ -85,7 +85,7 @@
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .stat-indicator {
@@ -98,23 +98,23 @@
   font-size: 0.75rem;
 
   &.stat-indicator-primary {
-    background: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
+    background: rgba(var(--legience-accent-rgb), 0.1);
+    color: var(--legience-accent);
   }
 
   &.stat-indicator-success {
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
 
   &.stat-indicator-warning {
-    background: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
   }
 
   &.stat-indicator-info {
-    background: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+    background: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
   }
 }
 
@@ -138,7 +138,7 @@
 .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   line-height: 1;
   font-feature-settings: "tnum";
 }
@@ -180,7 +180,7 @@
     padding: 1rem 1.5rem;
 
     h6 {
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
     }
   }
 
@@ -193,7 +193,7 @@
 code {
   font-size: 0.85em;
   padding: 2px 6px;
-  background-color: var(--vz-light);
+  background-color: var(--legience-bg-card-hover);
   border-radius: 4px;
 }
 
@@ -204,7 +204,7 @@ code {
 
 // ==================== Tab Navigation ====================
 .nav-tabs-custom {
-  border-bottom: 2px solid var(--vz-border-color);
+  border-bottom: 2px solid var(--legience-border-hairline);
 
   .nav-item {
     margin-bottom: -2px;
@@ -213,19 +213,19 @@ code {
   .nav-link {
     border: none;
     padding: 0.75rem 1.25rem;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-weight: 500;
     position: relative;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       background: transparent;
     }
 
     &.active {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       background: transparent;
 
       &::after {
@@ -235,7 +235,7 @@ code {
         left: 0;
         right: 0;
         height: 2px;
-        background: var(--vz-primary);
+        background: var(--legience-accent);
       }
     }
 
@@ -252,34 +252,34 @@ code {
 
 // ==================== Button Styles ====================
 .btn-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
   border: none;
 
   &:hover {
-    background-color: var(--vz-secondary);
+    background-color: var(--legience-secondary);
     color: #fff;
   }
 }
 
 .btn-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  color: var(--legience-info);
   border: none;
 
   &:hover {
-    background-color: var(--vz-info);
+    background-color: var(--legience-info);
     color: #fff;
   }
 }
 
 .btn-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1);
-  color: var(--vz-warning);
+  background-color: rgba(var(--legience-warning-rgb), 0.1);
+  color: var(--legience-warning);
   border: none;
 
   &:hover {
-    background-color: var(--vz-warning);
+    background-color: var(--legience-warning);
     color: #fff;
   }
 }
@@ -321,7 +321,7 @@ code {
 
   .stat-item {
     flex: 1 1 50%;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     &:nth-child(2) {
       border-right: none;
@@ -352,7 +352,7 @@ code {
   .stat-item {
     flex: 1 1 100%;
     border-right: none;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     &:last-child {
       border-bottom: none;
@@ -368,12 +368,12 @@ code {
 [data-bs-theme="dark"] {
   .page-header-wrapper {
     &::before {
-      background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.3) 100%);
+      background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.3) 100%);
     }
   }
 
   .org-header {
-    background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.1) 0%, rgba(var(--vz-info-rgb), 0.1) 100%);
+    background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.1) 0%, rgba(var(--legience-info-rgb), 0.1) 100%);
   }
 
   .stat-item {

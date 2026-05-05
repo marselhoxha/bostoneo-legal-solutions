@@ -53,6 +53,38 @@ export interface ChronologyPhase {
   recordIds?: number[];     // PIMedicalRecord IDs in this phase
 }
 
+/**
+ * Tier 5c — AI-detected open follow-up items the attorney should chase.
+ */
+export interface OpenItem {
+  type: 'MISSING_IMAGING' | 'MISSING_CONSULT' | 'MISSING_PROCEDURE_NOTE'
+      | 'MISSING_DISCHARGE' | 'MISSING_LAB' | 'MISSING_CLINICAL_NOTE' | 'OTHER';
+  description: string;
+  referencedIn?: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+/**
+ * P5.4 — Attorney-saved demand calculator scenario. Persists across sessions
+ * via the demand_scenario JSONB column on pi_medical_summaries.
+ */
+export type FeeMode = 'PRE_SUIT_33' | 'SUIT_FILED_40';
+
+export interface DemandScenario {
+  /** P&S multiplier (typical attorney range 1.5×–5×, default 3.0×). */
+  multiplier: number;
+  /** Lost-wages dollar amount (separate from medical specials). */
+  wageLoss: number;
+  /** Attorney fee mode — 33⅓% pre-suit or 40% post-suit. */
+  feeMode: FeeMode;
+  /** Case costs (filing fees, expert reports, etc.). */
+  costs: number;
+  /** Total liens to satisfy from settlement. */
+  liens: number;
+  /** Server-stamped ISO timestamp of the most recent save. */
+  savedAt?: string;
+}
+
 export interface PIMedicalSummary {
   id?: number;
   caseId: number;
@@ -67,6 +99,9 @@ export interface PIMedicalSummary {
   missingRecords?: MissingRecordItem[];
   keyHighlights?: string;
   prognosisAssessment?: string;
+  causationSummary?: string;          // Tier 5a — collated causation block
+  openItems?: OpenItem[];             // Tier 5c — AI-detected follow-up items
+  demandScenario?: DemandScenario;    // P5.4 — Attorney's last-saved demand calculator state
 
   // Metrics
   totalProviders?: number;

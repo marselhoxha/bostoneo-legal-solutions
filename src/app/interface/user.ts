@@ -20,4 +20,7 @@ export interface User {
       primaryRoleName?: string;
       roles?: string[];
       permissions: string;
+      // V63 — per-user opt-in for the new attorney-facing PI view (P4+).
+      // Drives FeatureFlagService.isAttorneyFacingPiViewEnabled() OR'd with env flag.
+      betaAttorneyView?: boolean;
 }

@@ -13,7 +13,7 @@
     top: 1.25rem;
     bottom: 1.5rem;
     width: 3px;
-    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.2) 100%);
     border-radius: 2px;
   }
 
@@ -22,7 +22,7 @@
   h4 {
     font-size: 1.5rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin: 0;
   }
 }
@@ -35,7 +35,7 @@
     padding: 1rem 1.5rem;
 
     h6 {
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
     }
   }
 
@@ -49,17 +49,17 @@
   .plan-option {
     cursor: pointer;
     transition: all 0.2s ease;
-    background-color: var(--vz-card-bg);
+    background-color: var(--legience-bg-card);
 
     &:hover {
-      border-color: var(--vz-primary) !important;
-      background-color: rgba(var(--vz-primary-rgb), 0.05);
+      border-color: var(--legience-accent) !important;
+      background-color: rgba(var(--legience-accent-rgb), 0.05);
     }
 
     &.selected {
-      border-color: var(--vz-primary) !important;
+      border-color: var(--legience-accent) !important;
       border-width: 2px;
-      background-color: rgba(var(--vz-primary-rgb), 0.1);
+      background-color: rgba(var(--legience-accent-rgb), 0.1);
     }
   }
 }
@@ -68,15 +68,15 @@
 .notification-toggle {
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: var(--vz-card-bg);
+  background-color: var(--legience-bg-card);
 
   &:hover {
-    background-color: var(--vz-light);
+    background-color: var(--legience-bg-card-hover);
   }
 
   &.active {
-    border-color: var(--vz-success) !important;
-    background-color: rgba(var(--vz-success-rgb), 0.05);
+    border-color: var(--legience-success) !important;
+    background-color: rgba(var(--legience-success-rgb), 0.05);
   }
 
   .form-check-input {
@@ -94,7 +94,7 @@
       font-size: 13px;
 
       &:not(:last-child) {
-        border-bottom: 1px dashed var(--vz-border-color);
+        border-bottom: 1px dashed var(--legience-border-hairline);
       }
 
       i {
@@ -108,7 +108,7 @@
 // ==================== Form Styles ====================
 .form-label {
   font-weight: 500;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   margin-bottom: 0.5rem;
 }
 
@@ -117,27 +117,27 @@
   padding: 0.5rem 1rem;
 
   &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.1);
   }
 }
 
 .form-text {
   font-size: 0.75rem;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 // Form switch styling
 .form-check-input:checked {
-  background-color: var(--vz-primary);
-  border-color: var(--vz-primary);
+  background-color: var(--legience-accent);
+  border-color: var(--legience-accent);
 }
 
 // ==================== Input Group ====================
 .input-group-text {
-  background-color: var(--vz-light);
-  border-color: var(--vz-border-color);
-  color: var(--vz-secondary-color);
+  background-color: var(--legience-bg-card-hover);
+  border-color: var(--legience-border-hairline);
+  color: var(--legience-text-muted);
   border-radius: 8px 0 0 8px;
 
   i {
@@ -151,12 +151,12 @@
 
 // ==================== Button Styles ====================
 .btn-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
   border: none;
 
   &:hover {
-    background-color: var(--vz-secondary);
+    background-color: var(--legience-secondary);
     color: #fff;
   }
 }
@@ -239,31 +239,31 @@
 [data-bs-theme="dark"] {
   .page-header-wrapper {
     &::before {
-      background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.3) 100%);
+      background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.3) 100%);
     }
   }
 
   .plan-option {
-    background-color: var(--vz-card-bg);
+    background-color: var(--legience-bg-card);
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.1);
+      background-color: rgba(var(--legience-accent-rgb), 0.1);
     }
 
     &.selected {
-      background-color: rgba(var(--vz-primary-rgb), 0.15);
+      background-color: rgba(var(--legience-accent-rgb), 0.15);
     }
   }
 
   .notification-toggle {
-    background-color: var(--vz-card-bg);
+    background-color: var(--legience-bg-card);
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.05);
     }
 
     &.active {
-      background-color: rgba(var(--vz-success-rgb), 0.1);
+      background-color: rgba(var(--legience-success-rgb), 0.1);
     }
   }
 }

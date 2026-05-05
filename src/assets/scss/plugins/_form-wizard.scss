@@ -46,7 +46,7 @@
             li {
                 &.active {
                     background-color: #e1e5ee;
-                    color: #405189;
+                    color: var(--legience-accent, #405189);
 
                     .number {
                         background-color: $primary;

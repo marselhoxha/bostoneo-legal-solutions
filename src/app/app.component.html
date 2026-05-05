@@ -1,3 +1,7 @@
 <app-preloader [isHidden]="!showPreloader"></app-preloader>
 <router-outlet></router-outlet>
 <app-tos-acceptance-modal *ngIf="showTosModal" (accepted)="onTosAccepted()"></app-tos-acceptance-modal>
+<!-- Dev-only design switcher. In production Rox is the only design and
+     this component must not render — end users should never see a
+     developer V/C/R toggle. -->
+<app-design-switcher *ngIf="!isProduction"></app-design-switcher>

@@ -195,6 +195,42 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * V63 — superadmin opts a user into the new attorney-facing PI view (P4+).
+   * The user picks up the change on their next login. Mirrors toggleMfa above.
+   */
+  async toggleBetaAttorneyView(): Promise<void> {
+    if (!this.user) return;
+    const enabling = !this.user.betaAttorneyView;
+    const action = enabling ? 'enable' : 'disable';
+
+    const result = await Swal.fire({
+      title: `${enabling ? 'Enable' : 'Disable'} new PI case view?`,
+      text: enabling
+        ? 'This user will see the new attorney-facing PI case view on their next login. Other practice areas are unaffected.'
+        : 'This user will revert to the standard case view on their next login.',
+      icon: enabling ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonColor: enabling ? '#0ab39c' : '#f06548',
+      confirmButtonText: `Yes, ${action}`
+    });
+
+    if (result.isConfirmed) {
+      this.superAdminService.toggleUserBetaAttorneyView(this.userId, enabling)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            Swal.fire('Success', `Beta PI view ${action}d for this user`, 'success');
+            this.loadUser();
+          },
+          error: (err: any) => {
+            const reason = err?.error?.reason || err?.error?.message || err?.message || `Failed to ${action} beta PI view`;
+            Swal.fire('Error', reason, 'error');
+          }
+        });
+    }
+  }
+
   async toggleUserStatus(): Promise<void> {
     if (!this.user) return;
     const action = this.user.enabled ? 'disable' : 'enable';

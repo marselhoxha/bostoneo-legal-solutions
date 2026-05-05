@@ -153,4 +153,34 @@ export class PIMedicalRecordService {
       map(response => response.data)
     );
   }
+
+  /**
+   * P15.a — Per-document scan tracking. Returns one row per scannable case
+   * document, joining FileItem with its PIScannedDocument tracking row (if any).
+   *
+   * Status values:
+   *   - 'created'     → AI extracted a medical record (green "Analyzed")
+   *   - 'merged'      → AI extraction merged into an existing record (green "Analyzed")
+   *   - 'non_medical' → AI determined this is not a medical record (grey "Skipped")
+   *   - 'insurance'   → AI flagged as insurance ledger / PIP log (grey "Skipped")
+   *   - 'no_text'     → text extraction failed (PDF was image-only, no OCR) (red "Failed")
+   *   - 'failed'      → AI call failed (red "Failed" with retry button)
+   *   - null          → file uploaded but never scanned (outline "Not scanned")
+   */
+  getScanTracking(caseId: number): Observable<PIScanTrackingRow[]> {
+    return this.http.get<any>(`${this.baseUrl}/${caseId}/medical-records/scan-tracking`).pipe(
+      map(response => response.data?.tracking || [])
+    );
+  }
+}
+
+/** P15.a — Per-document scan tracking row from `GET /scan-tracking`. */
+export interface PIScanTrackingRow {
+  documentId: number;
+  documentName: string;
+  mimeType?: string;
+  status: 'created' | 'merged' | 'non_medical' | 'insurance' | 'no_text' | 'failed' | null;
+  errorMessage: string | null;
+  medicalRecordId: number | null;
+  createdAt: string | null;
 }

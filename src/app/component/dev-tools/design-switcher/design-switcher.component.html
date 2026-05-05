@@ -1,0 +1,16 @@
+<div class="design-switcher-pill" [class.collapsed]="collapsed" role="group" aria-label="Design preview switcher">
+  <button type="button" class="ds-toggle" (click)="toggleCollapse()" [title]="collapsed ? 'Expand design switcher' : 'Collapse'">
+    <span class="ds-dot" [attr.data-design]="current"></span>
+  </button>
+  <div class="ds-options" *ngIf="!collapsed">
+    <button type="button"
+            *ngFor="let d of designs"
+            [class.active]="current === d"
+            (click)="apply(d)"
+            [attr.aria-pressed]="current === d"
+            [title]="d === 'velzon' ? 'Velzon (current)' : d === 'column' ? 'Column (Refero)' : 'Rox (Refero)'">
+      {{ d.charAt(0).toUpperCase() }}
+    </button>
+    <span class="ds-hint" title="Cmd/Ctrl + Shift + D to cycle">⌘⇧D</span>
+  </div>
+</div>

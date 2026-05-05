@@ -3,19 +3,19 @@
   cursor: pointer;
   
   &:hover {
-    border-color: var(--vz-primary) !important;
+    border-color: var(--legience-accent) !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
   
   &.active {
-    border-color: var(--vz-primary) !important;
-    background-color: var(--vz-primary-bg-subtle);
+    border-color: var(--legience-accent) !important;
+    background-color: var(--legience-accent-bg-subtle);
   }
 }
 
 .folder-structure {
-  background-color: var(--vz-light);
+  background-color: var(--legience-bg-card-hover);
   border-radius: 0.375rem;
   padding: 1rem;
   

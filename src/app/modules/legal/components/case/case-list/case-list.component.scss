@@ -13,7 +13,7 @@
     top: 1.25rem;
     bottom: 1.5rem;
     width: 3px;
-    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.2) 100%);
     border-radius: 2px;
   }
 
@@ -22,7 +22,7 @@
   h4 {
     font-size: 1.5rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin: 0;
   }
 }
@@ -35,25 +35,25 @@
     width: 280px;
     padding: 0.5rem 1rem 0.5rem 2.5rem;
     border-radius: 8px;
-    border: 1px solid var(--vz-border-color);
-    background-color: var(--vz-light);
+    border: 1px solid var(--legience-border-hairline);
+    background-color: var(--legience-bg-card-hover);
     font-size: 0.875rem;
     transition: all 0.25s ease;
 
     &::placeholder {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
 
     &:hover {
-      background-color: var(--vz-card-bg);
-      border-color: rgba(var(--vz-primary-rgb), 0.3);
+      background-color: var(--legience-bg-card);
+      border-color: rgba(var(--legience-accent-rgb), 0.3);
     }
 
     &:focus {
       width: 320px;
-      background-color: var(--vz-card-bg);
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+      background-color: var(--legience-bg-card);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.1);
     }
 
     // Responsive - full width on tablet and below
@@ -71,7 +71,7 @@
     left: 0.875rem;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 1rem;
   }
 }
@@ -79,9 +79,9 @@
 // ==================== Stats Row ====================
 .stats-row {
   display: flex;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   border-radius: 12px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   margin: 1.5rem 0;
   overflow: hidden;
 }
@@ -89,7 +89,7 @@
 .stat-item {
   flex: 1;
   padding: 1.25rem 1.5rem;
-  border-right: 1px solid var(--vz-border-color);
+  border-right: 1px solid var(--legience-border-hairline);
   transition: all 0.2s ease;
 
   &:last-child {
@@ -106,22 +106,22 @@
 }
 
 .stat-item:nth-child(1) {
-  background: rgba(var(--vz-primary-rgb), 0.08);
+  background: rgba(var(--legience-accent-rgb), 0.08);
 }
 
 .stat-item:nth-child(2) {
-  background: rgba(var(--vz-warning-rgb), 0.08);
+  background: rgba(var(--legience-warning-rgb), 0.08);
 }
 
 .stat-item:nth-child(3) {
-  background: rgba(var(--vz-info-rgb), 0.08);
+  background: rgba(var(--legience-info-rgb), 0.08);
 }
 
 .stat-item:nth-child(4) {
-  background: rgba(var(--vz-danger-rgb), 0.08);
+  background: rgba(var(--legience-danger-rgb), 0.08);
 
   &.has-alert {
-    background: rgba(var(--vz-danger-rgb), 0.15);
+    background: rgba(var(--legience-danger-rgb), 0.15);
   }
 }
 
@@ -136,7 +136,7 @@
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .stat-indicator {
@@ -149,28 +149,28 @@
   font-size: 0.75rem;
 
   &.stat-indicator-primary {
-    background: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
+    background: rgba(var(--legience-accent-rgb), 0.1);
+    color: var(--legience-accent);
   }
 
   &.stat-indicator-warning {
-    background: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
   }
 
   &.stat-indicator-success {
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
 
   &.stat-indicator-danger {
-    background: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
+    background: rgba(var(--legience-danger-rgb), 0.1);
+    color: var(--legience-danger);
   }
 
   &.stat-indicator-info {
-    background: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+    background: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
   }
 }
 
@@ -188,7 +188,7 @@
 .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   line-height: 1;
   font-feature-settings: "tnum";
 }
@@ -201,7 +201,7 @@
     padding: 1.25rem 1.5rem;
 
     h5 {
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
     }
   }
 
@@ -217,31 +217,31 @@
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: var(--vz-secondary-color);
-    border-bottom: 1px solid var(--vz-border-color);
+    color: var(--legience-text-muted);
+    border-bottom: 1px solid var(--legience-border-hairline);
     padding: 0.875rem 1rem;
   }
 
   td {
     padding: 1rem;
     vertical-align: middle;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
   }
 
   tbody tr {
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.03);
+      background-color: rgba(var(--legience-accent-rgb), 0.03);
     }
 
     // Urgent row highlighting
     &.row-urgent {
-      background-color: rgba(var(--vz-danger-rgb), 0.03);
-      border-left: 3px solid var(--vz-danger);
+      background-color: rgba(var(--legience-danger-rgb), 0.03);
+      border-left: 3px solid var(--legience-danger);
 
       &:hover {
-        background-color: rgba(var(--vz-danger-rgb), 0.06);
+        background-color: rgba(var(--legience-danger-rgb), 0.06);
       }
     }
   }
@@ -249,7 +249,7 @@
   h6 {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 }
 
@@ -260,16 +260,16 @@
   gap: 0.25rem;
 
   &.deadline-overdue {
-    color: var(--vz-danger);
+    color: var(--legience-danger);
     font-weight: 600;
   }
 
   &.deadline-urgent {
-    color: var(--vz-danger);
+    color: var(--legience-danger);
   }
 
   &.deadline-warning {
-    color: var(--vz-warning);
+    color: var(--legience-warning);
   }
 }
 
@@ -347,7 +347,7 @@
   background-color: rgba(33, 37, 41, 0.1) !important;
 }
 .text-dark {
-  color: #212529 !important;
+  color: var(--legience-text-secondary, #212529) !important;
 }
 
 .fs-7 {
@@ -356,34 +356,34 @@
 
 // ==================== Button Styles ====================
 .btn-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   border: none;
 
   &:hover {
-    background-color: var(--vz-primary);
+    background-color: var(--legience-accent);
     color: #fff;
   }
 }
 
 .btn-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
   border: none;
 
   &:hover {
-    background-color: var(--vz-secondary);
+    background-color: var(--legience-secondary);
     color: #fff;
   }
 }
 
 .btn-soft-danger {
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
-  color: var(--vz-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
+  color: var(--legience-danger);
   border: none;
 
   &:hover {
-    background-color: var(--vz-danger);
+    background-color: var(--legience-danger);
     color: #fff;
   }
 }
@@ -423,7 +423,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.15) 0%, rgba(var(--vz-primary-rgb), 0.05) 100%);
+  background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.15) 0%, rgba(var(--legience-accent-rgb), 0.05) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -433,7 +433,7 @@
 
   i {
     font-size: 2rem;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
   }
 }
 
@@ -447,7 +447,7 @@
   span {
     position: absolute;
     border-radius: 50%;
-    border: 2px dashed rgba(var(--vz-primary-rgb), 0.15);
+    border: 2px dashed rgba(var(--legience-accent-rgb), 0.15);
     animation: pulse-ring 3s ease-out infinite;
 
     &:nth-child(1) {
@@ -503,13 +503,13 @@
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  box-shadow: 0 4px 15px rgba(var(--vz-primary-rgb), 0.35);
+  box-shadow: 0 4px 15px rgba(var(--legience-accent-rgb), 0.35);
   transition: all 0.3s ease;
   border: none;
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(var(--vz-primary-rgb), 0.45);
+    box-shadow: 0 6px 20px rgba(var(--legience-accent-rgb), 0.45);
   }
 }
 
@@ -521,10 +521,10 @@
   gap: 0.5rem;
   padding: 0.625rem 1rem;
   margin-bottom: 0.75rem;
-  background: rgba(var(--vz-info-rgb), 0.1);
+  background: rgba(var(--legience-info-rgb), 0.1);
   border-radius: 0.5rem;
   font-size: 0.75rem;
-  color: var(--vz-info);
+  color: var(--legience-info);
   font-weight: 500;
 
   i {
@@ -540,25 +540,25 @@
   .page-item {
     .page-link {
       border: none;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       padding: 0.5rem 0.75rem;
       border-radius: 6px;
       margin: 0 2px;
       transition: all 0.2s ease;
 
       &:hover {
-        background-color: rgba(var(--vz-primary-rgb), 0.1);
-        color: var(--vz-primary);
+        background-color: rgba(var(--legience-accent-rgb), 0.1);
+        color: var(--legience-accent);
       }
     }
 
     &.active .page-link {
-      background-color: var(--vz-primary);
+      background-color: var(--legience-accent);
       color: #fff;
     }
 
     &.disabled .page-link {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       opacity: 0.5;
     }
   }
@@ -627,7 +627,7 @@
 
   .stat-item {
     flex: 1 1 50%;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     &:nth-child(2) {
       border-right: none;
@@ -673,7 +673,7 @@
   .stat-item {
     flex: 1 1 100%;
     border-right: none;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     &:last-child {
       border-bottom: none;
@@ -709,7 +709,7 @@
 [data-bs-theme="dark"] {
   .page-header-wrapper {
     &::before {
-      background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.3) 100%);
+      background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.3) 100%);
     }
   }
 

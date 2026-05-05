@@ -42,7 +42,7 @@
 .stat-label {
   font-size: 0.8rem;
   font-weight: 500;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -50,7 +50,7 @@
 .stat-value {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
 }
 
 .stat-footer {
@@ -81,7 +81,7 @@
       font-weight: 600;
       display: flex;
       align-items: center;
-      color: #495057;
+      color: var(--legience-text-secondary, #495057);
     }
   }
 }
@@ -98,7 +98,7 @@
 
     &:focus {
       box-shadow: none;
-      background-color: #fff !important;
+      background-color: var(--legience-bg-card, #fff) !important;
       border: 1px solid #405189;
     }
   }
@@ -108,7 +108,7 @@
     left: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     font-size: 0.9rem;
   }
 }
@@ -123,7 +123,7 @@
       font-size: 0.8rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
       border-bottom: none;
       padding: 0.875rem 0.75rem;
     }
@@ -226,14 +226,14 @@
       display: block;
       font-size: 1.75rem;
       font-weight: 700;
-      color: #495057;
+      color: var(--legience-text-secondary, #495057);
       line-height: 1;
     }
 
     .gauge-label {
       display: block;
       font-size: 0.75rem;
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-top: 4px;
@@ -252,7 +252,7 @@
   .task-stat-label {
     display: block;
     font-size: 0.7rem;
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     text-transform: uppercase;
     letter-spacing: 0.3px;
     margin-top: 4px;
@@ -293,50 +293,50 @@
 // Button Soft Variants
 // ========================================
 .btn-soft-primary {
-  color: #405189;
+  color: var(--legience-accent, #405189);
   background-color: rgba(64, 81, 137, 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: #405189;
-    border-color: #405189;
+    background-color: var(--legience-accent, #405189);
+    border-color: var(--legience-accent, #405189);
   }
 }
 
 .btn-soft-info {
-  color: #299cdb;
+  color: var(--legience-info, #299cdb);
   background-color: rgba(41, 156, 219, 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: #299cdb;
-    border-color: #299cdb;
+    background-color: var(--legience-info, #299cdb);
+    border-color: var(--legience-info, #299cdb);
   }
 }
 
 .btn-soft-success {
-  color: #0ab39c;
+  color: var(--legience-success, #0ab39c);
   background-color: rgba(10, 179, 156, 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: #0ab39c;
-    border-color: #0ab39c;
+    background-color: var(--legience-success, #0ab39c);
+    border-color: var(--legience-success, #0ab39c);
   }
 }
 
 .btn-soft-warning {
-  color: #f7b84b;
+  color: var(--legience-warning, #f7b84b);
   background-color: rgba(247, 184, 75, 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: #f7b84b;
-    border-color: #f7b84b;
+    background-color: var(--legience-warning, #f7b84b);
+    border-color: var(--legience-warning, #f7b84b);
   }
 }
 
@@ -385,7 +385,7 @@
 
     &.active {
       background-color: rgba(64, 81, 137, 0.1);
-      color: #405189;
+      color: var(--legience-accent, #405189);
     }
 
     &:hover {

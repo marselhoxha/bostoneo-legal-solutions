@@ -1,0 +1,88 @@
+// Refero "Column" design system — fintech blueprint aesthetic
+// Activates when <html data-design="column">. Zero changes to Velzon base vars.
+
+:root[data-design="column"] {
+  // Brand
+  --vz-primary: #ec652b;            --vz-primary-rgb: 236, 101, 43;
+  --bs-primary: #ec652b;            --bs-primary-rgb: 236, 101, 43;
+  --vz-secondary: #111a4a;          --vz-secondary-rgb: 17, 26, 74;
+  --bs-secondary: #111a4a;          --bs-secondary-rgb: 17, 26, 74;
+  --vz-success: #44b48b;            --vz-success-rgb: 68, 180, 139;
+  --bs-success: #44b48b;            --bs-success-rgb: 68, 180, 139;
+  --vz-info: #167e6c;               --vz-info-rgb: 22, 126, 108;
+  --bs-info: #167e6c;               --bs-info-rgb: 22, 126, 108;
+
+  // Body & surfaces
+  --vz-body-bg: #ffffff;            --vz-body-bg-rgb: 255, 255, 255;
+  --vz-body-color: #011821;         --vz-body-color-rgb: 1, 24, 33;
+  --bs-body-bg: #ffffff;            --bs-body-color: #011821;
+  --vz-secondary-bg: #f6f6f8;       --vz-tertiary-bg: #f6f6f8;
+  --bs-secondary-bg: #f6f6f8;       --bs-tertiary-bg: #f6f6f8;
+
+  // Borders & radius
+  --vz-border-color: #e3e4e8;
+  --vz-border-color-translucent: rgba(1, 24, 33, 0.1);
+  --bs-border-color: #e3e4e8;
+  --bs-border-color-translucent: rgba(1, 24, 33, 0.1);
+  --vz-border-radius: 0.5rem;       --vz-border-radius-sm: 0.25rem;     --vz-border-radius-lg: 0.75rem;
+  --bs-border-radius: 0.5rem;       --bs-border-radius-sm: 0.25rem;     --bs-border-radius-lg: 0.75rem;
+
+  // Typography
+  --vz-font-sans-serif: 'Inter', system-ui, -apple-system, sans-serif;
+  --vz-font-monospace: 'SF Mono', 'IBM Plex Mono', Menlo, monospace;
+  --bs-font-sans-serif: 'Inter', system-ui, -apple-system, sans-serif;
+  --bs-font-monospace: 'SF Mono', 'IBM Plex Mono', Menlo, monospace;
+  --vz-heading-color: #011821;      --bs-heading-color: #011821;
+
+  // Links
+  --vz-link-color: #ec652b;         --vz-link-hover-color: #c84e1a;
+  --bs-link-color: #ec652b;         --bs-link-hover-color: #c84e1a;
+
+  // Subtle / emphasis variants
+  --vz-primary-bg-subtle: #fde9dd;       --vz-primary-text-emphasis: #c84e1a;       --vz-primary-border-subtle: #f7c4a8;
+  --bs-primary-bg-subtle: #fde9dd;       --bs-primary-text-emphasis: #c84e1a;       --bs-primary-border-subtle: #f7c4a8;
+  --vz-secondary-bg-subtle: #dde0eb;     --vz-secondary-text-emphasis: #0a0f2c;     --vz-secondary-border-subtle: #9aa1c1;
+  --bs-secondary-bg-subtle: #dde0eb;     --bs-secondary-text-emphasis: #0a0f2c;     --bs-secondary-border-subtle: #9aa1c1;
+
+  // Layout chrome (these are baked from $primary at SCSS compile — must override)
+  --vz-vertical-menu-bg: #f6f6f8;
+  --vz-vertical-menu-item-bg: rgba(236, 101, 43, 0.12);
+  --vz-vertical-menu-item-active-bg: rgba(236, 101, 43, 0.12);
+  --vz-vertical-menu-item-active-color: #ec652b;
+  --vz-vertical-menu-item-hover-color: #ec652b;
+  --vz-vertical-menu-sub-item-active-color: #ec652b;
+  --vz-vertical-menu-sub-item-hover-color: #ec652b;
+  --vz-topnav-item-active-color: #ec652b;
+  --vz-header-item-bg: rgba(17, 26, 74, 0.08);
+
+  // Shadow (Column 3-layer subtle stack)
+  --vz-box-shadow-sm: rgba(0, 0, 0, 0.04) 0 1px 2px 0;
+  --vz-box-shadow: rgba(17, 26, 74, 0.05) 0 0 0 1px, rgba(0, 0, 0, 0.08) 0 1px 2px 0;
+  --vz-box-shadow-lg: rgba(17, 26, 74, 0.08) 0 4px 16px;
+  --bs-box-shadow-sm: rgba(0, 0, 0, 0.04) 0 1px 2px 0;
+  --bs-box-shadow: rgba(17, 26, 74, 0.05) 0 0 0 1px, rgba(0, 0, 0, 0.08) 0 1px 2px 0;
+  --bs-box-shadow-lg: rgba(17, 26, 74, 0.08) 0 4px 16px;
+}
+
+// Dark mode — invert canvas to Ink Blue, keep Action Orange accent
+:root[data-design="column"][data-bs-theme="dark"] {
+  --vz-body-bg: #011821;            --vz-body-bg-rgb: 1, 24, 33;
+  --vz-body-color: #f6f6f8;         --vz-body-color-rgb: 246, 246, 248;
+  --bs-body-bg: #011821;            --bs-body-color: #f6f6f8;
+  --vz-secondary-bg: #022b3d;       --vz-tertiary-bg: #022b3d;
+  --bs-secondary-bg: #022b3d;       --bs-tertiary-bg: #022b3d;
+  --vz-border-color: #1a3540;       --bs-border-color: #1a3540;
+  --vz-heading-color: #ffffff;      --bs-heading-color: #ffffff;
+
+  // Sidebar / header dark
+  --vz-vertical-menu-bg: #022b3d;
+  --vz-header-bg: #022b3d;
+  --vz-vertical-menu-item-color: #a1b7bf;
+  --vz-vertical-menu-sub-item-color: #a1b7bf;
+  --vz-vertical-menu-item-active-color: #ec652b;
+  --vz-vertical-menu-item-active-bg: rgba(236, 101, 43, 0.18);
+  --vz-vertical-menu-title-color: #6c8590;
+  --vz-header-item-color: #f6f6f8;
+  --vz-header-item-bg: rgba(255, 255, 255, 0.08);
+  --vz-header-item-sub-color: #a1b7bf;
+}

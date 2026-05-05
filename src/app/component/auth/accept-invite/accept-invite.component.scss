@@ -1,6 +1,6 @@
 .auth-page-wrapper {
   min-height: 100vh;
-  background-color: #405189;
+  background-color: var(--legience-accent, #405189);
 }
 
 .auth-one-bg {
@@ -37,22 +37,22 @@
 }
 
 .nav-tabs-custom {
-  border-bottom: 2px solid #e9ebec;
+  border-bottom: 2px solid var(--legience-border-hairline, #e9ebec);
 
   .nav-link {
     border: none;
-    color: #878a99;
+    color: var(--legience-text-muted, #878a99);
     font-weight: 500;
     padding: 0.75rem 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      color: #405189;
+      color: var(--legience-accent, #405189);
     }
 
     &.active {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background: transparent;
       border-bottom: 2px solid #405189;
       margin-bottom: -2px;
@@ -74,13 +74,13 @@
 }
 
 .form-control:focus {
-  border-color: #405189;
+  border-color: var(--legience-accent, #405189);
   box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.25);
 }
 
 .btn-primary {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
 
   &:hover {
     background-color: #364574;
@@ -88,15 +88,15 @@
   }
 
   &:disabled {
-    background-color: #405189;
-    border-color: #405189;
+    background-color: var(--legience-accent, #405189);
+    border-color: var(--legience-accent, #405189);
     opacity: 0.65;
   }
 }
 
 .btn-success {
-  background-color: #0ab39c;
-  border-color: #0ab39c;
+  background-color: var(--legience-success, #0ab39c);
+  border-color: var(--legience-success, #0ab39c);
 
   &:hover {
     background-color: #099885;
@@ -104,8 +104,8 @@
   }
 
   &:disabled {
-    background-color: #0ab39c;
-    border-color: #0ab39c;
+    background-color: var(--legience-success, #0ab39c);
+    border-color: var(--legience-success, #0ab39c);
     opacity: 0.65;
   }
 }

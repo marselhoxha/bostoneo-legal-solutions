@@ -52,17 +52,27 @@
               <span *ngIf="user.enabled" class="badge bg-success-subtle text-success me-1">Active</span>
               <span *ngIf="!user.enabled" class="badge bg-danger-subtle text-danger me-1">Disabled</span>
               <span *ngIf="!user.accountNonLocked" class="badge bg-warning-subtle text-warning me-1">Locked</span>
-              <span *ngIf="user.usingMfa" class="badge bg-info-subtle text-info">MFA Enabled</span>
-              <span *ngIf="!user.usingMfa" class="badge bg-secondary-subtle text-secondary">MFA Disabled</span>
+              <span *ngIf="user.usingMfa" class="badge bg-info-subtle text-info me-1">MFA Enabled</span>
+              <span *ngIf="!user.usingMfa" class="badge bg-secondary-subtle text-secondary me-1">MFA Disabled</span>
+              <!-- V63 — visible only when opted in; cleaner than a permanent badge -->
+              <span *ngIf="user.betaAttorneyView" class="badge bg-warning-subtle text-warning">Beta PI View</span>
             </div>
 
             <!-- MFA Toggle -->
-            <div class="mt-2">
+            <div class="mt-2 d-flex flex-wrap gap-2 justify-content-center">
               <button class="btn btn-sm"
                       [ngClass]="user.usingMfa ? 'btn-outline-danger' : 'btn-outline-info'"
                       (click)="toggleMfa()">
                 <i [class]="user.usingMfa ? 'ri-shield-keyhole-line me-1' : 'ri-shield-check-line me-1'"></i>
                 {{ user.usingMfa ? 'Disable MFA' : 'Enable MFA' }}
+              </button>
+              <!-- V63 — opt this user into the new attorney-facing PI view (P4+) -->
+              <button class="btn btn-sm"
+                      [ngClass]="user.betaAttorneyView ? 'btn-outline-danger' : 'btn-outline-warning'"
+                      (click)="toggleBetaAttorneyView()"
+                      title="Beta opt-in for the new attorney-facing PI case view">
+                <i [class]="user.betaAttorneyView ? 'ri-flask-line me-1' : 'ri-flask-fill me-1'"></i>
+                {{ user.betaAttorneyView ? 'Disable Beta PI View' : 'Enable Beta PI View' }}
               </button>
             </div>
 

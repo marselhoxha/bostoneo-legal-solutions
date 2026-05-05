@@ -25,7 +25,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 // chip to the same color family as the template mini-cards.
 .linked-case-chip {
   // PA accent colors — driven by [data-accent] on the wrapper.
-  --lc-accent: var(--vz-primary, #405189);
+  --lc-accent: var(--legience-accent, #405189);
   --lc-accent-soft: rgba(64, 81, 137, 0.1);
 
   &[data-accent="pi"]   { --lc-accent: #c026d3; --lc-accent-soft: rgba(192, 38, 211, 0.1); }
@@ -39,9 +39,9 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
   margin: 0 0 1.25rem;
   padding: 0;
   background: linear-gradient(180deg,
-    var(--vz-card-bg, #ffffff) 0%,
-    var(--vz-light, #f8f9fb) 100%);
-  border: 1px solid var(--vz-border-color, #e9ebec);
+    var(--legience-bg-card, #ffffff) 0%,
+    var(--legience-bg-card-hover, #f8f9fb) 100%);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 0.65rem;
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
@@ -126,7 +126,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     .lc-title {
       font-size: 0.95rem;
       font-weight: 600;
-      color: var(--vz-heading-color, #212529);
+      color: var(--legience-text-primary, #212529);
       line-height: 1.25;
       white-space: nowrap;
       overflow: hidden;
@@ -137,7 +137,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     .lc-subtitle {
       font-size: 0.72rem;
       font-weight: 400;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-muted, #878a99);
       line-height: 1.2;
       white-space: nowrap;
       overflow: hidden;
@@ -190,7 +190,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
   // ── Divider between body and × ──
   .lc-divider {
     width: 1px;
-    background: var(--vz-border-color, #e9ebec);
+    background: var(--legience-border-hairline, #e9ebec);
     align-self: stretch;
     margin: 0.35rem 0;
   }
@@ -203,7 +203,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     width: 36px;
     border: none;
     background: transparent;
-    color: var(--vz-secondary-color, #878a99);
+    color: var(--legience-text-muted, #878a99);
     cursor: pointer;
     transition: background 150ms ease, color 150ms ease;
     padding: 0;
@@ -245,13 +245,13 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     font-weight: 300;
     line-height: 1.2;
     letter-spacing: -0.02em;
-    color: var(--vz-heading-color, #212529);
+    color: var(--legience-text-primary, #212529);
     margin: 0 0 0.45rem;
   }
 
   .welcome-lead {
     font-family: $legidraft-font-stack;
-    color: var(--vz-body-color, #74788d);
+    color: var(--legience-text-secondary, #74788d);
     font-size: 1rem;
     font-weight: 300;
     line-height: 1.6;
@@ -276,7 +276,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 // `width: 100%` + `min-width: 0` guarantees the <button> stretches across its
 // `minmax(0, 5fr)` grid track instead of collapsing to min-content.
 .tile-primary {
-  background: linear-gradient(135deg, var(--vz-primary, #405189) 0%, #5d6ea6 60%, #8fbfff 110%);
+  background: linear-gradient(135deg, var(--legience-accent, #405189) 0%, #5d6ea6 60%, #8fbfff 110%);
   border-radius: 0.75rem;
   padding: 1.75rem 1.6rem;
   color: #ffffff;
@@ -391,8 +391,8 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     gap: 0.4rem;
     font-weight: 600;
     font-size: 0.8125rem;
-    background: #ffffff;
-    color: var(--vz-primary, #405189);
+    background: var(--legience-bg-card, #fff);
+    color: var(--legience-accent, #405189);
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     align-self: flex-start;
@@ -405,8 +405,8 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 // `width: 100%` + `min-width: 0` mirror the primary tile so the 5fr/4fr ratio
 // is actually respected in the grid (see note on .dd-tiles).
 .tile-secondary {
-  background: var(--vz-card-bg, #ffffff);
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  background: var(--legience-bg-card, #ffffff);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 0.75rem;
   padding: 1.55rem 1.35rem;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -419,7 +419,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
   &:hover {
-    border-color: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.4);
+    border-color: rgba(var(--legience-accent-rgb, 64, 81, 137), 0.4);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
   }
@@ -429,7 +429,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     letter-spacing: 0.08em;
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -444,12 +444,12 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     font-weight: 400;
     line-height: 1.2;
     margin-bottom: 0.4rem;
-    color: var(--vz-heading-color, #212529);
+    color: var(--legience-text-primary, #212529);
     letter-spacing: -0.02em;
   }
 
   .tile-desc {
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     font-size: 0.85rem;
     font-weight: 400;
     line-height: 1.55;
@@ -472,8 +472,8 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
   }
 
   .tpl-mini {
-    background: var(--vz-light, #fafbfd);
-    border: 1px solid var(--vz-border-color, #e9ebec);
+    background: var(--legience-bg-card-hover, #fafbfd);
+    border: 1px solid var(--legience-border-hairline, #e9ebec);
     border-radius: 7px;
     padding: 0.45rem 0.55rem;
     transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
@@ -493,20 +493,20 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     overflow: hidden;
 
     &:hover {
-      background: var(--vz-primary-bg-subtle, #f0f4fc);
-      border-color: var(--vz-primary, #405189);
+      background: var(--legience-accent-bg-subtle, #f0f4fc);
+      border-color: var(--legience-accent, #405189);
       transform: translateY(-1px);
     }
 
     &:focus-visible {
-      outline: 2px solid var(--vz-primary, #405189);
+      outline: 2px solid var(--legience-accent, #405189);
       outline-offset: 2px;
     }
 
     .tpl-name {
       font-size: 0.74rem;
       font-weight: 600;
-      color: var(--vz-heading-color, #212529);
+      color: var(--legience-text-primary, #212529);
       line-height: 1.2;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -517,7 +517,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 
     .tpl-meta {
       font-size: 0.6rem;
-      color: var(--vz-secondary-color, #74788d);
+      color: var(--legience-text-muted, #74788d);
       margin-top: 0.2rem;
       display: flex;
       gap: 0.3rem;
@@ -536,7 +536,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
       text-overflow: ellipsis;
 
       // Practice-area variants (light-mode swatches; dark-mode inherits via token blend)
-      &.pi   { background: #f0f4fc; color: var(--vz-primary, #405189); }
+      &.pi   { background: #f0f4fc; color: var(--legience-accent, #405189); }
       &.fam  { background: #fdecf3; color: #8b3760; }
       &.crim { background: #fff1e6; color: #b3521d; }
       &.imm  { background: #e8f5e9; color: #2e7d32; }
@@ -553,9 +553,9 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     justify-content: center;
     gap: 0.3rem;
     padding: 1rem;
-    border: 1px dashed var(--vz-border-color, #e9ebec);
+    border: 1px dashed var(--legience-border-hairline, #e9ebec);
     border-radius: 8px;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     font-size: 0.78rem;
     text-align: center;
     margin-bottom: 0.6rem;
@@ -567,7 +567,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    color: var(--vz-primary, #405189);
+    color: var(--legience-accent, #405189);
     font-weight: 600;
     font-size: 0.78rem;
     margin-top: auto;
@@ -581,7 +581,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     &:hover { text-decoration: underline; }
 
     &:focus-visible {
-      outline: 2px solid var(--vz-primary, #405189);
+      outline: 2px solid var(--legience-accent, #405189);
       outline-offset: 2px;
       border-radius: 4px;
     }
@@ -591,8 +591,8 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 // ── Recent drafts strip ──────────────────────────────────────────────────
 .dd-recent {
   margin-top: 1.1rem;
-  background: var(--vz-card-bg, #ffffff);
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  background: var(--legience-bg-card, #ffffff);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 0.75rem;
   padding: 1rem 1.1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -609,7 +609,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     margin: 0;
     font-size: 0.6875rem;
     font-weight: 600;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -622,8 +622,8 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 }
 
 .dd-recent-card {
-  background: var(--vz-light, #fafbfd);
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  background: var(--legience-bg-card-hover, #fafbfd);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 8px;
   padding: 0.6rem 0.7rem;
   cursor: pointer;
@@ -632,13 +632,13 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
   font-family: inherit;
 
   &:hover {
-    background: var(--vz-primary-bg-subtle, #f0f4fc);
-    border-color: var(--vz-primary, #405189);
+    background: var(--legience-accent-bg-subtle, #f0f4fc);
+    border-color: var(--legience-accent, #405189);
     transform: translateY(-1px);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--vz-primary, #405189);
+    outline: 2px solid var(--legience-accent, #405189);
     outline-offset: 2px;
   }
 
@@ -647,7 +647,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--vz-primary, #405189);
+    color: var(--legience-accent, #405189);
     margin-bottom: 0.18rem;
   }
 
@@ -655,7 +655,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
     font-size: 0.8rem;
     font-weight: 600;
     line-height: 1.2;
-    color: var(--vz-heading-color, #212529);
+    color: var(--legience-text-primary, #212529);
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -665,7 +665,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 
   .dr-date {
     font-size: 0.65rem;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     margin-top: 0.2rem;
   }
 }
@@ -673,7 +673,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 // ── Tip footer ───────────────────────────────────────────────────────────
 .tip-footer {
   margin-top: 1rem;
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
   font-size: 0.83rem;
   font-style: italic;
   display: inline-flex;
@@ -682,7 +682,7 @@ $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
 
   i {
     font-size: 1rem;
-    color: var(--vz-warning, #f7b84b);
+    color: var(--legience-warning, #f7b84b);
     font-style: normal;
   }
 }

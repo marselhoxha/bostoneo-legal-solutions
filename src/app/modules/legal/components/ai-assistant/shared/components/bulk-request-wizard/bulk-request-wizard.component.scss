@@ -1,5 +1,5 @@
 .bulk-wizard {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 0.5rem;
   min-height: 400px;
   max-height: calc(90vh - 60px);
@@ -11,8 +11,8 @@
 // Header with Steps
 .wizard-header {
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #e9ebec;
-  background: #f3f6f9;
+  border-bottom: 1px solid var(--legience-border-hairline, #e9ebec);
+  background: var(--legience-bg-card-hover, #f3f6f9);
   flex-shrink: 0;
 }
 
@@ -41,7 +41,7 @@
   height: 28px;
   border-radius: 50%;
   background: #e9ebec;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,12 +50,12 @@
   transition: all 0.3s ease;
 
   .step.active & {
-    background: #405189;
+    background: var(--legience-accent, #405189);
     color: #fff;
   }
 
   .step.completed & {
-    background: #0ab39c;
+    background: var(--legience-success, #0ab39c);
     color: #fff;
   }
 }
@@ -63,12 +63,12 @@
 .step-label {
   font-size: 0.65rem;
   font-weight: 500;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 
   .step.active & {
-    color: #405189;
+    color: var(--legience-accent, #405189);
   }
 }
 
@@ -81,7 +81,7 @@
   transition: background 0.3s ease;
 
   &.completed {
-    background: #0ab39c;
+    background: var(--legience-success, #0ab39c);
   }
 }
 
@@ -111,16 +111,16 @@
   gap: 1rem;
   padding: 1.25rem;
   border-radius: 0.5rem;
-  background: #f3f6f9;
+  background: var(--legience-bg-card-hover, #f3f6f9);
   border-left: 4px solid transparent;
 
   &.ready {
-    border-left-color: #0ab39c;
+    border-left-color: var(--legience-success, #0ab39c);
     background: rgba(10, 179, 156, 0.1);
   }
 
   &.attention {
-    border-left-color: #f7b84b;
+    border-left-color: var(--legience-warning, #f7b84b);
     background: rgba(247, 184, 75, 0.1);
 
     &.empty {
@@ -129,7 +129,7 @@
   }
 
   &.info {
-    border-left-color: #299cdb;
+    border-left-color: var(--legience-info, #299cdb);
     background: rgba(41, 156, 219, 0.1);
   }
 }
@@ -138,7 +138,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,9 +147,9 @@
     font-size: 1.5rem;
   }
 
-  .ready & i { color: #0ab39c; }
-  .attention & i { color: #f7b84b; }
-  .info & i { color: #299cdb; }
+  .ready & i { color: var(--legience-success, #0ab39c); }
+  .attention & i { color: var(--legience-warning, #f7b84b); }
+  .info & i { color: var(--legience-info, #299cdb); }
 }
 
 .summary-content {
@@ -164,7 +164,7 @@
 
 .summary-label {
   font-size: 0.8125rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   margin-top: 0.25rem;
 }
 
@@ -184,9 +184,9 @@
 
 .group-item {
   padding: 1rem;
-  background: #f3f6f9;
+  background: var(--legience-bg-card-hover, #f3f6f9);
   border-radius: 0.375rem;
-  border: 1px solid #e9ebec;
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
 }
 
 .group-header {
@@ -202,7 +202,7 @@
 
 .group-docs {
   font-size: 0.8125rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 .doc-tag {
@@ -235,7 +235,7 @@
 
 // Step 2: Review
 .accordion-item {
-  border: 1px solid #e9ebec;
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   margin-bottom: 0.5rem;
   border-radius: 0.375rem !important;
   overflow: hidden;
@@ -243,10 +243,10 @@
 
 .accordion-button {
   padding: 1rem 1.25rem;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
 
   &:not(.collapsed) {
-    background: #f3f6f9;
+    background: var(--legience-bg-card-hover, #f3f6f9);
   }
 
   &:focus {
@@ -274,14 +274,14 @@
 
 .accordion-body {
   padding: 1rem 1.25rem;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
 }
 
 .contact-info {
   display: flex;
   gap: 1.5rem;
   font-size: 0.8125rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 .contact-item {
@@ -300,7 +300,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: #f3f6f9;
+  background: var(--legience-bg-card-hover, #f3f6f9);
   border-radius: 0.25rem;
   transition: all 0.2s ease;
 
@@ -321,7 +321,7 @@
 }
 
 .doc-subtype {
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   font-size: 0.8125rem;
 }
 
@@ -346,11 +346,11 @@
 }
 
 .provider-name {
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 .manual-form {
-  background: #f3f6f9;
+  background: var(--legience-bg-card-hover, #f3f6f9);
   padding: 1rem;
   border-radius: 0.375rem;
 }
@@ -364,7 +364,7 @@
 .stat-box {
   text-align: center;
   padding: 1rem;
-  background: #f3f6f9;
+  background: var(--legience-bg-card-hover, #f3f6f9);
   border-radius: 0.5rem;
 }
 
@@ -377,7 +377,7 @@
 .stat-label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   margin-top: 0.25rem;
   letter-spacing: 0.5px;
 }
@@ -390,17 +390,17 @@
 
 .recipient-confirm-item {
   padding: 0.75rem 1rem;
-  background: #f3f6f9;
+  background: var(--legience-bg-card-hover, #f3f6f9);
   border-radius: 0.375rem;
   border-left: 3px solid #405189;
 
   &.manual {
-    border-left-color: #299cdb;
+    border-left-color: var(--legience-info, #299cdb);
   }
 
   &.all-skipped {
     opacity: 0.4;
-    border-left-color: #6c757d;
+    border-left-color: var(--legience-text-muted, #6c757d);
     text-decoration: line-through;
   }
 }
@@ -412,22 +412,22 @@
 }
 
 .channel-icon {
-  color: #405189;
+  color: var(--legience-accent, #405189);
 }
 
 .doc-count {
   font-size: 0.8125rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 // Footer
 .wizard-footer {
   padding: 1rem 2rem;
-  border-top: 1px solid #e9ebec;
+  border-top: 1px solid var(--legience-border-hairline, #e9ebec);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   flex-shrink: 0;
 }
 
@@ -457,11 +457,11 @@
 
   .step-number {
     background: #32383e;
-    color: #adb5bd;
+    color: var(--legience-text-muted, #adb5bd);
   }
 
   .step-label {
-    color: #adb5bd;
+    color: var(--legience-text-muted, #adb5bd);
   }
 
   .step-connector {
@@ -483,7 +483,7 @@
   .provider-name,
   .stat-label,
   .doc-count {
-    color: #adb5bd;
+    color: var(--legience-text-muted, #adb5bd);
   }
 
   .group-item {
@@ -497,7 +497,7 @@
 
   .accordion-button {
     background: #212529;
-    color: #adb5bd;
+    color: var(--legience-text-muted, #adb5bd);
 
     &:not(.collapsed) {
       background: #2a2f34;

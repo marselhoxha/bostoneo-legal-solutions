@@ -19,7 +19,7 @@
         font-size: 14px;
 
         a {
-          color: #6c757d;
+          color: var(--legience-text-muted, #6c757d);
           text-decoration: none;
 
           &:hover {
@@ -88,7 +88,7 @@
         width: 50px;
         height: 50px;
         border-radius: 50%;
-        border: 2px solid #dee2e6;
+        border: 2px solid var(--legience-border-hairline, #dee2e6);
         background: white;
         display: inline-flex;
         align-items: center;
@@ -101,7 +101,7 @@
 
       .step-title {
         font-size: 14px;
-        color: #6c757d;
+        color: var(--legience-text-muted, #6c757d);
       }
     }
   }
@@ -131,17 +131,17 @@
 
     p {
       font-size: 14px;
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
       margin-bottom: 15px;
       min-height: 40px;
     }
   }
 
   .pdf-viewer-container {
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--legience-border-hairline, #dee2e6);
     border-radius: 5px;
     overflow: hidden;
-    background: #f8f9fa;
+    background: var(--legience-bg-card-hover, #f8f9fa);
     min-height: 600px;
     position: relative;
 
@@ -152,7 +152,7 @@
   }
 
   .edit-panel {
-    background: #f8f9fa;
+    background: var(--legience-bg-card-hover, #f8f9fa);
     border-radius: 5px;
     padding: 20px;
     max-height: 600px;
@@ -162,7 +162,7 @@
       font-size: 18px;
       font-weight: 600;
       margin-bottom: 20px;
-      color: #333;
+      color: var(--legience-text-primary, #333);
     }
 
     .edit-fields-container {
@@ -198,13 +198,13 @@
 
   .next-step-card {
     padding: 20px;
-    background: #f8f9fa;
+    background: var(--legience-bg-card-hover, #f8f9fa);
     border-radius: 10px;
     text-align: center;
     transition: all 0.3s ease;
 
     &:hover {
-      background: #e9ecef;
+      background: var(--legience-bg-subtle, #e9ecef);
       transform: translateY(-3px);
     }
 
@@ -262,8 +262,8 @@
     }
 
     &.btn-secondary {
-      background-color: #6c757d;
-      border-color: #6c757d;
+      background-color: var(--legience-text-muted, #6c757d);
+      border-color: var(--legience-text-muted, #6c757d);
 
       &:hover {
         background-color: #545b62;
@@ -272,9 +272,9 @@
     }
 
     &.btn-warning {
-      background-color: #ffc107;
-      border-color: #ffc107;
-      color: #212529;
+      background-color: var(--legience-warning, #ffc107);
+      border-color: var(--legience-warning, #ffc107);
+      color: var(--legience-text-secondary, #212529);
 
       &:hover {
         background-color: #e0a800;

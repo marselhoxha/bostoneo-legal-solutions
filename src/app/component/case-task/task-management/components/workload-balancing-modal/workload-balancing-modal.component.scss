@@ -1,7 +1,7 @@
 .modal-header {
   .modal-title {
     font-weight: 600;
-    color: #495057;
+    color: var(--legience-text-secondary, #495057);
   }
 }
 
@@ -24,7 +24,7 @@
 
 .workload-card {
   padding: 1rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--legience-border-hairline, #e9ecef);
   border-radius: 8px;
   transition: all 0.2s ease;
   border-left-width: 3px;
@@ -60,9 +60,9 @@
 
 .reassignment-card {
   padding: 1rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--legience-border-hairline, #e9ecef);
   border-radius: 8px;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   margin-bottom: 0.75rem;
   transition: all 0.2s ease;
 
@@ -83,7 +83,7 @@
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     border-radius: 6px;
-    background: #f8f9fa;
+    background: var(--legience-bg-card-hover, #f8f9fa);
 
     &.from {
       background: rgba(220, 53, 69, 0.1);
@@ -111,7 +111,7 @@
 
 // Progress Bars
 .progress {
-  background-color: #e9ecef;
+  background-color: var(--legience-bg-subtle, #e9ecef);
   border-radius: 4px;
 
   &.progress-sm {
@@ -268,5 +268,5 @@
 
 // Border utilities
 .border-top {
-  border-top: 1px solid #e9ecef !important;
+  border-top: 1px solid var(--legience-border-hairline, #e9ecef) !important;
 }

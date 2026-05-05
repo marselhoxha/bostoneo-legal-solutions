@@ -229,6 +229,8 @@ export interface UserDetail {
   enabled: boolean;
   accountNonLocked: boolean;
   usingMfa: boolean;
+  // V63 — opted into the new attorney-facing PI case view (P4+)
+  betaAttorneyView?: boolean;
   createdAt: string;
   lastLogin?: string;
   casesAssigned: number;

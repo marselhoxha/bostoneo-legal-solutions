@@ -18,27 +18,27 @@
 }
 
 .card.border-light {
-  border: 1px solid #e9ecef !important;
+  border: 1px solid var(--legience-border-hairline, #e9ecef) !important;
 }
 
 .form-check-input:checked {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
 }
 
 .btn-outline-primary {
-  color: #405189;
-  border-color: #405189;
+  color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
   
   &:hover {
-    background-color: #405189;
-    border-color: #405189;
+    background-color: var(--legience-accent, #405189);
+    border-color: var(--legience-accent, #405189);
   }
 }
 
 .btn-primary {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
   
   &:hover {
     background-color: #364068;
@@ -47,14 +47,14 @@
 }
 
 .badge.bg-secondary-subtle {
-  background-color: #f8f9fa !important;
-  color: #6c757d !important;
+  background-color: var(--legience-bg-card-hover, #f8f9fa) !important;
+  color: var(--legience-text-muted, #6c757d) !important;
 }
 
 .table th {
-  background-color: #f8f9fa;
+  background-color: var(--legience-bg-card-hover, #f8f9fa);
   font-weight: 600;
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
 }
 
 .table td {
@@ -70,11 +70,11 @@
 }
 
 .breadcrumb-item {
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 .breadcrumb-item.active {
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
 }
 
 // Loading spinner styles
@@ -100,12 +100,12 @@
 
 // Animation for form elements
 .form-control:focus {
-  border-color: #405189;
+  border-color: var(--legience-accent, #405189);
   box-shadow: 0 0 0 0.2rem rgba(64, 81, 137, 0.25);
 }
 
 .form-select:focus {
-  border-color: #405189;
+  border-color: var(--legience-accent, #405189);
   box-shadow: 0 0 0 0.2rem rgba(64, 81, 137, 0.25);
 }
 
@@ -125,11 +125,11 @@
 
 // Success and error states
 .is-invalid {
-  border-color: #dc3545;
+  border-color: var(--legience-danger, #dc3545);
 }
 
 .is-valid {
-  border-color: #198754;
+  border-color: var(--legience-success, #198754);
 }
 
 // Custom scrollbar for customizations container

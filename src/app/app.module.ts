@@ -25,6 +25,13 @@ import { TosAcceptanceModalComponent } from './component/tos-acceptance-modal/to
 
 import { PreloaderComponent } from './component/preloader/preloader.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { DesignSwitcherComponent } from './component/dev-tools/design-switcher/design-switcher.component';
+import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
+         Clock, FolderOpen, LayoutDashboard, Folder, Calendar, CheckSquare,
+         Wrench, Users, DollarSign, Headphones, PenTool, Briefcase,
+         X, ChevronDown, Building2, BarChart2, Settings, Megaphone,
+         FileText, CalendarCheck, MessageCircle, UserCog,
+         BookOpen, Receipt, ScrollText, Square } from 'lucide-angular';
 
 @NgModule({
   declarations: [
@@ -48,6 +55,14 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
     NgChartsModule,
     CountUpModule,
     NgbAccordionModule,
+    DesignSwitcherComponent,
+    LucideAngularModule.pick({
+      Search, Bell, MessageSquare, Moon, Sun, Sparkles, Clock, FolderOpen,
+      LayoutDashboard, Folder, Calendar, CheckSquare, Wrench, Users,
+      DollarSign, Headphones, PenTool, Briefcase, X, ChevronDown,
+      Building2, BarChart2, Settings, Megaphone, FileText, CalendarCheck,
+      MessageCircle, UserCog, BookOpen, Receipt, ScrollText, Square
+    }),
     // JwtModule removed - custom TokenInterceptor handles auth to avoid conflicts
     StoreModule.forRoot(rootReducer)
   ],

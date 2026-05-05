@@ -78,7 +78,7 @@
 // Content Card
 // ========================================
 .consent-content {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -93,17 +93,17 @@
 
 .consent-greeting {
   font-size: 1rem;
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
   margin-bottom: 1rem;
 
   strong {
-    color: #333;
+    color: var(--legience-text-primary, #333);
   }
 }
 
 .consent-intro {
   font-size: 0.925rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   line-height: 1.65;
   margin-bottom: 1.75rem;
 }
@@ -123,12 +123,12 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.875rem 1rem;
-  background: #f8f9fa;
+  background: var(--legience-bg-card-hover, #f8f9fa);
   border-radius: 10px;
   transition: background 0.2s ease;
 
   &:hover {
-    background: #f0f2f5;
+    background: var(--legience-bg-card-hover, #f0f2f5);
   }
 }
 
@@ -144,12 +144,12 @@
 
   &.research {
     background: rgba(41, 156, 219, 0.12);
-    color: #299cdb;
+    color: var(--legience-info, #299cdb);
   }
 
   &.document {
     background: rgba(10, 179, 156, 0.12);
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
   }
 
   &.drafting {
@@ -159,14 +159,14 @@
 
   &.review {
     background: rgba(64, 81, 137, 0.12);
-    color: #405189;
+    color: var(--legience-accent, #405189);
   }
 }
 
 .ai-use-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
 }
 
 // ========================================
@@ -188,7 +188,7 @@
   height: 32px;
   border-radius: 50%;
   background: rgba(41, 156, 219, 0.12);
-  color: #299cdb;
+  color: var(--legience-info, #299cdb);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,11 +199,11 @@
 
 .attorney-notice-text {
   font-size: 0.875rem;
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
   line-height: 1.55;
 
   strong {
-    color: #333;
+    color: var(--legience-text-primary, #333);
   }
 }
 
@@ -216,7 +216,7 @@
   border-radius: 8px;
   margin-bottom: 1.75rem;
   font-size: 0.8125rem;
-  color: #0ab39c;
+  color: var(--legience-success, #0ab39c);
   font-weight: 500;
 }
 
@@ -226,7 +226,7 @@
 .consent-cta {
   text-align: center;
   padding: 1.75rem 2rem;
-  background: #f8f9fa;
+  background: var(--legience-bg-card-hover, #f8f9fa);
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -266,7 +266,7 @@
 
 .consent-cta-note {
   font-size: 0.8rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   margin: 1rem 0 0;
 }
 
@@ -278,7 +278,7 @@
   align-items: center;
   gap: 1rem;
   padding: 1.25rem 2rem;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 12px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
   margin-top: 1rem;
@@ -289,7 +289,7 @@
   height: 40px;
   border-radius: 10px;
   background: rgba(64, 81, 137, 0.08);
-  color: #405189;
+  color: var(--legience-accent, #405189);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,13 +303,13 @@
   h6 {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #405189;
+    color: var(--legience-accent, #405189);
     margin-bottom: 0.15rem;
   }
 
   p {
     font-size: 0.8rem;
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     margin: 0;
   }
 }
@@ -322,7 +322,7 @@
 }
 
 .success-card {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -376,7 +376,7 @@
 
 .success-message {
   font-size: 0.925rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
@@ -387,7 +387,7 @@
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
   background: rgba(10, 179, 156, 0.08);
-  color: #0ab39c;
+  color: var(--legience-success, #0ab39c);
   border-radius: 50px;
   font-size: 0.85rem;
   font-weight: 500;
@@ -397,7 +397,7 @@
 // Error State
 // ========================================
 .error-card {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   padding: 3rem 2rem;
@@ -409,7 +409,7 @@
   height: 72px;
   border-radius: 50%;
   background: rgba(240, 101, 72, 0.1);
-  color: #f06548;
+  color: var(--legience-danger, #f06548);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,7 +421,7 @@
 // Loading State
 // ========================================
 .loading-card {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   padding: 3rem 2rem;

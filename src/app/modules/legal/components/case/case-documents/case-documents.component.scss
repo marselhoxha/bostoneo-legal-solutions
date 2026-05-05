@@ -46,17 +46,17 @@
 
 .btn-soft-secondary {
   background-color: rgba(108, 117, 125, 0.1);
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   
   &:hover {
-    background-color: #6c757d;
+    background-color: var(--legience-text-muted, #6c757d);
     color: #fff;
   }
 }
 
 .btn-soft-light {
   background-color: rgba(149, 194, 239, 0.85);
-  color: #212529;
+  color: var(--legience-text-secondary, #212529);
   
   &:hover {
     background-color: #44596e;
@@ -109,20 +109,20 @@
 
 .btn-soft-secondary {
   background-color: rgba(108, 117, 125, 0.1);
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   
   &:hover {
-    background-color: #6c757d;
+    background-color: var(--legience-text-muted, #6c757d);
     color: #fff;
   }
 }
 
 .btn-soft-light {
   background-color: rgba(248, 249, 250, 0.85);
-  color: #212529;
+  color: var(--legience-text-secondary, #212529);
   
   &:hover {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
   }
 } 
  

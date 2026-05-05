@@ -24,17 +24,17 @@
 
 // Upload section styling
 .card.bg-primary-subtle {
-  background-color: rgba(var(--vz-primary-rgb), 0.06) !important;
-  border: 1px solid rgba(var(--vz-primary-rgb), 0.15) !important;
+  background-color: rgba(var(--legience-accent-rgb), 0.06) !important;
+  border: 1px solid rgba(var(--legience-accent-rgb), 0.15) !important;
   
   .form-control.border-primary-subtle {
-    border-color: rgba(var(--vz-primary-rgb), 0.2);
-    background-color: var(--vz-body-bg);
+    border-color: rgba(var(--legience-accent-rgb), 0.2);
+    background-color: var(--legience-bg-page);
     
     &:focus {
-      border-color: rgba(var(--vz-primary-rgb), 0.5);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.1);
-      background-color: var(--vz-body-bg);
+      border-color: rgba(var(--legience-accent-rgb), 0.5);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.1);
+      background-color: var(--legience-bg-page);
     }
   }
   
@@ -51,7 +51,7 @@
 .progress.progress-sm {
   height: 0.4rem;
   border-radius: 0.2rem;
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
 }
 
 // Professional Version Timeline (Compact & Theme-Optimized)
@@ -87,8 +87,8 @@
         width: 2rem;
         height: 2rem;
         border-radius: 50%;
-        background-color: var(--vz-card-bg);
-        border: 2px solid var(--vz-border-color);
+        background-color: var(--legience-bg-card);
+        border: 2px solid var(--legience-border-hairline);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -98,14 +98,14 @@
         
         i {
           font-size: 0.875rem;
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
           transition: all 0.3s ease;
         }
         
         &.current {
-          background-color: var(--vz-success);
-          border-color: var(--vz-success);
-          box-shadow: 0 0 0 2px rgba(var(--vz-success-rgb), 0.15);
+          background-color: var(--legience-success);
+          border-color: var(--legience-success);
+          box-shadow: 0 0 0 2px rgba(var(--legience-success-rgb), 0.15);
           
           i {
             color: white;
@@ -121,8 +121,8 @@
         width: 1.5px;
         height: calc(100% + 1.5rem);
         background: linear-gradient(to bottom, 
-          var(--vz-border-color), 
-          rgba(var(--vz-border-color-rgb), 0.3));
+          var(--legience-border-hairline), 
+          rgba(var(--legience-border-hairline-rgb), 0.3));
         z-index: 1;
       }
     }
@@ -135,23 +135,23 @@
       
       .card {
         transition: all 0.3s ease;
-        box-shadow: 0 1px 3px rgba(var(--vz-dark-rgb), 0.05);
-        background-color: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        box-shadow: 0 1px 3px rgba(var(--legience-dark-rgb), 0.05);
+        background-color: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         
         &:hover {
-          box-shadow: 0 4px 12px rgba(var(--vz-dark-rgb), 0.08);
+          box-shadow: 0 4px 12px rgba(var(--legience-dark-rgb), 0.08);
           transform: translateY(-1px);
-          border-color: rgba(var(--vz-primary-rgb), 0.2);
+          border-color: rgba(var(--legience-accent-rgb), 0.2);
         }
         
         &.border-success {
-          border-color: rgba(var(--vz-success-rgb), 0.3);
-          background-color: rgba(var(--vz-success-rgb), 0.02);
+          border-color: rgba(var(--legience-success-rgb), 0.3);
+          background-color: rgba(var(--legience-success-rgb), 0.02);
           
           &:hover {
-            border-color: rgba(var(--vz-success-rgb), 0.4);
-            box-shadow: 0 4px 12px rgba(var(--vz-success-rgb), 0.1);
+            border-color: rgba(var(--legience-success-rgb), 0.4);
+            box-shadow: 0 4px 12px rgba(var(--legience-success-rgb), 0.1);
           }
         }
         
@@ -202,15 +202,15 @@
       // Version details grid (more compact)
       .version-details {
         .bg-light {
-          background-color: rgba(var(--vz-light-rgb), 0.3) !important;
-          border: 1px solid rgba(var(--vz-border-color-rgb), 0.5);
+          background-color: rgba(var(--legience-bg-card-hover-rgb), 0.3) !important;
+          border: 1px solid rgba(var(--legience-border-hairline-rgb), 0.5);
           
           .text-muted {
-            color: var(--vz-secondary-color) !important;
+            color: var(--legience-text-muted) !important;
           }
           
           .text-dark {
-            color: var(--vz-body-color) !important;
+            color: var(--legience-text-secondary) !important;
           }
         }
         
@@ -231,22 +231,22 @@
         
         // Version comment styling
         .alert.alert-info {
-          background-color: rgba(var(--vz-info-rgb), 0.06);
-          border: 1px solid rgba(var(--vz-info-rgb), 0.15);
+          background-color: rgba(var(--legience-info-rgb), 0.06);
+          border: 1px solid rgba(var(--legience-info-rgb), 0.15);
           padding: 0.75rem;
           margin-top: 0.75rem;
           
           .ri-chat-3-line {
             font-size: 0.9rem;
-            color: var(--vz-info);
+            color: var(--legience-info);
           }
           
           .text-info {
-            color: var(--vz-info) !important;
+            color: var(--legience-info) !important;
           }
           
           .text-dark {
-            color: var(--vz-body-color) !important;
+            color: var(--legience-text-secondary) !important;
           }
           
           .fs-13 {
@@ -265,11 +265,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(var(--vz-light-rgb), 0.3);
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.3);
   
   i.display-6 {
     font-size: 2rem;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
   }
 }
 
@@ -279,10 +279,10 @@
     .timeline-item {
       .timeline-marker {
         .timeline-dot {
-          background-color: var(--vz-dark);
+          background-color: var(--legience-dark);
           
           &:not(.current) {
-            border-color: rgba(var(--vz-light-rgb), 0.2);
+            border-color: rgba(var(--legience-bg-card-hover-rgb), 0.2);
           }
         }
       }
@@ -475,11 +475,11 @@
 // Hover effects for better interactivity (theme-aware)
 .card:hover {
   .timeline-dot:not(.current) {
-    border-color: var(--vz-primary);
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
+    border-color: var(--legience-accent);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
     
     i {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
     }
   }
 }
@@ -508,9 +508,9 @@
 
 // Form control focus states (theme-optimized)
 .form-control:focus {
-  border-color: var(--vz-primary);
-  box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.15);
-  background-color: var(--vz-body-bg);
+  border-color: var(--legience-accent);
+  box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.15);
+  background-color: var(--legience-bg-page);
 }
 
 // Button hover enhancements (subtle)
@@ -529,17 +529,17 @@
   
   &.alert-info {
     .alert & {
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
     }
   }
   
   &.alert-danger {
-    background-color: rgba(var(--vz-danger-rgb), 0.06);
-    border-color: rgba(var(--vz-danger-rgb), 0.15);
-    color: var(--vz-body-color);
+    background-color: rgba(var(--legience-danger-rgb), 0.06);
+    border-color: rgba(var(--legience-danger-rgb), 0.15);
+    color: var(--legience-text-secondary);
     
     i {
-      color: var(--vz-danger);
+      color: var(--legience-danger);
     }
   }
 }

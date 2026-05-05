@@ -1,0 +1,885 @@
+// =====================================================
+// 19. WELCOME BANNER + DASHBOARD GREETING — light + dark
+//   Used on home dashboard. Originally Velzon "editorial" with gradient stripe.
+//   Rox treatment: flat, hairline divider, compact heading scale.
+// =====================================================
+:root[data-design="rox"] {
+  .dashboard-greeting {
+    padding: 16px 0 24px !important;
+    padding-left: 0 !important;
+    margin-bottom: 24px !important;
+    border-bottom: 1px solid var(--rox-border-hairline) !important;
+
+    // Kill the vertical gradient accent stripe (single-accent rule)
+    &::before { display: none !important; }
+
+    .greeting-date {
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.06em !important;
+      color: var(--rox-text-muted) !important;
+      text-transform: uppercase !important;
+      margin-bottom: 8px !important;
+    }
+
+    .greeting-title {
+      font-size: 24px !important;
+      font-weight: 500 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1.25 !important;
+      color: var(--rox-text-primary) !important;
+      margin: 0 0 12px 0 !important;
+    }
+
+    .greeting-briefing p {
+      font-size: 14px !important;
+      font-weight: 400 !important;
+      line-height: 1.6 !important;
+      color: var(--rox-text-secondary) !important;
+      opacity: 1 !important;
+      font-family: 'Geist', system-ui, sans-serif !important;
+    }
+  }
+
+  // "My Ongoing Cases" + similar dashboard section headers
+  .dashboard-section-title,
+  .section-header h2,
+  .section-header h3 {
+    font-size: 17px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    color: var(--rox-text-primary) !important;
+  }
+}
+
+// =====================================================
+// 20. AUTH PAGES (login, register, resetpassword, verify, accept-invite)
+//   Each has its own .css/.scss with hardcoded gradients, button colors,
+//   input borders. Match specificity + override.
+// =====================================================
+:root[data-design="rox"] {
+
+  // ---- Login page (login.component.css) ----
+  .login-page {
+    background: linear-gradient(135deg, #0c0a09 0%, #0b1e3d 55%, #0950bd 100%) !important;
+    min-height: 100vh;
+  }
+
+  .login-card {
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: rgba(0, 0, 0, 0.18) 0 12px 32px 0, rgba(0, 0, 0, 0.06) 0 0 0 1px !important;
+    padding: 32px !important;
+    max-width: 420px !important;
+  }
+
+  .login-title {
+    color: var(--rox-text-primary) !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.015em !important;
+    font-size: 22px !important;
+  }
+
+  .login-subtitle {
+    color: var(--rox-text-muted) !important;
+    font-size: 13.5px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .login-label {
+    color: var(--rox-text-secondary) !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .login-input {
+    border: 1px solid var(--vz-border-color) !important;
+    border-radius: 6px !important;
+    height: 40px !important;
+    font-size: 13.5px !important;
+    box-shadow: none !important;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease !important;
+
+    &:focus {
+      border-color: var(--vz-primary) !important;
+      box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.12) !important;
+      outline: none !important;
+    }
+  }
+
+  .login-btn {
+    background-color: var(--vz-primary) !important;
+    border-color: var(--vz-primary) !important;
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-size: 13.5px !important;
+
+    &:hover, &:focus {
+      background-color: #0950bd !important;
+      border-color: #0950bd !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  .login-link {
+    color: var(--vz-primary) !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    &:hover { color: #0950bd !important; text-decoration: underline !important; }
+  }
+
+  // ---- Register page (register.component.css — same patterns) ----
+  app-register {
+    .register-page, .auth-page, .auth-bg-cover { background: linear-gradient(135deg, #0c0a09 0%, #0b1e3d 55%, #0950bd 100%) !important; }
+    .register-card, .auth-card { background: #ffffff !important; border-radius: 12px !important; box-shadow: rgba(0, 0, 0, 0.18) 0 12px 32px 0, rgba(0, 0, 0, 0.06) 0 0 0 1px !important; }
+  }
+
+  // ---- Reset password ----
+  app-resetpassword {
+    .reset-page, .auth-page { background: linear-gradient(135deg, #0c0a09 0%, #0b1e3d 55%, #0950bd 100%) !important; }
+    .reset-card, .auth-card { background: #ffffff !important; border-radius: 12px !important; }
+  }
+
+  // ---- Verify ----
+  app-verify {
+    .verify-page, .auth-page { background: linear-gradient(135deg, #0c0a09 0%, #0b1e3d 55%, #0950bd 100%) !important; }
+  }
+
+  // ---- Accept-invite (uses #405189 → #6366f1 gradient on shapes) ----
+  app-accept-invite {
+    .accept-invite-page, .auth-page-wrapper { background: linear-gradient(135deg, #0c0a09 0%, #0b1e3d 55%, #0950bd 100%) !important; }
+    .auth-page-content { background: transparent !important; }
+
+    // The decorative gradient shape overlay
+    [class*="bg-gradient"], .auth-bg-cover {
+      background: linear-gradient(135deg, #0950bd 0%, #0b64e9 100%) !important;
+      opacity: 0.85 !important;
+    }
+
+    .invite-card, .accept-invite-card, .card {
+      background: #ffffff !important;
+      border-radius: 12px !important;
+      box-shadow: rgba(0, 0, 0, 0.18) 0 12px 32px 0, rgba(0, 0, 0, 0.06) 0 0 0 1px !important;
+      border: none !important;
+    }
+  }
+
+  // Common auth utility — generic .auth-bg / .bg-auth-pattern
+  .auth-bg-cover, .auth-bg, .bg-auth-pattern {
+    background: linear-gradient(135deg, #0c0a09 0%, #0b1e3d 55%, #0950bd 100%) !important;
+  }
+}
+
+// Auth dark mode — minor adjustments (gradient already dark, card stays white for legibility)
+:root[data-design="rox"][data-bs-theme="dark"] {
+  .login-card,
+  app-register .register-card,
+  app-register .auth-card,
+  app-resetpassword .reset-card,
+  app-resetpassword .auth-card,
+  app-accept-invite .invite-card,
+  app-accept-invite .accept-invite-card,
+  app-accept-invite .card {
+    background: #141414 !important;
+    border: 1px solid var(--rox-border-hairline) !important;
+  }
+
+  .login-title { color: var(--rox-text-primary) !important; }
+  .login-subtitle { color: var(--rox-text-muted) !important; }
+  .login-label { color: var(--rox-text-secondary) !important; }
+
+  .login-input {
+    background: #0a0a0a !important;
+    border-color: var(--rox-border-hairline) !important;
+    color: var(--rox-text-primary) !important;
+    &::placeholder { color: var(--rox-text-muted) !important; }
+  }
+}
+
+// =====================================================
+// 21. EXTENDED COVERAGE — Messages, Calendar, Signatures, Misc
+// =====================================================
+:root[data-design="rox"] {
+
+  // ---- Messages module (chat) ----
+  app-messages {
+    .messages-page {
+      background: var(--vz-body-bg) !important;
+    }
+
+    // Thread list items
+    .thread-item, .conversation-item, .message-thread-item {
+      background: transparent !important;
+      border-bottom: 1px solid var(--rox-border-hairline) !important;
+      padding: 12px 16px !important;
+      transition: background 0.1s ease;
+
+      &:hover { background: var(--rox-bg-hover) !important; }
+      &.active, &.selected {
+        background: rgba(11, 100, 233, 0.06) !important;
+        border-left: 2px solid var(--vz-primary) !important;
+      }
+
+      .thread-name, .conversation-name { color: var(--rox-text-primary) !important; font-weight: 500 !important; font-size: 13.5px !important; }
+      .thread-preview, .last-message { color: var(--rox-text-muted) !important; font-size: 12.5px !important; }
+      .thread-time, .timestamp { color: var(--rox-text-muted) !important; font-size: 11.5px !important; font-feature-settings: 'tnum'; }
+    }
+
+    // Chat bubble — sent vs received
+    .message-bubble.sent, .bubble-sent, .my-message {
+      background: var(--vz-primary) !important;
+      color: #ffffff !important;
+      border-radius: 12px 12px 2px 12px !important;
+      box-shadow: none !important;
+    }
+    .message-bubble.received, .bubble-received, .other-message {
+      background: var(--vz-tertiary-bg) !important;
+      color: var(--rox-text-primary) !important;
+      border-radius: 12px 12px 12px 2px !important;
+      box-shadow: none !important;
+    }
+
+    // Input area
+    .message-input-area, .chat-input-wrapper {
+      background: #ffffff !important;
+      border-top: 1px solid var(--rox-border-hairline) !important;
+    }
+  }
+
+  // ---- Calendar (FullCalendar) ----
+  .fc {
+    .fc-toolbar-title { font-size: 17px !important; font-weight: 500 !important; letter-spacing: -0.01em !important; color: var(--rox-text-primary) !important; }
+    .fc-button {
+      background: #ffffff !important;
+      border: 1px solid var(--vz-border-color) !important;
+      color: var(--rox-text-primary) !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      box-shadow: none !important;
+      border-radius: 6px !important;
+      padding: 5px 10px !important;
+      text-transform: none !important;
+
+      &:hover { background: var(--rox-bg-hover) !important; border-color: var(--rox-text-muted) !important; color: var(--rox-text-primary) !important; }
+
+      &.fc-button-active, &:active {
+        background: var(--vz-primary) !important;
+        border-color: var(--vz-primary) !important;
+        color: #ffffff !important;
+      }
+    }
+
+    // Day grid
+    .fc-daygrid-day, .fc-timegrid-slot {
+      border-color: var(--rox-border-hairline) !important;
+    }
+    .fc-day-today {
+      background: rgba(11, 100, 233, 0.04) !important;
+    }
+    .fc-col-header-cell {
+      background: transparent !important;
+      border-color: var(--rox-border-hairline) !important;
+      .fc-col-header-cell-cushion {
+        font-size: 11.5px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: var(--rox-text-muted) !important;
+        padding: 8px !important;
+      }
+    }
+
+    // Day numbers
+    .fc-daygrid-day-number {
+      color: var(--rox-text-secondary) !important;
+      font-size: 12.5px !important;
+      font-weight: 500 !important;
+      padding: 6px !important;
+    }
+    .fc-day-today .fc-daygrid-day-number {
+      color: var(--vz-primary) !important;
+      font-weight: 600 !important;
+    }
+
+    // Events
+    .fc-event {
+      border-radius: 4px !important;
+      border: none !important;
+      padding: 1px 6px !important;
+      font-size: 11.5px !important;
+      font-weight: 500 !important;
+      background: rgba(11, 100, 233, 0.10) !important;
+      color: var(--vz-primary) !important;
+      box-shadow: none !important;
+
+      &.fc-event-success { background: rgba(22, 163, 74, 0.10) !important; color: var(--vz-success) !important; }
+      &.fc-event-warning { background: rgba(249, 183, 3, 0.14) !important; color: #b45309 !important; }
+      &.fc-event-danger  { background: rgba(242, 65, 73, 0.10) !important; color: var(--vz-danger) !important; }
+      &.fc-event-info    { background: rgba(107, 74, 255, 0.10) !important; color: var(--vz-info) !important; }
+    }
+    .fc-event-title { font-weight: 500 !important; }
+    .fc-event-time { opacity: 0.75 !important; }
+  }
+
+  // ---- Signatures module ----
+  app-signatures {
+    .timeline-item, .version-timeline-professional .timeline-item {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+
+      .timeline-content { color: var(--rox-text-primary) !important; }
+      .timeline-meta, .timeline-time { color: var(--rox-text-muted) !important; font-size: 12px !important; }
+    }
+
+    .version-timeline-professional {
+      &::before, .timeline-line { background: var(--rox-border-hairline) !important; }
+    }
+
+    .timeline-marker, .timeline-dot {
+      background: var(--vz-primary) !important;
+      border: 2px solid #ffffff !important;
+      box-shadow: 0 0 0 1px var(--vz-primary) !important;
+    }
+
+    // Status indicators in signature workspace
+    .signature-status, .doc-status {
+      border-radius: 100px !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
+      padding: 2px 9px !important;
+      text-transform: none !important;
+    }
+  }
+
+  // ---- File manager ----
+  app-file-manager {
+    .file-card, .folder-card, .file-item, .folder-item {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      transition: all 0.12s ease;
+
+      &:hover {
+        border-color: var(--vz-border-color) !important;
+        background: var(--rox-bg-hover) !important;
+      }
+
+      .file-name, .folder-name { color: var(--rox-text-primary) !important; font-weight: 500 !important; }
+      .file-meta, .file-size, .file-date { color: var(--rox-text-muted) !important; font-size: 12px !important; }
+    }
+
+    // File icons in grid view
+    .file-icon, .folder-icon { color: var(--rox-text-subtle) !important; }
+  }
+
+  // ---- Modal-modern (used in admin/settings) ----
+  .modal-modern {
+    .modal-content {
+      border-radius: 10px !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      box-shadow: rgba(0, 0, 0, 0.12) 0 12px 32px 0, rgba(0, 0, 0, 0.06) 0 0 0 1px !important;
+    }
+  }
+
+  // ---- Permission/role mapping containers (admin pages) ----
+  .permission-mapping-container,
+  .inheritance-rules-container,
+  .conditions-container,
+  .customizations-container {
+    background: #ffffff !important;
+    border: 1px solid var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+  }
+}
+
+// Section 21 dark mode
+:root[data-design="rox"][data-bs-theme="dark"] {
+  app-messages {
+    .messages-page { background: var(--vz-body-bg) !important; }
+    .thread-item, .conversation-item, .message-thread-item {
+      border-bottom-color: var(--rox-border-hairline) !important;
+      &:hover { background: var(--rox-bg-hover) !important; }
+      &.active, &.selected { background: rgba(77, 142, 255, 0.10) !important; border-left-color: var(--vz-primary) !important; }
+      .thread-name, .conversation-name { color: var(--rox-text-primary) !important; }
+    }
+    .message-bubble.received, .bubble-received, .other-message {
+      background: var(--vz-tertiary-bg) !important;
+      color: var(--rox-text-primary) !important;
+    }
+    .message-input-area, .chat-input-wrapper {
+      background: #141414 !important;
+      border-top-color: var(--rox-border-hairline) !important;
+    }
+  }
+
+  .fc {
+    .fc-button {
+      background: #141414 !important;
+      border-color: var(--rox-border-hairline) !important;
+      color: var(--rox-text-primary) !important;
+      &:hover { background: var(--rox-bg-hover) !important; }
+    }
+    .fc-day-today { background: rgba(77, 142, 255, 0.06) !important; }
+  }
+
+  app-signatures .timeline-item,
+  app-signatures .version-timeline-professional .timeline-item,
+  app-file-manager .file-card,
+  app-file-manager .folder-card,
+  app-file-manager .file-item,
+  app-file-manager .folder-item,
+  .permission-mapping-container,
+  .inheritance-rules-container,
+  .conditions-container,
+  .customizations-container {
+    background: #141414 !important;
+    border-color: var(--rox-border-hairline) !important;
+  }
+
+  app-signatures .timeline-marker, app-signatures .timeline-dot {
+    border-color: #141414 !important;
+  }
+}
+
+// =====================================================
+// 22. AI WORKSPACE + PRACTICE AREAS (deep dive)
+//   Patterns extracted from ai-workspace.component.scss (15K lines),
+//   personal-injury.component.scss (10K lines), and related sub-components.
+// =====================================================
+:root[data-design="rox"] {
+
+  // Scope: every AI assistant + practice area component
+  app-ai-workspace,
+  app-ai-drafting,
+  app-ai-dashboard,
+  app-ai-response-modal,
+  app-document-analysis-viewer,
+  app-document-editor,
+  app-collection-viewer,
+  app-draft-wizard,
+  app-template-library,
+  app-template-filler,
+  app-template-editor,
+  app-template-import-wizard,
+  app-auto-fill-wizard,
+  app-bulk-request-wizard,
+  app-practice-area-workspace,
+  app-practice-areas,
+  app-practice-areas-dashboard,
+  app-personal-injury,
+  app-criminal-defense,
+  app-family-law,
+  app-immigration,
+  app-real-estate,
+  app-intellectual-property,
+  app-legal-research,
+  app-timeline-view {
+
+    // ---- Layout containers ----
+    .drafting-container,
+    .split-view-container,
+    .main-content-area,
+    .case-workflow-section,
+    .workspace-container {
+      background: var(--vz-body-bg) !important;
+    }
+
+    // ---- Workspace sidebars (drafting + conversation) ----
+    .drafting-sidebar,
+    .conversation-sidebar,
+    .sidebar-panel,
+    .workspace-sidebar {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+    }
+
+    // ---- Welcome screen / empty states ----
+    .welcome-screen,
+    .welcome-header,
+    .empty-state {
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 32px 24px !important;
+      text-align: center;
+
+      h1, h2, h3 {
+        font-weight: 500 !important;
+        letter-spacing: -0.015em !important;
+        color: var(--rox-text-primary) !important;
+      }
+      p { color: var(--rox-text-secondary) !important; font-size: 14px !important; line-height: 1.6 !important; }
+    }
+
+    // ---- Action cards / feature cards on workspace home ----
+    .action-card,
+    .feature-card,
+    .strategy-card {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      padding: 16px !important;
+      transition: all 0.12s ease;
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--vz-primary) !important;
+        background: rgba(11, 100, 233, 0.02) !important;
+      }
+
+      .icon-box,
+      .strategy-icon,
+      .card-icon {
+        background: rgba(11, 100, 233, 0.10) !important;
+        color: var(--vz-primary) !important;
+        border-radius: 8px !important;
+        width: 36px !important;
+        height: 36px !important;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+
+      .card-title, h4, h5 { font-size: 14px !important; font-weight: 500 !important; color: var(--rox-text-primary) !important; }
+      .card-content, .card-description { font-size: 12.5px !important; color: var(--rox-text-secondary) !important; line-height: 1.5 !important; }
+    }
+
+    // ---- Wizard / stepper UI ----
+    .step-indicator,
+    .step-circle {
+      background: var(--vz-tertiary-bg) !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      color: var(--rox-text-muted) !important;
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 50% !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      display: inline-flex; align-items: center; justify-content: center;
+
+      &.active, &.current {
+        background: var(--vz-primary) !important;
+        border-color: var(--vz-primary) !important;
+        color: #ffffff !important;
+      }
+      &.completed, &.done {
+        background: rgba(11, 100, 233, 0.10) !important;
+        border-color: var(--vz-primary) !important;
+        color: var(--vz-primary) !important;
+      }
+    }
+
+    .step-connector {
+      background: var(--rox-border-hairline) !important;
+      height: 1px !important;
+
+      &.active, &.completed { background: var(--vz-primary) !important; }
+    }
+
+    .step-header {
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: var(--rox-text-primary) !important;
+      letter-spacing: -0.005em !important;
+    }
+    .step-content { color: var(--rox-text-secondary) !important; font-size: 12.5px !important; }
+
+    // ---- Section headers within workspace ----
+    .section-header {
+      padding: 12px 16px !important;
+      border-bottom: 1px solid var(--rox-border-hairline) !important;
+
+      h3, h4, h5, .section-title {
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: var(--rox-text-primary) !important;
+        letter-spacing: -0.005em !important;
+        margin: 0 !important;
+      }
+    }
+
+    // ---- Toolbar chips + divider ----
+    .toolbar-chip {
+      background: transparent !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      color: var(--rox-text-secondary) !important;
+      border-radius: 6px !important;
+      padding: 4px 10px !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      box-shadow: none !important;
+
+      &:hover { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
+      &.active, &.selected {
+        background: rgba(11, 100, 233, 0.08) !important;
+        border-color: rgba(11, 100, 233, 0.25) !important;
+        color: var(--vz-primary) !important;
+      }
+    }
+
+    .toolbar-divider { background: var(--rox-border-hairline) !important; width: 1px !important; }
+
+    // ---- Sidebar filter chips ----
+    .sidebar-filter-chips {
+      gap: 6px;
+
+      .chip, [class*="chip"] {
+        background: transparent !important;
+        border: 1px solid var(--rox-border-hairline) !important;
+        color: var(--rox-text-secondary) !important;
+        border-radius: 100px !important;
+        padding: 3px 9px !important;
+        font-size: 11.5px !important;
+        font-weight: 500 !important;
+        cursor: pointer;
+        transition: all 0.12s ease;
+
+        &:hover { background: var(--rox-bg-hover) !important; }
+        &.active, &.selected {
+          background: rgba(11, 100, 233, 0.08) !important;
+          border-color: rgba(11, 100, 233, 0.25) !important;
+          color: var(--vz-primary) !important;
+        }
+      }
+    }
+
+    // ---- Document preview panel ----
+    .document-preview-content,
+    .document-viewer,
+    .preview-panel {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+
+      .document-name { color: var(--rox-text-primary) !important; font-weight: 500 !important; }
+      .document-icon { color: var(--rox-text-subtle) !important; }
+      .status-text { color: var(--rox-text-secondary) !important; font-size: 12.5px !important; }
+      .status-icon { color: var(--rox-text-subtle) !important; }
+    }
+
+    // ---- TOC (table of contents) ----
+    .toc-number {
+      font-feature-settings: 'tnum';
+      color: var(--rox-text-muted) !important;
+      font-size: 11.5px !important;
+      font-weight: 500 !important;
+      width: 24px !important;
+      flex-shrink: 0;
+    }
+    .toc-text {
+      font-size: 12.5px !important;
+      color: var(--rox-text-primary) !important;
+      &:hover { color: var(--vz-primary) !important; }
+    }
+
+    // ---- Timeline marker (legal-research, conversation history) ----
+    .timeline-marker {
+      background: var(--vz-primary) !important;
+      border: 2px solid #ffffff !important;
+      box-shadow: 0 0 0 1px var(--vz-primary) !important;
+      width: 8px !important;
+      height: 8px !important;
+      border-radius: 50% !important;
+    }
+  }
+
+  // =====================================================
+  // PERSONAL INJURY workspace specifics
+  // =====================================================
+  app-personal-injury,
+  app-practice-area-workspace {
+
+    // ---- Workspace case info header ----
+    .workspace-case-info {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      padding: 16px !important;
+    }
+
+    // ---- Custom nav pills ----
+    .nav-custom-pills {
+      .nav-link, button, [class*="pill"] {
+        background: transparent !important;
+        color: var(--rox-text-secondary) !important;
+        border: 1px solid transparent !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        padding: 6px 12px !important;
+        box-shadow: none !important;
+
+        &:hover { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
+        &.active, &.selected {
+          background: rgba(11, 100, 233, 0.08) !important;
+          color: var(--vz-primary) !important;
+          border-color: transparent !important;
+        }
+      }
+    }
+
+    // ---- Stat cards in PI workspace ----
+    .summary-stat-card,
+    .panel-card,
+    .stat-card {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      padding: 14px 16px !important;
+
+      .stat-value, .metric-value {
+        font-size: 20px !important;
+        font-weight: 500 !important;
+        letter-spacing: -0.015em !important;
+        color: var(--rox-text-primary) !important;
+      }
+      .stat-label, .metric-label {
+        font-size: 11.5px !important;
+        color: var(--rox-text-muted) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+      }
+      .stat-icon, .metric-icon { color: var(--rox-text-subtle) !important; }
+    }
+
+    // ---- Severity indicator (PI medical) ----
+    .severity-indicator {
+      border-radius: 100px !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
+      padding: 2px 9px !important;
+      text-transform: none !important;
+
+      &.high, &.severe   { background: rgba(242, 65, 73, 0.10) !important; color: var(--vz-danger) !important; }
+      &.medium, &.moderate { background: rgba(249, 183, 3, 0.14) !important; color: #b45309 !important; }
+      &.low, &.mild      { background: rgba(22, 163, 74, 0.10) !important; color: var(--vz-success) !important; }
+    }
+
+    // ---- Pill values + labels (medical UI) ----
+    .pill-value {
+      font-feature-settings: 'tnum';
+      color: var(--rox-text-primary) !important;
+      font-weight: 500 !important;
+    }
+    .pill-label { color: var(--rox-text-muted) !important; font-size: 11.5px !important; }
+
+    // ---- Red flag chip (clinical alerts) ----
+    .red-flag-chip {
+      background: rgba(242, 65, 73, 0.08) !important;
+      color: var(--vz-danger) !important;
+      border: 1px solid rgba(242, 65, 73, 0.20) !important;
+      border-radius: 4px !important;
+      font-size: 11.5px !important;
+      font-weight: 500 !important;
+      padding: 2px 8px !important;
+    }
+
+    // ---- Item rows (medical records, treatment) ----
+    .item-name { color: var(--rox-text-primary) !important; font-weight: 500 !important; font-size: 13px !important; }
+    .ssc-icon { color: var(--rox-text-subtle) !important; }
+
+    // ---- Treatment table ----
+    .treatment-table {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      overflow: hidden;
+
+      th { font-size: 11.5px !important; text-transform: uppercase !important; color: var(--rox-text-muted) !important; font-weight: 600 !important; letter-spacing: 0.05em !important; padding: 10px 14px !important; border-bottom: 1px solid var(--rox-border-hairline) !important; }
+      td { font-size: 13px !important; padding: 11px 14px !important; border-color: var(--rox-border-hairline) !important; }
+      tr:hover td { background: var(--rox-bg-hover) !important; }
+    }
+
+    // ---- Medical summary/records containers ----
+    .medical-summary-container,
+    .medical-records-container,
+    .pip-coverage-container {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+    }
+  }
+
+  // ---- Citation viewer modal ----
+  app-citation-viewer-modal,
+  .citation-viewer-modal-window {
+    .modal-content { background: #ffffff !important; }
+    .citation-header { font-weight: 500 !important; color: var(--rox-text-primary) !important; }
+    .citation-body { color: var(--rox-text-secondary) !important; line-height: 1.6 !important; }
+  }
+}
+
+// AI Workspace + PI dark mode
+:root[data-design="rox"][data-bs-theme="dark"] {
+  app-ai-workspace,
+  app-ai-drafting,
+  app-document-analysis-viewer,
+  app-document-editor,
+  app-collection-viewer,
+  app-draft-wizard,
+  app-template-library,
+  app-template-filler,
+  app-template-editor,
+  app-bulk-request-wizard,
+  app-practice-area-workspace,
+  app-practice-areas-dashboard,
+  app-personal-injury,
+  app-legal-research,
+  app-timeline-view {
+
+    .drafting-sidebar,
+    .conversation-sidebar,
+    .sidebar-panel,
+    .workspace-sidebar,
+    .action-card,
+    .feature-card,
+    .strategy-card,
+    .document-preview-content,
+    .document-viewer,
+    .preview-panel,
+    .workspace-case-info,
+    .summary-stat-card,
+    .panel-card,
+    .stat-card,
+    .treatment-table,
+    .medical-summary-container,
+    .medical-records-container,
+    .pip-coverage-container {
+      background: #141414 !important;
+      border-color: var(--rox-border-hairline) !important;
+    }
+
+    .step-indicator,
+    .step-circle {
+      background: var(--vz-tertiary-bg) !important;
+      border-color: var(--rox-border-hairline) !important;
+      color: var(--rox-text-muted) !important;
+    }
+
+    .toolbar-chip {
+      border-color: var(--rox-border-hairline) !important;
+      &:hover { background: var(--rox-bg-hover) !important; }
+    }
+
+    .timeline-marker { border-color: #141414 !important; }
+  }
+
+  app-citation-viewer-modal,
+  .citation-viewer-modal-window {
+    .modal-content { background: #141414 !important; }
+  }
+}
+

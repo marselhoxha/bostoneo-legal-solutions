@@ -1,19 +1,820 @@
-// Timer icon pulse animation
-.timer-pulse {
-  animation: timer-pulse-animation 1.5s ease-in-out infinite;
+// =====================================================================
+// LEGIENCE TOPBAR — clean replacement (spec: 2026-05-04)
+// All chrome uses .lt-* classes. No fights with Velzon's .navbar-*,
+// .header-item, .topbar-*, .btn-topbar — those rules can't match the new
+// markup, so we don't need !important wars to override them.
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// Bar 1 — outer header
+// ---------------------------------------------------------------------
+#page-topbar.lt-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  background: transparent;     // background lives on .lt-bar-row
+  box-shadow: none;
+  border-bottom: none;
 }
 
-@keyframes timer-pulse-animation {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
+.lt-bar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 22px;
+  height: 70px;
+  background:
+    linear-gradient(135deg,
+      #ffffff 0%,
+      rgba(11, 100, 233, 0.025) 50%,
+      rgba(11, 100, 233, 0.06) 100%);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  // overflow MUST stay visible so ngbDropdown menus can render below the bar.
+  // The decorative radial glow is contained via a child .lt-bar-glow div
+  // (which has its own overflow: hidden) instead of clipping the whole row.
+  overflow: visible;
+
+  // Decorative radial glow — top-right corner. Same pattern as the
+  // attorney dashboard's hero focus card. Rendered via ::before on the
+  // row directly. We bias the glow upward so its falloff doesn't leak
+  // visibly below the bar's hairline. (No overflow:hidden — dropdowns win.)
+  &::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -40px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(11, 100, 233, 0.10) 0%, transparent 65%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
   }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.1);
+
+  > * { position: relative; z-index: 1; }
+}
+
+.lt-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.lt-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+// ---------------------------------------------------------------------
+// Brand — logo + firm subtitle
+// ---------------------------------------------------------------------
+.lt-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none !important;
+  color: inherit;
+
+  &:hover { color: inherit; }
+}
+
+.lt-brand-mark {
+  display: block;
+  height: 28px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.lt-brand-firm {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--legience-text-muted);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+// ---------------------------------------------------------------------
+// Hamburger (mobile menu toggle) — hidden on desktop
+// ---------------------------------------------------------------------
+.lt-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  color: var(--legience-text-muted);
+  cursor: pointer;
+  border-radius: 7px;
+
+  &:hover {
+    background: rgba(28, 25, 23, 0.05);
+    color: var(--legience-text-primary);
   }
 }
 
+.lt-hamburger-icon {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 18px;
+
+  span {
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .lt-hamburger { display: inline-flex; }
+}
+
+// ---------------------------------------------------------------------
+// Active case context pill — shown on /legal/cases/:id and sub-routes
+// ---------------------------------------------------------------------
+.lt-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 999px;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--legience-text-primary);
+  text-decoration: none !important;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  white-space: nowrap;
+  max-width: 360px;
+
+  &:hover {
+    background: #ffffff;
+    border-color: rgba(11, 100, 233, 0.30);
+    color: var(--legience-text-primary);
+  }
+
+  i-lucide,
+  i-lucide svg {
+    color: var(--legience-accent);
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  strong {
+    color: var(--legience-accent);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+}
+
+.lt-context-num {
+  color: var(--legience-text-muted);
+  font-weight: 400;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+
+// ---------------------------------------------------------------------
+// Search trigger
+// ---------------------------------------------------------------------
+.lt-search {
+  width: 320px;
+  height: 36px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--legience-text-muted);
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+  text-align: left;
+
+  &:hover { border-color: rgba(11, 100, 233, 0.30); }
+
+  i-lucide,
+  i-lucide svg {
+    color: var(--legience-text-muted);
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  .lt-search-text {
+    flex: 1;
+    color: var(--legience-text-muted);
+  }
+}
+
+.lt-kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: rgba(28, 25, 23, 0.05);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--legience-text-muted);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.lt-mobile-search { display: none; }
+@media (max-width: 991.98px) { .lt-mobile-search { display: inline-flex; } }
+
+// ---------------------------------------------------------------------
+// Ask Legience — primary CTA
+// ---------------------------------------------------------------------
+.lt-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #0b64e9 0%, #1e3a8a 100%);
+  color: #ffffff;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px -2px rgba(11, 100, 233, 0.45);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  white-space: nowrap;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px rgba(11, 100, 233, 0.55);
+    color: #ffffff;
+  }
+
+  i-lucide,
+  i-lucide svg {
+    color: #ffffff;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .lt-ai-btn .lt-ai-label { display: none; }
+  .lt-ai-btn { padding: 0 10px; }
+}
+
+// ---------------------------------------------------------------------
+// Active billable timer pill
+// ---------------------------------------------------------------------
+.lt-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.20);
+  border-radius: 999px;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--legience-success);
+  letter-spacing: -0.003em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  i-lucide,
+  i-lucide svg {
+    color: var(--legience-success);
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+}
+
+.lt-timer-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--legience-success);
+  animation: ltTimerPulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.lt-timer-time { line-height: 1; }
+
+@keyframes ltTimerPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.85); }
+}
+
+@media (max-width: 575.98px) {
+  .lt-timer { display: none; }
+}
+
+// ---------------------------------------------------------------------
+// Cluster — theme/messages/notifications
+// ---------------------------------------------------------------------
+.lt-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 6px;
+  margin-left: 4px;
+  border-left: 1px solid var(--legience-border-hairline);
+}
+
+.lt-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.lt-icon-btn {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--legience-text-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  &:hover,
+  &:focus {
+    background: rgba(28, 25, 23, 0.05);
+    color: var(--legience-text-primary);
+    outline: none;
+  }
+
+  &::after { display: none !important; }   // kill ngbDropdown caret arrow
+
+  // pointer-events: none on the icon SVG so clicks always reach the
+  // button and ngbDropdownToggle fires reliably.
+  i-lucide,
+  i-lucide svg {
+    color: inherit;
+    pointer-events: none;
+    stroke-width: 2;
+  }
+}
+
+.lt-icon-badge {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--legience-warning);
+  color: #ffffff;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1.5px #ffffff;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+.lt-icon-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--legience-warning);
+  box-shadow: 0 0 0 1.5px #ffffff;
+}
+
+// ---------------------------------------------------------------------
+// User block
+// ---------------------------------------------------------------------
+.lt-user {
+  position: relative;
+  display: inline-flex;
+}
+
+.lt-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 4px 12px 4px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: 'Geist', system-ui, sans-serif;
+  transition: background 0.12s ease;
+
+  &:hover { background: rgba(28, 25, 23, 0.04); }
+  &:focus { outline: none; box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.15); }
+  &::after { display: none !important; }
+}
+
+.lt-user-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.lt-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.lt-user-status {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--legience-success);
+  border: 2px solid #ffffff;
+}
+
+.lt-user-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.lt-user-name {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--legience-text-primary);
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+}
+
+.lt-user-role {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--legience-text-muted);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+// ---------------------------------------------------------------------
+// Org switcher slot — overrides the component's internal Velzon button
+// styling so the building icon visually matches the cluster (34×34, no
+// circle, smaller icon). The org-switcher uses Remix `ri-building-line
+// fs-22` internally; ::ng-deep is needed to reach into the component.
+// ---------------------------------------------------------------------
+.lt-org-switcher {
+  display: inline-flex;
+  align-items: center;
+
+  ::ng-deep .dropdown {
+    margin-left: 0 !important;
+  }
+
+  ::ng-deep .btn,
+  ::ng-deep .btn-topbar,
+  ::ng-deep button[ngbDropdownToggle] {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 7px !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--legience-text-muted) !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    &:hover, &:focus {
+      background: rgba(28, 25, 23, 0.05) !important;
+      color: var(--legience-text-primary) !important;
+    }
+
+    &::after { display: none !important; }
+
+    i, .bx, [class^="ri-"], [class*=" ri-"] {
+      font-size: 18px !important;
+      line-height: 1 !important;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// Dropdown menus — Direction A "Refined Card"
+// White panels with hairline border. Headers in normal-case dark text on
+// the same card surface. Soft hover on items. Footer is a text-link, not
+// a bordered button. The whole thing reads quiet and expensive instead
+// of the marketing-blue gradient ergonomics from before.
+// ---------------------------------------------------------------------
+.lt-dropdown-menu {
+  margin-top: 0.5rem !important;
+  // Hardcoded background (not --legience-bg-card) so the white surface
+  // is scoped to the topbar dropdowns only. Token would white-bleach
+  // every card across the app.
+  background: #ffffff;
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 10px !important;
+  box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.16);
+  padding: 0;
+  overflow: hidden;
+  font-family: 'Geist', system-ui, sans-serif;
+}
+
+[data-bs-theme="dark"] .lt-dropdown-menu {
+  background: #1c1917;
+  border-color: rgba(245, 245, 244, 0.08);
+}
+
+.lt-msg-menu,
+.lt-notif-menu {
+  width: 380px !important;
+  max-width: calc(100vw - 32px);
+}
+
+@media (max-width: 575.98px) {
+  .lt-msg-menu,
+  .lt-notif-menu {
+    width: calc(100vw - 32px) !important;
+  }
+}
+
+.lt-mobile-search-menu {
+  width: 320px !important;
+  max-width: calc(100vw - 32px);
+}
+
+.lt-user-menu {
+  min-width: 220px;
+  padding: 6px;
+
+  .dropdown-item {
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--legience-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.12s ease;
+    letter-spacing: -0.003em;
+
+    &:hover, &:focus {
+      background: rgba(28, 25, 23, 0.04);
+      color: var(--legience-text-primary);
+    }
+
+    i {
+      color: var(--legience-text-muted);
+      font-size: 15px !important;
+      width: 16px;
+      text-align: center;
+      line-height: 1;
+    }
+  }
+
+  .dropdown-divider {
+    border-color: var(--legience-border-hairline);
+    margin: 4px 0;
+  }
+}
+
+// Header — replaces the old saturated blue gradient with a refined
+// hairline-bordered title bar. Title in normal case (no uppercase).
+.lt-dropdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+  background: transparent;   // inherits parent .lt-dropdown-menu white/dark
+
+  // Override Velzon's `text-white`, uppercase, fs-16, and bx-icon styling
+  // from the existing markup (still inside our new wrapper).
+  .row { width: 100%; margin: 0; align-items: center; flex-wrap: nowrap; }
+  .col { padding: 0; }
+  .col-auto { padding: 0; }
+
+  h6 {
+    margin: 0 !important;
+    font-family: 'Geist', system-ui, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.012em !important;
+    color: var(--legience-text-primary) !important;
+    text-transform: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    // Hide the legacy bx-* icon — the title alone reads cleanly.
+    i.bx { display: none !important; }
+  }
+
+  .badge {
+    background: rgba(11, 100, 233, 0.10) !important;
+    color: var(--legience-accent) !important;
+    font-family: 'Geist', system-ui, sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 3px 8px !important;
+    border-radius: 999px !important;
+    letter-spacing: 0;
+    text-transform: none !important;
+  }
+}
+
+// Refined notification + message item rows — drop the heavy bg/border
+// patterns from Velzon, use a quieter row style with proper hover.
+:host ::ng-deep {
+  .lt-notif-menu .notification-item,
+  .lt-msg-menu .message-item {
+    padding: 12px 18px !important;
+    border-bottom: 1px solid var(--legience-border-hairline) !important;
+    transform: none !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transition: background 0.12s ease;
+
+    &:last-child { border-bottom: none !important; }
+
+    &:hover {
+      background: rgba(28, 25, 23, 0.025) !important;
+      transform: none !important;
+      cursor: pointer;
+    }
+
+    // Kill the left-edge accent bar Velzon adds via ::before
+    &::before { display: none !important; }
+
+    // Keep only one unread indicator (right-edge dot) — refined size
+    &.bg-light-subtle {
+      background-color: rgba(11, 100, 233, 0.025) !important;
+
+      &::after {
+        right: 14px !important;
+        top: 16px !important;
+        width: 7px !important;
+        height: 7px !important;
+        background-color: var(--legience-accent) !important;
+      }
+    }
+
+    // Item title — normal case, refined weight
+    h6.notification-title,
+    h6 {
+      font-family: 'Geist', system-ui, sans-serif !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: var(--legience-text-primary) !important;
+      letter-spacing: -0.008em !important;
+      text-transform: none !important;
+      margin-bottom: 2px !important;
+    }
+
+    .notification-text p,
+    p.notification-text-unread,
+    .text-truncate,
+    p.mb-1 {
+      font-family: 'Geist', system-ui, sans-serif !important;
+      font-size: 12.5px !important;
+      font-weight: 400 !important;
+      color: var(--legience-text-secondary) !important;
+      line-height: 1.45 !important;
+    }
+
+    // Time / metadata
+    .font-size-11,
+    .fs-11,
+    .fs-12 {
+      font-family: 'Geist', system-ui, sans-serif;
+      color: var(--legience-text-muted) !important;
+      font-size: 11px !important;
+      font-weight: 400 !important;
+    }
+
+    // Refined avatar — smaller, more subtle
+    .avatar-xs,
+    .avatar-sm {
+      width: 32px !important;
+      height: 32px !important;
+      animation: none !important;
+      box-shadow: none !important;
+
+      i {
+        font-size: 14px !important;
+      }
+
+      .avatar-title {
+        font-size: 12px !important;
+        font-weight: 600 !important;
+      }
+    }
+  }
+
+  // Footer — text link instead of bordered buttons
+  .lt-notif-menu > div:last-child,
+  .lt-msg-menu > div:last-child {
+    padding: 10px 18px !important;
+    border-top: 1px solid var(--legience-border-hairline) !important;
+    background: rgba(28, 25, 23, 0.015);
+
+    .btn-soft-primary,
+    .btn-light {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      font-family: 'Geist', system-ui, sans-serif !important;
+      font-size: 12.5px !important;
+      font-weight: 500 !important;
+      color: var(--legience-accent) !important;
+      padding: 4px 8px !important;
+      border-radius: 6px;
+
+      &:hover {
+        background: rgba(11, 100, 233, 0.06) !important;
+        color: var(--legience-accent) !important;
+      }
+
+      i { font-size: 13px !important; }
+    }
+  }
+
+  // Empty states refined — no animations, refined typography
+  .empty-notification,
+  .lt-msg-menu .text-center {
+    padding: 32px 18px !important;
+    color: var(--legience-text-muted) !important;
+    font-family: 'Geist', system-ui, sans-serif;
+
+    h5 {
+      font-family: 'Geist', system-ui, sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      color: var(--legience-text-primary) !important;
+      margin-bottom: 4px !important;
+    }
+
+    p {
+      font-size: 12.5px !important;
+      color: var(--legience-text-muted) !important;
+    }
+
+    .avatar-md { animation: none !important; }
+  }
+}
+
+// =====================================================================
+// PRESERVED — dropdown panel content styling (notification-item etc.)
+// These come from the original Velzon implementation and the panel
+// content here is unchanged — just re-parented into .lt-dropdown-menu.
+// Keeping these blocks behind :host ::ng-deep (legacy from previous
+// iterations) so the inner item styling continues to work.
+// =====================================================================
 :host ::ng-deep {
   .notification-item {
     transition: all 0.25s ease;
@@ -24,36 +825,30 @@
     animation: notification-appear 0.3s ease forwards;
     animation-delay: calc(var(--index, 0) * 0.05s);
     opacity: 0;
-    
+
     &:hover {
       background-color: var(--vz-light);
       cursor: pointer;
       transform: translateX(3px);
-      
-      &::before {
-        opacity: 1;
-      }
+
+      &::before { opacity: 1; }
     }
-    
+
     &::before {
       content: '';
       position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
+      left: 0; top: 0; bottom: 0;
       width: 3px;
       background-color: var(--vz-primary);
       opacity: 0;
       transition: opacity 0.25s ease;
     }
-    
-    &:last-child {
-      border-bottom: none;
-    }
-    
+
+    &:last-child { border-bottom: none; }
+
     &.bg-light-subtle {
       position: relative;
-      
+
       &::after {
         content: '';
         position: absolute;
@@ -65,1904 +860,130 @@
         background-color: var(--vz-primary);
       }
     }
+
+    .notification-title { color: var(--vz-body-color) !important; }
+    .notification-text {
+      color: var(--vz-body-color);
+      p { color: var(--vz-body-color); }
+    }
+    .notification-text-unread {
+      color: var(--vz-body-color) !important;
+      font-weight: 600;
+    }
   }
-  
-  .dropdown-head {
-    background-image: url('/assets/images/nft/bg-pattern.png');
-    background-size: cover;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  .notification-list-scroll,
+  .message-list-scroll {
+    position: relative;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-thumb { background-color: rgba(var(--vz-dark-rgb), 0.2); border-radius: 5px; }
+    &::-webkit-scrollbar-track { background-color: transparent; }
   }
-  
+
+  .message-item {
+    transition: all 0.25s ease;
+    cursor: pointer;
+    position: relative;
+
+    &:hover {
+      background-color: rgba(var(--vz-primary-rgb), 0.06) !important;
+      &::before { opacity: 1; }
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background-color: var(--vz-primary);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    &:last-child { border-bottom: none !important; }
+
+    &.bg-light-subtle {
+      background-color: rgba(var(--vz-primary-rgb), 0.04);
+
+      &::after {
+        content: '';
+        position: absolute;
+        right: 12px; top: 12px;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background-color: var(--vz-primary);
+      }
+    }
+
+    .avatar-sm {
+      width: 40px;
+      height: 40px;
+      .avatar-title {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+  }
+
   .empty-notification {
     padding: 1.5rem;
     color: var(--vz-gray-600);
   }
-  
+
   .badge-soft-danger {
     color: var(--vz-danger);
     background-color: rgba(var(--vz-danger-rgb), 0.18);
     font-weight: 500;
   }
-  
-  .notification-list-scroll {
-    position: relative;
-    max-height: 300px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    
-    &::-webkit-scrollbar {
-      width: 5px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(var(--vz-dark-rgb), 0.2);
-      border-radius: 5px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background-color: transparent;
-    }
-  }
-  
-  .avatar-xs {
-    height: 2rem;
-    width: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: avatar-pulse 2s infinite;
-  }
-  
-  .font-size-11 {
-    font-size: 11px !important;
-  }
-  
-  .font-size-13 {
-    font-size: 13px !important;
-  }
-  
-  .font-size-15 {
-    font-size: 15px !important;
-  }
-  
-  .font-size-16 {
-    font-size: 16px !important;
-  }
-  
-  .btn-group {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    
-    .btn {
-      transition: all 0.2s;
-      
-      &:hover {
-        transform: translateY(-2px);
-      }
-      
-      &:active {
-        transform: translateY(0);
-      }
-    }
-  }
-  
-  .dropdown-menu {
-    animation: dropdown-fade-in 0.15s cubic-bezier(0.3, 0, 0.3, 1) forwards !important;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, opacity 0.2s !important;
-    will-change: transform, opacity;
-    transform-origin: inherit !important;
-  }
-}
 
-// Bell animation for new notifications
-@keyframes bell-ring {
-  0% { transform: rotate(0); }
-  10% { transform: rotate(15deg); }
-  20% { transform: rotate(-13deg); }
-  30% { transform: rotate(11deg); }
-  40% { transform: rotate(-8deg); }
-  50% { transform: rotate(6deg); }
-  60% { transform: rotate(-4deg); }
-  70% { transform: rotate(2deg); }
-  80% { transform: rotate(-1deg); }
-  100% { transform: rotate(0); }
-}
-
-@keyframes avatar-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0.2); }
-  70% { box-shadow: 0 0 0 6px rgba(var(--vz-primary-rgb), 0); }
-  100% { box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0); }
-}
-
-@keyframes dropdown-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-5px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes notification-appear {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-:host ::ng-deep {
   .has-new-notifications {
     animation: bell-ring 1.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
     transform-origin: center top;
   }
-  
-  // Badge animation
-  .topbar-badge {
-    animation: badge-pulse 1.5s infinite;
+}
+
+@keyframes notification-appear {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bell-ring {
+  0%   { transform: rotate(0); }
+  10%  { transform: rotate(15deg); }
+  20%  { transform: rotate(-13deg); }
+  30%  { transform: rotate(11deg); }
+  40%  { transform: rotate(-8deg); }
+  50%  { transform: rotate(6deg); }
+  60%  { transform: rotate(-4deg); }
+  70%  { transform: rotate(2deg); }
+  80%  { transform: rotate(-1deg); }
+  100% { transform: rotate(0); }
+}
+
+// =====================================================================
+// RESPONSIVE TRIMS
+// =====================================================================
+@media (max-width: 991.98px) {
+  .lt-bar-row {
+    padding: 0 14px;
+    gap: 8px;
+  }
+
+  // Hide elements that don't survive narrow viewports
+  .lt-brand-firm,
+  .lt-context,
+  .lt-search,
+  .lt-user-meta {
+    display: none !important;
   }
 }
 
-@keyframes badge-pulse {
-  0% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.1); }
-  100% { transform: translate(-50%, -50%) scale(1); }
+@media (max-width: 575.98px) {
+  .lt-bar-row { padding: 0 10px; gap: 6px; }
+  .lt-cluster { border-left: none; padding-left: 0; margin-left: 0; }
 }
-
-// Improve notification details modal styling
-:host ::ng-deep {
-  // Improve notification details modal
-  .notification-details {
-    .notification-content {
-      line-height: 1.6;
-    }
-    
-    // Enhanced card styling with soft shadow
-    .card {
-      border-radius: 0.75rem;
-      border: 1px solid var(--vz-border-color);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-      transition: all 0.3s ease;
-      
-      .card-header {
-        border-top-left-radius: 0.75rem;
-        border-top-right-radius: 0.75rem;
-        border-bottom: 1px solid rgba(var(--vz-border-color-rgb), 0.5);
-      }
-    }
-    
-    // Enhanced body content styling
-    .border-start {
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-      
-      &::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-        pointer-events: none;
-      }
-    }
-    
-    // Enhanced tables
-    .table-responsive {
-      border-radius: 0.5rem;
-      
-      .table {
-        margin-bottom: 0;
-        
-        th {
-          font-weight: 600;
-          color: var(--vz-gray-700);
-        }
-        
-        td {
-          vertical-align: middle;
-        }
-      }
-    }
-    
-    // Priority badge enhancement
-    .badge.rounded-pill {
-      box-shadow: 0 2px 4px rgba(var(--vz-danger-rgb), 0.2);
-    }
-    
-    // Timestamp container enhancement
-    .avatar-xs.rounded-circle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      i {
-        font-size: 0.85rem;
-      }
-    }
-  }
-  
-  // Modal enhancements
-  .modal-content {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    
-    .modal-header {
-      position: relative;
-      
-      &::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(to right, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.05) 100%);
-      }
-    }
-    
-    .modal-footer {
-      border-top: 1px solid rgba(var(--vz-border-color-rgb), 0.5);
-      
-      .btn {
-        font-weight: 500;
-        padding: 0.5rem 1.25rem;
-        border-radius: 0.5rem;
-        
-        &.btn-primary {
-          box-shadow: 0 2px 10px rgba(var(--vz-primary-rgb), 0.3);
-        }
-      }
-    }
-  }
-}
-
-// Fix notification dropdown positioning
-:host ::ng-deep {
-  .custom-notification-dropdown {
-    right: 0 !important;
-    left: auto !important;
-    top: 70px !important;
-    transform: none !important;
-    margin-top: 0 !important;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    border: 1px solid var(--vz-border-color);
-  }
-}
-
-// Enhanced notification bell styling for better interaction
-.notification-bell {
-  position: relative;
-  transition: all 0.3s ease;
-  outline: none !important;
-  z-index: 1;
-  
-  // Improve touch target for better mobile interaction
-  &::before {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    border-radius: 50%;
-    z-index: -1;
-  }
-  
-  &:hover, &:active, &:focus {
-    background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
-    color: var(--vz-primary) !important;
-  }
-  
-  &.has-new-notifications {
-    animation: bell-ring 1.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-    transform-origin: center top;
-  }
-
-  .topbar-badge {
-    position: absolute;
-    top: 0;
-    right: 0;
-    transform: translate(25%, -25%) !important;
-    animation: badge-pulse 1.5s infinite;
-    z-index: 2;
-  }
-}
-
-// Improved dropdown positioning and appearance
-.dropdown-menu.custom-notification-dropdown {
-  position: absolute !important;
-  margin-top: 0.75rem !important;
-  animation: dropdown-appear 0.2s ease-out;
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.18) !important;
-  border: 1px solid var(--vz-border-color);
-  max-width: 360px !important;
-  width: 360px !important;
-  border-radius: 0.5rem !important;
-  z-index: 1000 !important;
-  overflow: hidden;
-  will-change: transform, opacity;
-
-  // Responsive dropdown - full width on mobile
-  @media (max-width: 575.98px) {
-    width: calc(100vw - 2rem) !important;
-    max-width: calc(100vw - 2rem) !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-  }
-  
-  // Pseudo-element for dropdown arrow
-  &::before {
-    content: '';
-    position: absolute;
-    top: -6px;
-    right: 20px;
-    width: 12px;
-    height: 12px;
-    background-color: var(--vz-primary);
-    transform: rotate(45deg);
-    border-top: 1px solid var(--vz-primary);
-    border-left: 1px solid var(--vz-primary);
-    z-index: -1;
-  }
-
-  // Ensure dropdown header has proper z-index
-  .dropdown-head {
-    position: relative;
-    z-index: 1;
-  }
-}
-
-// Fix for notification items to ensure proper styling and behavior
-.notification-item {
-  padding: 0.75rem 1rem;
-  transition: all 0.25s ease;
-  border-bottom: 1px solid var(--vz-border-color);
-  
-  &:hover {
-    background-color: var(--vz-light) !important;
-    cursor: pointer;
-    transform: translateX(3px);
-  }
-  
-  &:last-child {
-    border-bottom: none;
-  }
-  
-  .flex-grow-1 {
-    max-width: calc(100% - 3rem); // Account for the avatar width and margin
-    
-    p {
-      word-wrap: break-word;
-      white-space: normal;
-      max-width: 100%;
-      margin-bottom: 0.5rem;
-      line-height: 1.4;
-    }
-  }
-  
-  &.bg-light-subtle {
-    position: relative;
-    
-    &::after {
-      content: '';
-      position: absolute;
-      right: 12px;
-      top: 12px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--vz-primary);
-    }
-  }
-  
-  // Improved visibility for dark mode
-  .notification-title {
-    color: var(--vz-body-color) !important;
-  }
-  
-  .notification-text {
-    color: var(--vz-body-color);
-    
-    p {
-      color: var(--vz-body-color);
-    }
-  }
-  
-  .notification-text-unread {
-    color: var(--vz-body-color) !important;
-    font-weight: 600;
-  }
-}
-
-// Apply darker background in dark mode for better contrast
-[data-bs-theme="dark"] {
-  .custom-notification-dropdown {
-    background-color: var(--vz-gray-800) !important;
-    
-    .notification-item {
-      &:hover {
-        background-color: var(--vz-gray-700) !important;
-      }
-      
-      .notification-title {
-        color: var(--vz-gray-100) !important;
-      }
-      
-      .notification-text {
-        p {
-          color: var(--vz-gray-300) !important;
-        }
-      }
-      
-      .notification-text-unread {
-        color: var(--vz-white) !important;
-      }
-      
-      &.bg-light-subtle {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-      }
-    }
-  }
-}
-
-// Update notification dropdown animation for smoother appearance
-@keyframes dropdown-appear {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Enhanced notification detail modal
-.modal-content {
-  .notification-details {
-    .border-start {
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    .avatar-xs.rounded-circle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      i {
-        font-size: 0.85rem;
-      }
-    }
-  }
-  
-  .modal-header {
-    .notification-icon {
-      width: 45px !important;
-      height: 45px !important;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-      background-color: var(--vz-primary);
-      
-      &.bg-primary, &.bg-info, &.bg-warning, &.bg-success, &.bg-danger, &.bg-purple {
-        i {
-          color: #fff;
-          font-size: 1.25rem;
-          filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
-        }
-      }
-    }
-  }
-}
-
-// Fix for notification badge text
-.dropdown-tabs {
-  .badge {
-    white-space: nowrap;
-    
-    .text-nowrap {
-      display: inline-block;
-    }
-  }
-}
-
-// Case Management Dropdown styles
-.hover-bg-light {
-  transition: background-color 0.3s ease;
-  
-  &:hover {
-    background-color: var(--vz-light) !important;
-  }
-}
-
-.custom-notification-dropdown {
-  max-width: 500px !important;
-  min-width: 480px !important;
-
-  // Responsive - adjust for smaller screens
-  @media (max-width: 767.98px) {
-    min-width: auto !important;
-    max-width: calc(100vw - 2rem) !important;
-  }
-
-  @media (max-width: 575.98px) {
-    width: calc(100vw - 2rem) !important;
-    min-width: auto !important;
-    max-width: calc(100vw - 2rem) !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-  }
-}
-
-// Task Assignment Details styling
-.info-item {
-  label {
-    letter-spacing: 0.5px;
-    font-weight: 600;
-    color: var(--vz-gray-600);
-  }
-  
-  p {
-    line-height: 1.4;
-    color: var(--vz-body-color);
-    
-    &.fw-medium {
-      font-weight: 600 !important;
-    }
-  }
-}
-
-// Enhanced task details section
-.bg-success-subtle {
-  background-color: rgba(25, 135, 84, 0.08) !important;
-  border-color: rgba(25, 135, 84, 0.2) !important;
-  position: relative;
-  overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
-    pointer-events: none;
-  }
-  
-  .text-success {
-    color: #198754 !important;
-    font-weight: 600;
-  }
-  
-  .bg-success {
-    background-color: #198754 !important;
-    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.25);
-  }
-  
-  .row {
-    .col-6 {
-      .info-item {
-        padding: 0.25rem;
-        
-        label {
-          font-size: 0.75rem;
-          margin-bottom: 0.25rem;
-          text-transform: uppercase;
-          font-weight: 700;
-        }
-        
-        p {
-          margin-bottom: 0;
-          font-size: 0.875rem;
-          
-          &.fw-medium {
-            color: var(--vz-gray-800);
-          }
-          
-          &.text-muted {
-            font-size: 0.75rem;
-            color: var(--vz-gray-500) !important;
-          }
-        }
-      }
-    }
-  }
-}
-
-// Dark mode support for task details
-[data-bs-theme="dark"] {
-  .bg-success-subtle {
-    background-color: rgba(25, 135, 84, 0.15) !important;
-
-    .info-item {
-      label {
-        color: var(--vz-gray-300);
-      }
-
-      p {
-        color: var(--vz-gray-100);
-
-        &.text-muted {
-          color: var(--vz-gray-400) !important;
-        }
-      }
-    }
-  }
-}
-
-// ==========================================
-// MESSAGE DROPDOWN STYLES
-// ==========================================
-
-// Message dropdown positioning
-.message-dropdown {
-  position: absolute !important;
-  top: 100% !important;
-  right: 0 !important;
-  left: auto !important;
-  margin-top: 0.5rem !important;
-  width: 380px !important;
-  max-width: 380px !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid var(--vz-border-color);
-  z-index: 1050 !important;
-  animation: dropdown-fade-in 0.15s ease-out;
-
-  // Responsive - full width on mobile
-  @media (max-width: 575.98px) {
-    width: calc(100vw - 2rem) !important;
-    max-width: calc(100vw - 2rem) !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-  }
-
-  // Arrow pointing to the icon
-  &::before {
-    content: '';
-    position: absolute;
-    top: -6px;
-    right: 14px;
-    width: 12px;
-    height: 12px;
-    background-color: var(--vz-primary);
-    transform: rotate(45deg);
-    border-top: 1px solid var(--vz-primary);
-    border-left: 1px solid var(--vz-primary);
-    z-index: -1;
-  }
-}
-
-.message-item {
-  transition: all 0.25s ease;
-  cursor: pointer;
-  position: relative;
-
-  &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.06) !important;
-
-    &::before {
-      opacity: 1;
-    }
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background-color: var(--vz-primary);
-    opacity: 0;
-    transition: opacity 0.25s ease;
-  }
-
-  &:last-child {
-    border-bottom: none !important;
-  }
-
-  &.bg-light-subtle {
-    background-color: rgba(var(--vz-primary-rgb), 0.04);
-
-    &::after {
-      content: '';
-      position: absolute;
-      right: 12px;
-      top: 12px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--vz-primary);
-    }
-  }
-
-  .avatar-sm {
-    width: 40px;
-    height: 40px;
-
-    .avatar-title {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  }
-}
-
-.message-list-scroll {
-  position: relative;
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(var(--vz-dark-rgb), 0.2);
-    border-radius: 5px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-}
-
-// Cursor pointer utility
-.cursor-pointer {
-  cursor: pointer;
-}
-
-// Dark mode support for message dropdown
-[data-bs-theme="dark"] {
-  .message-item {
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.05) !important;
-    }
-
-    &.bg-light-subtle {
-      background-color: rgba(255, 255, 255, 0.03) !important;
-    }
-  }
-}
-
-// ==========================================
-// USER PROFILE DROPDOWN FIX
-// ==========================================
-:host ::ng-deep {
-  .topbar-user {
-    position: relative;
-
-    .dropdown-menu,
-    .user-profile-dropdown {
-      position: absolute !important;
-      top: 100% !important;
-      bottom: auto !important;
-      right: 0 !important;
-      left: auto !important;
-      margin-top: 0.5rem !important;
-      transform: none !important;
-      min-width: 180px;
-      border-radius: 0.5rem;
-      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
-      border: 1px solid var(--vz-border-color);
-      z-index: 1055 !important;
-      animation: dropdown-fade-in 0.15s ease-out;
-    }
-  }
-}
-
-// Force user profile dropdown to appear below
-.user-profile-dropdown {
-  position: absolute !important;
-  top: 100% !important;
-  bottom: auto !important;
-  right: 0 !important;
-  left: auto !important;
-  margin-top: 8px !important;
-  transform: none !important;
-  inset: auto 0 auto auto !important;
-}
-
-// ==========================================
-// TIME TRACKING DROPDOWN - VELZON PROFESSIONAL
-// ==========================================
-
-:host ::ng-deep {
-
-.timer-dropdown {
-  width: 380px !important;
-  position: absolute !important;
-  top: 100% !important;
-  right: 0 !important;
-  left: auto !important;
-  margin-top: 0.5rem !important;
-  border-radius: 12px !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
-  border: 1px solid var(--vz-border-color) !important;
-  background: var(--vz-card-bg);
-  z-index: 1050 !important;
-  animation: dropdown-slide-in 0.2s ease-out;
-  overflow: hidden;
-
-  // Responsive - full width on mobile
-  @media (max-width: 575.98px) {
-    width: calc(100vw - 2rem) !important;
-    max-width: calc(100vw - 2rem) !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-    border-radius: 8px !important;
-  }
-}
-
-@keyframes dropdown-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// ==================== Header ====================
-.timer-dropdown-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  background: var(--vz-success);
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--vz-border-color);
-  }
-}
-
-.timer-header-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.timer-header-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #1a9d5c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  i {
-    font-size: 1.25rem;
-    color: #fff;
-  }
-}
-
-.timer-header-text {
-  h6 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #fff;
-  }
-
-  .timer-header-subtitle {
-    font-size: 0.75rem;
-    color: #c8e6d5;
-    display: block;
-    margin-top: 2px;
-  }
-}
-
-.timer-header-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
-  background: #1a9d5c;
-  border-radius: 20px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #fff;
-
-  .live-indicator {
-    width: 8px;
-    height: 8px;
-    background: #fff;
-    border-radius: 50%;
-    animation: live-pulse 1.5s infinite;
-  }
-}
-
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
-}
-
-// ==================== Stats Row ====================
-.timer-stats-row {
-  display: flex;
-  padding: 0.75rem 1rem;
-  gap: 0.5rem;
-  background: var(--vz-tertiary-bg);
-  border-bottom: 1px solid var(--vz-border-color);
-}
-
-.timer-stat {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: 8px;
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
-  transition: all 0.2s ease;
-
-  .stat-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.875rem;
-  }
-
-  .stat-info {
-    display: flex;
-    flex-direction: column;
-
-    .stat-value {
-      font-size: 0.9375rem;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--vz-heading-color);
-    }
-
-    .stat-label {
-      font-size: 0.625rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      color: var(--vz-secondary-color);
-      margin-top: 2px;
-    }
-  }
-
-  &.running {
-    .stat-icon {
-      background: var(--vz-success);
-      color: #fff;
-    }
-    .stat-value { color: var(--vz-success); }
-  }
-
-  &.paused {
-    .stat-icon {
-      background: var(--vz-warning);
-      color: #fff;
-    }
-    .stat-value { color: var(--vz-warning); }
-  }
-
-  &.total {
-    .stat-icon {
-      background: var(--vz-primary);
-      color: #fff;
-    }
-    .stat-value { color: var(--vz-primary); }
-  }
-}
-
-// ==================== Quick Start ====================
-.timer-quick-start {
-  padding: 1rem 1.25rem;
-  background: var(--vz-card-bg);
-  border-bottom: 1px solid var(--vz-border-color);
-}
-
-.quick-start-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-
-  .section-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--vz-secondary-color);
-
-    i {
-      color: var(--vz-warning);
-      margin-right: 0.25rem;
-    }
-  }
-
-  .browse-all-btn {
-    padding: 0;
-    background: none;
-    border: none;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--vz-primary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    transition: all 0.2s ease;
-
-    &:hover {
-      color: var(--vz-success);
-    }
-  }
-}
-
-.quick-cases-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-}
-
-.quick-case-card {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 0.75rem;
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-
-  &:hover {
-    background: var(--vz-light);
-    border-color: var(--vz-success);
-    transform: translateY(-1px);
-
-    .quick-case-icon {
-      background: var(--vz-success);
-      i { color: #fff; }
-    }
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .quick-case-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    background: var(--vz-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-
-    i {
-      font-size: 0.75rem;
-      color: var(--vz-success);
-    }
-  }
-
-  .quick-case-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-
-    .case-number {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--vz-heading-color);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .case-title {
-      font-size: 0.6875rem;
-      color: var(--vz-secondary-color);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-}
-
-// Empty Quick Start
-.quick-start-empty {
-  .start-timer-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--vz-light);
-    border: 2px dashed var(--vz-border-color);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-
-    &:hover {
-      background: var(--vz-card-bg);
-      border-color: var(--vz-success);
-
-      .btn-icon {
-        background: var(--vz-success);
-        transform: scale(1.05);
-        i { color: #fff; }
-      }
-
-      .btn-arrow {
-        transform: translateX(3px);
-      }
-    }
-
-    .btn-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: var(--vz-tertiary-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: all 0.25s ease;
-
-      i {
-        font-size: 1.5rem;
-        color: var(--vz-success);
-      }
-    }
-
-    .btn-text {
-      flex: 1;
-      text-align: left;
-
-      .btn-title {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--vz-heading-color);
-      }
-
-      .btn-subtitle {
-        display: block;
-        font-size: 0.75rem;
-        color: var(--vz-secondary-color);
-        margin-top: 2px;
-      }
-    }
-
-    .btn-arrow {
-      font-size: 1.25rem;
-      color: var(--vz-secondary-color);
-      transition: transform 0.2s ease;
-    }
-  }
-}
-
-// ==================== Form Section ====================
-.timer-form-section {
-  padding: 1rem 1.25rem;
-  background: var(--vz-tertiary-bg);
-  border-bottom: 1px solid var(--vz-border-color);
-
-  .form-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-
-    .form-title {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--vz-heading-color);
-
-      i {
-        color: var(--vz-success);
-        margin-right: 0.375rem;
-      }
-    }
-
-    .form-close-btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 6px;
-      border: none;
-      background: var(--vz-card-bg);
-      color: var(--vz-secondary-color);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: var(--vz-danger);
-        color: #fff;
-      }
-    }
-  }
-
-  .form-group {
-    margin-bottom: 0.875rem;
-
-    &:last-of-type {
-      margin-bottom: 1rem;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      color: var(--vz-secondary-color);
-      margin-bottom: 0.5rem;
-
-      .optional {
-        font-weight: 400;
-        text-transform: none;
-        color: var(--vz-secondary-color);
-        opacity: 0.7;
-      }
-    }
-  }
-
-  .search-input-wrapper {
-    position: relative;
-
-    .search-icon {
-      position: absolute;
-      left: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--vz-secondary-color);
-      font-size: 0.875rem;
-    }
-
-    .form-control {
-      padding-left: 2.25rem;
-      background: var(--vz-card-bg);
-      border-color: var(--vz-border-color);
-      border-radius: 8px;
-      font-size: 0.8125rem;
-      transition: all 0.2s ease;
-
-      &:focus {
-        border-color: var(--vz-success);
-        box-shadow: none;
-      }
-    }
-  }
-
-  .form-control {
-    background: var(--vz-card-bg);
-    border-color: var(--vz-border-color);
-    border-radius: 8px;
-    font-size: 0.8125rem;
-
-    &:focus {
-      border-color: var(--vz-success);
-      box-shadow: none;
-    }
-  }
-
-  .case-results-list {
-    margin-top: 0.5rem;
-    max-height: 140px;
-    overflow-y: auto;
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
-    border-radius: 8px;
-  }
-
-  .case-result-item {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 0.625rem 0.75rem;
-    cursor: pointer;
-    border-bottom: 1px solid var(--vz-border-color);
-    transition: all 0.15s ease;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    &:hover {
-      background: var(--vz-light);
-    }
-
-    &.selected {
-      background: var(--vz-light);
-
-      .case-icon {
-        background: var(--vz-success);
-        i { color: #fff; }
-      }
-    }
-
-    .case-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      background: var(--vz-light);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: all 0.15s ease;
-
-      i {
-        font-size: 0.875rem;
-        color: var(--vz-secondary-color);
-      }
-    }
-
-    .case-details {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-
-      .case-num {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--vz-heading-color);
-      }
-
-      .case-name {
-        font-size: 0.6875rem;
-        color: var(--vz-secondary-color);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    }
-
-    .check-icon {
-      font-size: 1rem;
-      color: var(--vz-success);
-    }
-  }
-
-  .no-results {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 1rem;
-    color: var(--vz-secondary-color);
-    font-size: 0.75rem;
-
-    i {
-      font-size: 1.25rem;
-      opacity: 0.5;
-    }
-  }
-
-  .start-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--vz-success);
-    border: none;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.25s ease;
-
-    i {
-      font-size: 1.125rem;
-    }
-
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      background: #1a9d5c;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .spin {
-      animation: spin 1s linear infinite;
-    }
-  }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-// ==================== Timer List Container ====================
-.timer-list-container {
-  max-height: 280px;
-  overflow-y: auto;
-  background: var(--vz-card-bg);
-  scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--vz-border-color);
-    border-radius: 4px;
-  }
-}
-
-// Loading State
-.timer-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 2rem;
-  color: var(--vz-secondary-color);
-  font-size: 0.8125rem;
-
-  .loading-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--vz-border-color);
-    border-top-color: var(--vz-success);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-}
-
-// Empty State
-.timer-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 1.5rem;
-  text-align: center;
-
-  .empty-icon {
-    position: relative;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--vz-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-
-    i {
-      font-size: 1.75rem;
-      color: var(--vz-secondary-color);
-    }
-
-    .pulse-ring {
-      position: absolute;
-      inset: -8px;
-      border: 2px dashed var(--vz-border-color);
-      border-radius: 50%;
-      animation: pulse-ring 2.5s ease-out infinite;
-    }
-  }
-
-  h6 {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--vz-heading-color);
-    margin: 0 0 0.25rem;
-  }
-
-  p {
-    font-size: 0.8125rem;
-    color: var(--vz-secondary-color);
-    margin: 0;
-  }
-}
-
-@keyframes pulse-ring {
-  0% { opacity: 0.6; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.3); }
-}
-
-// Timers List Header
-.timers-list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.625rem 1rem;
-  background: var(--vz-tertiary-bg);
-  border-bottom: 1px solid var(--vz-border-color);
-
-  .header-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--vz-secondary-color);
-
-    i {
-      color: var(--vz-success);
-      margin-right: 0.25rem;
-      animation: pulse-icon 1.5s infinite;
-    }
-  }
-
-  .header-count {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    padding: 0.125rem 0.5rem;
-    background: var(--vz-success);
-    color: #fff;
-    border-radius: 10px;
-  }
-}
-
-@keyframes pulse-icon {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-// Timer Cards
-.timers-list {
-  padding: 0.5rem;
-}
-
-.timer-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.875rem;
-  margin-bottom: 0.5rem;
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
-  border-radius: 10px;
-  transition: all 0.2s ease;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  }
-
-  &.is-running {
-    background: var(--vz-card-bg);
-
-    .status-dot {
-      background: var(--vz-success);
-      animation: dot-pulse 1.5s infinite;
-    }
-  }
-
-  &.is-paused {
-    .status-dot {
-      background: var(--vz-warning);
-    }
-  }
-}
-
-@keyframes dot-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
-}
-
-.timer-card-status {
-  padding-top: 0.25rem;
-
-  .status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--vz-secondary-color);
-  }
-}
-
-.timer-card-content {
-  flex: 1;
-  min-width: 0;
-
-  .timer-card-header {
-    margin-bottom: 0.25rem;
-
-    .timer-case-name {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--vz-heading-color);
-      margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .timer-case-number {
-      font-size: 0.6875rem;
-      color: var(--vz-secondary-color);
-    }
-  }
-
-  .timer-description {
-    font-size: 0.75rem;
-    color: var(--vz-secondary-color);
-    margin: 0 0 0.5rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .timer-duration-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .duration-display {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0.625rem;
-    background: var(--vz-light);
-    border-radius: 6px;
-
-    i {
-      font-size: 0.875rem;
-      color: var(--vz-warning);
-    }
-
-    .duration-value {
-      font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: var(--vz-warning);
-      letter-spacing: 0.5px;
-    }
-
-    &.running {
-      background: var(--vz-light);
-
-      i, .duration-value {
-        color: var(--vz-success);
-      }
-    }
-  }
-
-  .status-badge {
-    font-size: 0.5625rem;
-    font-weight: 700;
-    padding: 0.125rem 0.375rem;
-    background: var(--vz-warning);
-    color: #fff;
-    border-radius: 4px;
-    letter-spacing: 0.03em;
-  }
-}
-
-.timer-card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-
-  .action-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    i {
-      font-size: 0.875rem;
-    }
-
-    &:hover {
-      transform: scale(1.08);
-    }
-
-    &.toggle {
-      &.pause {
-        background: var(--vz-warning);
-        color: #fff;
-      }
-
-      &.play {
-        background: var(--vz-success);
-        color: #fff;
-      }
-    }
-
-    &.stop {
-      background: var(--vz-light);
-      color: var(--vz-danger);
-
-      &:hover {
-        background: var(--vz-danger);
-        color: #fff;
-      }
-    }
-  }
-}
-
-// ==================== Footer ====================
-.timer-dropdown-footer {
-  padding: 0.75rem 1rem;
-  background: var(--vz-tertiary-bg);
-  border-top: 1px solid var(--vz-border-color);
-
-  .footer-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1rem;
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
-    border-radius: 8px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--vz-body-color);
-    text-decoration: none;
-    transition: all 0.2s ease;
-
-    i {
-      font-size: 1rem;
-    }
-
-    .arrow {
-      transition: transform 0.2s ease;
-    }
-
-    &:hover {
-      background: var(--vz-primary);
-      border-color: var(--vz-primary);
-      color: #fff;
-
-      .arrow {
-        transform: translateX(3px);
-      }
-    }
-  }
-}
-
-// ==================== Dark Mode ====================
-[data-bs-theme="dark"] {
-  .timer-dropdown {
-    background: var(--vz-card-bg);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
-  }
-
-  .timer-stats-row {
-    background: var(--vz-tertiary-bg);
-  }
-
-  .timer-stat {
-    background: var(--vz-card-bg);
-    border-color: var(--vz-border-color);
-  }
-
-  .timer-quick-start {
-    background: var(--vz-card-bg);
-  }
-
-  .quick-case-card {
-    background: var(--vz-tertiary-bg);
-    border-color: var(--vz-border-color);
-
-    &:hover {
-      background: var(--vz-card-bg);
-    }
-  }
-
-  .timer-form-section {
-    background: var(--vz-tertiary-bg);
-
-    .form-control {
-      background: var(--vz-card-bg);
-      color: var(--vz-body-color);
-    }
-
-    .case-results-list {
-      background: var(--vz-card-bg);
-    }
-
-    .case-result-item .case-icon {
-      background: var(--vz-tertiary-bg);
-    }
-  }
-
-  .timer-list-container {
-    background: var(--vz-card-bg);
-  }
-
-  .timer-empty-state .empty-icon {
-    background: var(--vz-tertiary-bg);
-  }
-
-  .timers-list-header {
-    background: var(--vz-tertiary-bg);
-  }
-
-  .timer-card {
-    background: var(--vz-card-bg);
-    border-color: var(--vz-border-color);
-
-    &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    &.is-running {
-      background: var(--vz-card-bg);
-    }
-
-    .duration-display {
-      background: var(--vz-tertiary-bg);
-
-      &.running {
-        background: var(--vz-tertiary-bg);
-      }
-    }
-
-    .action-btn.stop {
-      background: var(--vz-tertiary-bg);
-    }
-  }
-
-  .timer-dropdown-footer {
-    background: var(--vz-tertiary-bg);
-
-    .footer-link {
-      background: var(--vz-card-bg);
-      border-color: var(--vz-border-color);
-    }
-  }
-}
-
-} // end :host ::ng-deep

@@ -10,9 +10,9 @@
     .modal-content {
       border: none;
       border-radius: 0.5rem;
-      box-shadow: 0 0.125rem 1.25rem rgba(var(--vz-dark-rgb), 0.15);
+      box-shadow: 0 0.125rem 1.25rem rgba(var(--legience-dark-rgb), 0.15);
       overflow: hidden;
-      background-color: var(--vz-card-bg);
+      background-color: var(--legience-bg-card);
     }
 
     .modal-header {
@@ -20,13 +20,13 @@
       padding: 1.25rem 1.5rem;
       
       &.soft-header {
-        background-color: rgba(var(--vz-primary-rgb), 0.1);
-        color: var(--vz-heading-color);
+        background-color: rgba(var(--legience-accent-rgb), 0.1);
+        color: var(--legience-text-primary);
       }
       
       .modal-title {
         h5 {
-          color: var(--vz-heading-color);
+          color: var(--legience-text-primary);
           font-weight: 600;
           margin-bottom: 0.25rem;
           font-size: 1.05rem;
@@ -50,8 +50,8 @@
     
     .modal-body {
       padding: 0; // Remove padding to allow full-width event view card
-      background-color: var(--vz-card-bg);
-      color: var(--vz-body-color);
+      background-color: var(--legience-bg-card);
+      color: var(--legience-text-secondary);
       
       app-event-form {
         padding: 1.5rem;
@@ -66,18 +66,18 @@
     // Dark mode specific adjustments
     [data-layout-mode="dark"] & {
       .modal-content {
-        background-color: var(--vz-card-bg);
+        background-color: var(--legience-bg-card);
         box-shadow: 0 0.125rem 1.25rem rgba(0, 0, 0, 0.25);
       }
       
       .modal-header {
         &.soft-header {
-          background-color: rgba(var(--vz-primary-rgb), 0.15);
+          background-color: rgba(var(--legience-accent-rgb), 0.15);
         }
         
         .modal-title {
           h5 {
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
           }
           
           p {
@@ -87,7 +87,7 @@
       }
       
       .modal-body {
-        background-color: var(--vz-card-bg);
+        background-color: var(--legience-bg-card);
       }
     }
   }
@@ -105,15 +105,15 @@
   border-radius: 0.375rem;
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 6px rgba(var(--vz-danger-rgb), 0.15);
+  box-shadow: 0 2px 6px rgba(var(--legience-danger-rgb), 0.15);
 }
 
 // Enhanced Event View Card
 .event-details {
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   
   .event-view-card {
-    background-color: var(--vz-card-bg);
+    background-color: var(--legience-bg-card);
     position: relative;
     overflow: hidden;
     
@@ -139,7 +139,7 @@
       .event-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
         word-break: break-word;
         line-height: 1.4;
       }
@@ -174,7 +174,7 @@
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: var(--vz-light);
+          background-color: var(--legience-bg-card-hover);
           border-radius: 50%;
           margin-right: 0.875rem;
           
@@ -189,20 +189,20 @@
           .info-label {
             display: block;
             font-size: 0.8125rem;
-            color: var(--vz-secondary-color);
+            color: var(--legience-text-muted);
             margin-bottom: 0.125rem;
           }
           
           .info-value {
             font-weight: 500;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
             font-size: 0.9375rem;
           }
           
           .info-extra {
             display: block;
             font-size: 0.8125rem;
-            color: var(--vz-secondary-color);
+            color: var(--legience-text-muted);
             margin-top: 0.25rem;
           }
           
@@ -221,19 +221,19 @@
     // Event Description Section
     .event-description-section {
       padding: 1.25rem 1.5rem;
-      border-top: 1px solid var(--vz-border-color);
+      border-top: 1px solid var(--legience-border-hairline);
       
       .section-title {
         font-size: 0.9375rem;
         font-weight: 600;
         margin-bottom: 0.875rem;
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
       }
       
       .description-content {
         font-size: 0.875rem;
         line-height: 1.5;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
         white-space: pre-line;
       }
     }
@@ -247,7 +247,7 @@
   
   // Custom Tabs Styling
   .nav-tabs-custom {
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     margin-bottom: 0; // Removed margin to fix spacing
     padding: 0 1.5rem; // Added padding for better alignment
     
@@ -257,13 +257,13 @@
       .nav-link {
         padding: 0.75rem 1rem;
         font-weight: 500;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
         position: relative;
         
         &.active {
-          color: var(--vz-primary);
+          color: var(--legience-accent);
           background-color: transparent;
-          border-color: var(--vz-border-color) var(--vz-border-color) var(--vz-card-bg);
+          border-color: var(--legience-border-hairline) var(--legience-border-hairline) var(--legience-bg-card);
           
           &::after {
             content: '';
@@ -272,14 +272,14 @@
             left: 0;
             right: 0;
             height: 3px;
-            background-color: var(--vz-primary);
+            background-color: var(--legience-accent);
             border-top-left-radius: 3px;
             border-top-right-radius: 3px;
           }
         }
         
         &:hover:not(.active) {
-          color: var(--vz-primary);
+          color: var(--legience-accent);
           border-color: transparent;
         }
         
@@ -308,7 +308,7 @@
   
   // Reminder Status Header
   .reminder-status-header {
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     
     .reminder-icon {
       width: 48px;
@@ -326,10 +326,10 @@
   .reminder-section-title {
     font-size: 0.9375rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px dashed var(--vz-border-color);
+    border-bottom: 1px dashed var(--legience-border-hairline);
   }
   
   // Reminder Item
@@ -356,21 +356,21 @@
   
   // Alert Soft Variants
   .alert-soft-warning {
-    background-color: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
-    border: 1px solid rgba(var(--vz-warning-rgb), 0.2);
+    background-color: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
+    border: 1px solid rgba(var(--legience-warning-rgb), 0.2);
   }
   
   .alert-soft-info {
-    background-color: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
-    border: 1px solid rgba(var(--vz-info-rgb), 0.2);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
+    border: 1px solid rgba(var(--legience-info-rgb), 0.2);
   }
   
   .alert-soft-secondary {
-    background-color: rgba(var(--vz-secondary-rgb), 0.1);
-    color: var(--vz-secondary);
-    border: 1px solid rgba(var(--vz-secondary-rgb), 0.2);
+    background-color: rgba(var(--legience-secondary-rgb), 0.1);
+    color: var(--legience-secondary);
+    border: 1px solid rgba(var(--legience-secondary-rgb), 0.2);
   }
   
   // Reminder Timeline - Improved visualization
@@ -401,7 +401,7 @@
         color: #fff;
         font-size: 0.875rem;
         z-index: 2;
-        border: 2px solid var(--vz-card-bg);
+        border: 2px solid var(--legience-bg-card);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: transform 0.2s ease; // Added transition for hover effect
         
@@ -411,15 +411,15 @@
         
         // Color variants
         &.bg-info {
-          box-shadow: 0 0 0 4px rgba(var(--vz-info-rgb), 0.15);
+          box-shadow: 0 0 0 4px rgba(var(--legience-info-rgb), 0.15);
         }
         
         &.bg-warning {
-          box-shadow: 0 0 0 4px rgba(var(--vz-warning-rgb), 0.15);
+          box-shadow: 0 0 0 4px rgba(var(--legience-warning-rgb), 0.15);
         }
         
         &.bg-success {
-          box-shadow: 0 0 0 4px rgba(var(--vz-success-rgb), 0.15);
+          box-shadow: 0 0 0 4px rgba(var(--legience-success-rgb), 0.15);
         }
       }
       
@@ -434,7 +434,7 @@
           margin-top: 0.25rem;
           font-size: 0.8125rem;
           font-weight: 500;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
         }
         
         .reminder-label {
@@ -450,7 +450,7 @@
       position: absolute;
       left: -14px;
       width: 2px;
-      background-color: var(--vz-border-color);
+      background-color: var(--legience-border-hairline);
       top: 28px;
       height: calc(100% - 28px); // Make connector span entire height
       z-index: 1;
@@ -464,7 +464,7 @@
 
 // Action Buttons - improved styling
 .d-flex.mt-4.pt-2.px-4.pb-4 {
-  border-top: 1px solid var(--vz-border-color);
+  border-top: 1px solid var(--legience-border-hairline);
   
   .btn {
     padding: 0.5rem 1rem;
@@ -487,81 +487,81 @@
 
 // Badge Soft Variants
 .badge-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
 }
 
 .badge-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
 }
 
 .badge-soft-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1);
-  color: var(--vz-success);
+  background-color: rgba(var(--legience-success-rgb), 0.1);
+  color: var(--legience-success);
 }
 
 .badge-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  color: var(--legience-info);
 }
 
 .badge-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1);
-  color: var(--vz-warning);
+  background-color: rgba(var(--legience-warning-rgb), 0.1);
+  color: var(--legience-warning);
 }
 
 .badge-soft-danger {
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
-  color: var(--vz-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
+  color: var(--legience-danger);
 }
 
 .badge-soft-dark {
-  background-color: rgba(var(--vz-dark-rgb), 0.1);
-  color: var(--vz-dark);
+  background-color: rgba(var(--legience-dark-rgb), 0.1);
+  color: var(--legience-dark);
 }
 
 .badge-soft-light {
-  background-color: rgba(var(--vz-light-rgb), 0.1);
-  color: var(--vz-body-color);
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.1);
+  color: var(--legience-text-secondary);
 }
 
 // Soft Backgrounds
 .bg-soft-light {
-  background-color: rgba(var(--vz-light-rgb), 0.25);
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.25);
 }
 
 .bg-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
 }
 
 .bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
 }
 
 .bg-soft-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1);
+  background-color: rgba(var(--legience-success-rgb), 0.1);
 }
 
 .bg-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1);
+  background-color: rgba(var(--legience-warning-rgb), 0.1);
 }
 
 .bg-soft-danger {
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
 }
 
 .bg-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
 }
 
 // New softer background variants
 .bg-soft-info-5 {
-  background-color: rgba(var(--vz-info-rgb), 0.05);
+  background-color: rgba(var(--legience-info-rgb), 0.05);
 }
 
 .bg-soft-primary-5 {
-  background-color: rgba(var(--vz-primary-rgb), 0.05);
+  background-color: rgba(var(--legience-accent-rgb), 0.05);
 }
 
 // Event type badge styling
@@ -583,17 +583,17 @@
 [data-layout-mode="dark"] {
   .event-details {
     .event-view-card {
-      background-color: var(--vz-card-bg);
+      background-color: var(--legience-bg-card);
       
       .event-header {
         .event-title {
-          color: var(--vz-heading-color);
+          color: var(--legience-text-primary);
         }
       }
       
       .event-info-item {
         .info-icon {
-          background-color: rgba(var(--vz-light-rgb), 0.1);
+          background-color: rgba(var(--legience-bg-card-hover-rgb), 0.1);
         }
         
         .info-content {
@@ -602,7 +602,7 @@
           }
           
           .info-value {
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
           }
           
           .info-extra {
@@ -612,14 +612,14 @@
       }
       
       .event-description-section {
-        border-color: var(--vz-border-color);
+        border-color: var(--legience-border-hairline);
         
         .section-title {
-          color: var(--vz-heading-color);
+          color: var(--legience-text-primary);
         }
         
         .description-content {
-          background-color: rgba(var(--vz-dark-rgb), 0.2);
+          background-color: rgba(var(--legience-dark-rgb), 0.2);
         }
       }
     }

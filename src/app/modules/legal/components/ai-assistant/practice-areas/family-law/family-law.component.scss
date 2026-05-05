@@ -1,7 +1,7 @@
 @import '../../shared/form-validation.scss';
 
 .custody-preview {
-  background-color: #f8f9fa;
+  background-color: var(--legience-bg-card-hover, #f8f9fa);
   padding: 20px;
   border-radius: 5px;
   font-family: 'Courier New', monospace;
@@ -25,19 +25,19 @@
 
 .nav-tabs-custom {
   .nav-link {
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     background-color: transparent;
     border: none;
     padding: 12px 20px;
     font-weight: 500;
     
     &:hover {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background-color: rgba(64, 81, 137, 0.05);
     }
     
     &.active {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background-color: transparent;
       border-bottom: 3px solid #405189;
     }
@@ -48,8 +48,8 @@
   .table {
     th {
       font-weight: 600;
-      background-color: #f8f9fa;
-      border-bottom: 2px solid #dee2e6;
+      background-color: var(--legience-bg-card-hover, #f8f9fa);
+      border-bottom: 2px solid var(--legience-border-hairline, #dee2e6);
     }
     
     td {
@@ -59,8 +59,8 @@
 }
 
 .form-check-input:checked {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
 }
 
 .alert {
@@ -74,8 +74,8 @@
 }
 
 .input-group-text {
-  background-color: #f8f9fa;
-  border-color: #ced4da;
+  background-color: var(--legience-bg-card-hover, #f8f9fa);
+  border-color: var(--legience-border-hairline, #ced4da);
 }
 
 .card-header {
@@ -92,11 +92,11 @@
 }
 
 .border-primary {
-  border-color: #405189 !important;
+  border-color: var(--legience-accent, #405189) !important;
 }
 
 .border-success {
-  border-color: #0ab39c !important;
+  border-color: var(--legience-success, #0ab39c) !important;
 }
 
 .tab-content {

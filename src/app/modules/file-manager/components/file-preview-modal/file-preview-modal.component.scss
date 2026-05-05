@@ -1,5 +1,5 @@
 .modal-header {
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--legience-border-hairline, #e9ecef);
   padding: 1rem 1.5rem;
   display: flex;
   justify-content: space-between;
@@ -9,7 +9,7 @@
     flex-grow: 1;
     
     .modal-title {
-      color: #495057;
+      color: var(--legience-text-secondary, #495057);
       font-weight: 600;
       font-size: 1.1rem;
     }
@@ -50,7 +50,7 @@
   }
   
   .pdf-preview {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
     
     iframe {
       display: block;
@@ -59,7 +59,7 @@
   }
   
   .image-preview {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
     overflow: auto;
     max-height: 70vh;
     
@@ -81,7 +81,7 @@
   }
   
   .text-preview {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
     max-height: 70vh;
     overflow: auto;
     
@@ -90,14 +90,14 @@
       
       .text-content-pre {
         background-color: white;
-        border: 1px solid #e9ecef;
+        border: 1px solid var(--legience-border-hairline, #e9ecef);
         border-radius: 6px;
         padding: 1rem;
         margin: 0;
         font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         font-size: 0.875rem;
         line-height: 1.5;
-        color: #495057;
+        color: var(--legience-text-secondary, #495057);
         white-space: pre-wrap;
         word-wrap: break-word;
         max-height: 60vh;
@@ -107,7 +107,7 @@
   }
   
   .office-preview {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
     min-height: 70vh;
     display: flex;
     align-items: center;
@@ -128,13 +128,13 @@
       
       .office-info {
         h4 {
-          color: #495057;
+          color: var(--legience-text-secondary, #495057);
           font-weight: 600;
         }
         
         .file-details {
           background: white;
-          border: 1px solid #e9ecef;
+          border: 1px solid var(--legience-border-hairline, #e9ecef);
           border-radius: 8px;
           padding: 1.5rem;
           
@@ -143,13 +143,13 @@
             margin-bottom: 0.5rem;
             
             .detail-label {
-              color: #6c757d;
+              color: var(--legience-text-muted, #6c757d);
               font-weight: 500;
               margin-right: 0.5rem;
             }
             
             .detail-value {
-              color: #495057;
+              color: var(--legience-text-secondary, #495057);
             }
           }
         }
@@ -176,12 +176,12 @@
   }
   
   .text-warning {
-    color: #ffc107 !important;
+    color: var(--legience-warning, #ffc107) !important;
   }
 }
 
 .modal-footer {
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--legience-border-hairline, #e9ecef);
   padding: 1rem 1.5rem;
   display: flex;
   justify-content: space-between;
@@ -221,7 +221,7 @@
 }
 
 .text-secondary {
-  color: #6c757d !important;
+  color: var(--legience-text-muted, #6c757d) !important;
 }
 
 // Responsive adjustments

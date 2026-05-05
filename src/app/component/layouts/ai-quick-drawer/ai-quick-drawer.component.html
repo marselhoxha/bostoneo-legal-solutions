@@ -1,0 +1,25 @@
+<div class="ai-drawer-backdrop" *ngIf="state" (click)="close()"></div>
+
+<aside class="ai-drawer" [class.open]="state">
+  <header class="ai-drawer-header">
+    <span class="ai-drawer-title">
+      <i-lucide name="sparkles" size="18"></i-lucide>
+      Ask Legience
+    </span>
+    <button type="button" class="ai-drawer-close" (click)="close()" aria-label="Close drawer">
+      <i-lucide name="x" size="18"></i-lucide>
+    </button>
+  </header>
+
+  <div class="ai-drawer-context" *ngIf="state?.context?.activeCase as activeCase">
+    <span class="ai-drawer-context-label">Context</span>
+    <span class="ai-drawer-context-value">{{ activeCase.displayName }}</span>
+  </div>
+
+  <div class="ai-drawer-body">
+    <p class="ai-drawer-placeholder">
+      The full Ask Legience interaction lands in a follow-up spec.
+      For now, this drawer slides in to confirm the wiring works.
+    </p>
+  </div>
+</aside>

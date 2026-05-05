@@ -1,0 +1,193 @@
+// =====================================================
+// 14. DARK MODE
+// =====================================================
+:root[data-design="rox"][data-bs-theme="dark"] {
+  --vz-body-bg: #0a0a0a;            --vz-body-bg-rgb: 10, 10, 10;
+  --vz-body-color: #f5f5f4;         --vz-body-color-rgb: 245, 245, 244;
+  --bs-body-bg: #0a0a0a;            --bs-body-color: #f5f5f4;
+  --vz-secondary-bg: #141414;       --vz-tertiary-bg: #1c1917;
+  --bs-secondary-bg: #141414;       --bs-tertiary-bg: #1c1917;
+
+  --vz-border-color: #292524;       --bs-border-color: #292524;
+  --vz-border-color-translucent: rgba(245, 245, 244, 0.08);
+  --bs-border-color-translucent: rgba(245, 245, 244, 0.08);
+
+  --vz-heading-color: #f5f5f4;      --bs-heading-color: #f5f5f4;
+
+  --rox-text-primary: #f5f5f4;
+  --rox-text-secondary: #d4d2d1;
+  --rox-text-subtle: #a6a09b;
+  --rox-text-muted: #57534d;
+  --rox-border-hairline: #292524;
+  --rox-bg-hover: #1c1917;
+
+  --vz-primary: #4d8eff;            --vz-primary-rgb: 77, 142, 255;
+  --bs-primary: #4d8eff;            --bs-primary-rgb: 77, 142, 255;
+  --vz-link-color: #4d8eff;         --bs-link-color: #4d8eff;
+
+  --vz-vertical-menu-bg: #141414;
+  --vz-header-bg: #141414;
+  --vz-vertical-menu-item-color: #a6a09b;
+  --vz-vertical-menu-sub-item-color: #a6a09b;
+  --vz-vertical-menu-item-active-color: #4d8eff;
+  --vz-vertical-menu-item-active-bg: rgba(77, 142, 255, 0.15);
+  --vz-vertical-menu-title-color: #57534d;
+  --vz-header-item-color: #d4d2d1;
+  --vz-header-item-bg: rgba(255, 255, 255, 0.05);
+  --vz-header-item-sub-color: #a6a09b;
+
+  // Surfaces lift above body
+  .card,
+  .modal-content,
+  .dropdown-menu,
+  .offcanvas {
+    background: #141414;
+    border-color: var(--rox-border-hairline);
+  }
+
+  .form-control,
+  .form-select {
+    background: #0a0a0a;
+    border-color: var(--rox-border-hairline);
+    color: var(--rox-text-primary);
+    &::placeholder { color: var(--rox-text-muted); }
+  }
+
+  .input-group-text {
+    background: var(--vz-tertiary-bg);
+    border-color: var(--rox-border-hairline);
+    color: var(--rox-text-subtle);
+  }
+
+  .table > tbody td,
+  .list-group-item { background: transparent; }
+
+  .navbar-brand-box,
+  #page-topbar,
+  .footer { border-color: var(--rox-border-hairline); }
+
+  .page-title-box,
+  .nav-tabs { border-color: var(--rox-border-hairline); }
+
+  code:not(pre code) {
+    background: var(--vz-tertiary-bg);
+    color: #ff6b6b;
+  }
+}
+
+// =====================================================
+// 18. DARK-MODE PATCH — fixes for hardcoded #ffffff !important rules
+//   These rules use !important in light mode (necessary to fight Velzon),
+//   but blocked the dark token cascade. Explicitly invert here.
+// =====================================================
+:root[data-design="rox"][data-bs-theme="dark"] {
+
+  // Layout shell — top of app
+  #page-topbar         { background: #141414 !important; }
+  .navbar-brand-box    { background: #141414 !important; }
+  .footer              { background: #141414 !important; }
+
+  // Sidebar / horizontal topbar nav links (re-assert dark hover/active)
+  #navbar-nav .nav-link,
+  .navbar-nav .nav-link {
+    &:hover  { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
+    &.active { background: rgba(77, 142, 255, 0.15) !important; color: var(--vz-primary) !important;
+               i { color: var(--vz-primary); } }
+  }
+
+  .menu-title { color: var(--rox-text-muted) !important; }
+
+  // Topbar action buttons
+  .btn-topbar,
+  .topbar-user .btn {
+    color: var(--rox-text-subtle) !important;
+    &:hover { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
+  }
+
+  // Topbar search
+  .app-search .form-control {
+    background: #0a0a0a !important;
+    border-color: transparent !important;
+    color: var(--rox-text-primary) !important;
+    &:focus       { background: #141414 !important; border-color: var(--rox-border-hairline) !important; }
+    &::placeholder { color: var(--rox-text-muted) !important; }
+  }
+  .app-search .search-icon { color: var(--rox-text-muted) !important; }
+
+  // Page title
+  .page-title-box {
+    border-bottom-color: var(--rox-border-hairline) !important;
+    h4 { color: var(--rox-text-primary) !important; }
+    .breadcrumb-item, .breadcrumb-item a { color: var(--rox-text-muted) !important; }
+  }
+
+  // Search box (universal pattern, used in case-list etc.)
+  .search-box .search-input,
+  .search-box input[type="search"],
+  .search-box input[type="text"].search {
+    background: #0a0a0a !important;
+    border-color: var(--rox-border-hairline) !important;
+    color: var(--rox-text-primary) !important;
+    &:focus { background: #141414 !important; border-color: var(--vz-primary) !important; }
+    &::placeholder { color: var(--rox-text-muted) !important; }
+  }
+
+  // Stats row + cards
+  .stats-row, .stats-container { background: #141414 !important; border-color: var(--rox-border-hairline) !important; }
+
+  .stat-item {
+    background: transparent !important;
+    border-right-color: var(--rox-border-hairline) !important;
+    &:hover { background: var(--rox-bg-hover) !important; }
+    &.active { background: rgba(77, 142, 255, 0.08) !important; }
+    .stat-label, .stat-name, .label, .l, .stat-title { color: var(--rox-text-muted) !important; }
+    .stat-value, .stat-number, .value, .v, .stat-count { color: var(--rox-text-primary) !important; }
+  }
+
+  // Legal-module card variants
+  .case-header-premium,
+  .sw-card, .arg-card, .ps-method-card, .def-block,
+  .case-card, .timeline-card, .summary-card, .insight-card,
+  .premium-card, .info-card, .data-card, .meta-card {
+    background: #141414 !important;
+    border-color: var(--rox-border-hairline) !important;
+  }
+
+  // Custom buttons
+  .btn-out {
+    background: #141414 !important;
+    border-color: var(--rox-border-hairline) !important;
+    color: var(--rox-text-primary) !important;
+    &:hover { background: var(--rox-bg-hover) !important; }
+  }
+
+  .iconbtn, .info-icon {
+    background: transparent !important;
+    border-color: var(--rox-border-hairline) !important;
+    color: var(--rox-text-subtle) !important;
+    &:hover { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
+  }
+
+  // PI hero — slightly different dark treatment (already deep)
+  .pi-hero {
+    background: linear-gradient(135deg, #050505 0%, #141414 50%, #1c1917 100%) !important;
+    border-color: var(--rox-border-hairline) !important;
+  }
+
+  // Prompt tips modal tip cards
+  .modal.prompt-tips-modal .tips-category .tip-item {
+    background: #141414 !important;
+    border-color: var(--rox-border-hairline) !important;
+  }
+
+  // AI note card
+  .ai-note-card { background: #141414 !important; }
+  .ai-note-modal.swal2-popup { background: #141414 !important; }
+
+  // Dashboard greeting (welcome banner)
+  .dashboard-greeting {
+    .greeting-title    { color: var(--rox-text-primary) !important; }
+    .greeting-briefing p { color: var(--rox-text-secondary) !important; }
+  }
+}
+

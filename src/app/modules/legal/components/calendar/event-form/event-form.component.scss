@@ -1,42 +1,42 @@
 // Form styling
 .custom-form {
-  background-color: var(--vz-card-bg);
-  color: var(--vz-body-color);
+  background-color: var(--legience-bg-card);
+  color: var(--legience-text-secondary);
   
   // Button styling to match Velzon theme
   .btn-soft-primary {
-    color: var(--vz-primary);
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--legience-accent);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
     border-color: transparent;
     
     &:hover, &:focus, &:active {
       color: #fff;
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
     }
   }
   
   .btn-soft-danger {
-    color: var(--vz-danger);
-    background-color: rgba(var(--vz-danger-rgb), 0.1);
+    color: var(--legience-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
     border-color: transparent;
     
     &:hover, &:focus, &:active {
       color: #fff;
-      background-color: var(--vz-danger);
-      border-color: var(--vz-danger);
+      background-color: var(--legience-danger);
+      border-color: var(--legience-danger);
     }
   }
   
   .btn-soft-success {
-    color: var(--vz-success);
-    background-color: rgba(var(--vz-success-rgb), 0.1);
+    color: var(--legience-success);
+    background-color: rgba(var(--legience-success-rgb), 0.1);
     border-color: transparent;
     
     &:hover, &:focus, &:active {
       color: #fff;
-      background-color: var(--vz-success);
-      border-color: var(--vz-success);
+      background-color: var(--legience-success);
+      border-color: var(--legience-success);
     }
   }
   
@@ -97,16 +97,16 @@
     .form-control {
       min-height: calc(3.5rem + 2px);
       padding: 1.25rem 0.75rem 0.5rem;
-      border-color: var(--vz-border-color);
-      background-color: var(--vz-input-bg);
-      color: var(--vz-body-color);
+      border-color: var(--legience-border-hairline);
+      background-color: var(--legience-bg-input);
+      color: var(--legience-text-secondary);
       font-size: 0.9rem;
       line-height: 1.6;
       transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
       
       &:focus {
-        border-color: var(--vz-primary);
-        box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+        border-color: var(--legience-accent);
+        box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
       }
     }
     
@@ -138,7 +138,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: var(--vz-input-bg);
+        background-color: var(--legience-bg-input);
         z-index: -1;
       }
     }
@@ -157,9 +157,9 @@
   }
   
   .form-control, .form-select {
-    border: 1px solid var(--vz-border-color);
-    background-color: var(--vz-input-bg);
-    color: var(--vz-body-color);
+    border: 1px solid var(--legience-border-hairline);
+    background-color: var(--legience-bg-input);
+    color: var(--legience-text-secondary);
     padding: 0.47rem 0.75rem;
     border-radius: 0.25rem;
     font-size: 0.875rem;
@@ -168,14 +168,14 @@
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
     }
   }
   
   // Flatpickr styling
   .flatpickr-input {
-    background-color: var(--vz-input-bg);
+    background-color: var(--legience-bg-input);
     
     &::placeholder {
       color: var(--vz-gray-500);
@@ -188,12 +188,12 @@
     border-radius: 0.25rem;
     
     &:focus-within {
-      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
     }
     
     .input-group-text {
-      background-color: var(--vz-light);
-      border-color: var(--vz-border-color);
+      background-color: var(--legience-bg-card-hover);
+      border-color: var(--legience-border-hairline);
       color: var(--vz-gray-600);
       transition: color 0.2s ease, background-color 0.2s ease;
       border-top-left-radius: 0.25rem;
@@ -206,8 +206,8 @@
     }
     
     &:focus-within .input-group-text {
-      color: var(--vz-primary);
-      background-color: rgba(var(--vz-primary-rgb), 0.1);
+      color: var(--legience-accent);
+      background-color: rgba(var(--legience-accent-rgb), 0.1);
     }
     
     .form-control {
@@ -220,10 +220,10 @@
   .color-swatch-container {
     display: flex;
     align-items: center;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 0.25rem;
     overflow: hidden;
-    background-color: var(--vz-input-bg);
+    background-color: var(--legience-bg-input);
     height: 38px;
     position: relative;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -261,7 +261,7 @@
       padding: 0 0.75rem 0 0.75rem;
       color: var(--vz-gray-600);
       font-size: 0.8125rem;
-      border-left: 1px solid var(--vz-border-color);
+      border-left: 1px solid var(--legience-border-hairline);
       line-height: 36px;
       height: 36px;
       font-weight: 500;
@@ -273,7 +273,7 @@
         height: 12px;
         margin-right: 6px;
         border-radius: 2px;
-        border: 1px solid var(--vz-border-color);
+        border: 1px solid var(--legience-border-hairline);
         background-color: var(--selected-color, currentColor);
         vertical-align: middle;
         position: relative;
@@ -282,8 +282,8 @@
     }
     
     &:focus-within {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
     }
   }
   
@@ -307,18 +307,18 @@
         position: absolute;
         
         &:checked + .toggle-label {
-          background-color: var(--vz-primary);
-          border-color: var(--vz-primary);
+          background-color: var(--legience-accent);
+          border-color: var(--legience-accent);
           
           .toggle-inner {
             transform: translateX(26px);
-            background-color: #fff;
+            background-color: var(--legience-bg-card, #fff);
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
           }
         }
         
         &:focus + .toggle-label {
-          box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+          box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
         }
       }
       
@@ -327,9 +327,9 @@
         cursor: pointer;
         width: 100%;
         height: 100%;
-        background: var(--vz-light);
+        background: var(--legience-bg-card-hover);
         border-radius: 4px; // Square corners
-        border: 1px solid var(--vz-border-color);
+        border: 1px solid var(--legience-border-hairline);
         position: relative;
         transition: all 0.25s ease;
         box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -337,7 +337,7 @@
         .toggle-inner {
           width: 18px;
           height: 18px;
-          background: #fff;
+          background: var(--legience-bg-card, #fff);
           border-radius: 3px; // Square corners to match
           position: absolute;
           top: 2px;
@@ -351,7 +351,7 @@
     .toggle-label-text {
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       display: flex;
       align-items: center;
       
@@ -362,8 +362,8 @@
         padding: 0.18rem 0.5rem;
         border-radius: 3px;
         margin-left: 6px;
-        background-color: var(--status-bg, rgba(var(--vz-success-rgb), 0.1));
-        color: var(--status-color, var(--vz-success));
+        background-color: var(--status-bg, rgba(var(--legience-success-rgb), 0.1));
+        color: var(--status-color, var(--legience-success));
       }
     }
   }
@@ -380,16 +380,16 @@
         
         &:focus {
           z-index: 2;
-          border-color: var(--vz-info);
-          box-shadow: 0 0 0 0.15rem rgba(var(--vz-info-rgb), 0.25);
+          border-color: var(--legience-info);
+          box-shadow: 0 0 0 0.15rem rgba(var(--legience-info-rgb), 0.25);
         }
       }
       
       .input-group-text {
-        background-color: rgba(var(--vz-info-rgb), 0.1);
-        color: var(--vz-info);
+        background-color: rgba(var(--legience-info-rgb), 0.1);
+        color: var(--legience-info);
         font-size: 0.75rem;
-        border-color: rgba(var(--vz-info-rgb), 0.2);
+        border-color: rgba(var(--legience-info-rgb), 0.2);
         border-radius: 0;
         height: 31px;
       }
@@ -437,7 +437,7 @@
         }
         
         &:hover {
-          background-color: rgba(var(--vz-danger-rgb), 0.1);
+          background-color: rgba(var(--legience-danger-rgb), 0.1);
         }
       }
     }
@@ -449,7 +449,7 @@
       width: 38px;
       height: 36px;
       padding: 0;
-      border: 1px solid var(--vz-border-color);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 4px;
       cursor: pointer;
       overflow: hidden;
@@ -467,7 +467,7 @@
       }
       
       &:focus {
-        box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+        box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
       }
     }
     
@@ -496,16 +496,16 @@
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
       border: none;
-      background-color: #e9ecef;
+      background-color: var(--legience-bg-subtle, #e9ecef);
       
       &:checked {
         background-position: right center;
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-        background-color: var(--vz-success);
+        background-color: var(--legience-success);
       }
       
       &:focus {
-        box-shadow: 0 0 0 0.25rem rgba(var(--vz-success-rgb), 0.25);
+        box-shadow: 0 0 0 0.25rem rgba(var(--legience-success-rgb), 0.25);
       }
     }
     
@@ -523,11 +523,11 @@
         padding-bottom: 0.35em;
         
         &.bg-success-subtle {
-          border: 1px solid rgba(var(--vz-success-rgb), 0.2);
+          border: 1px solid rgba(var(--legience-success-rgb), 0.2);
         }
         
         &.bg-danger-subtle {
-          border: 1px solid rgba(var(--vz-danger-rgb), 0.2);
+          border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
         }
       }
     }
@@ -561,32 +561,32 @@
 [data-layout-mode="dark"] {
   .custom-form {
     .form-control, .form-select, .form-floating .form-control {
-      background-color: var(--vz-input-bg);
-      border-color: var(--vz-border-color);
-      color: var(--vz-body-color);
+      background-color: var(--legience-bg-input);
+      border-color: var(--legience-border-hairline);
+      color: var(--legience-text-secondary);
     }
     
     .form-floating label::after {
-      background-color: var(--vz-input-bg);
+      background-color: var(--legience-bg-input);
     }
     
     .input-group-dynamic {
       .input-group-text {
         background-color: var(--vz-gray-700);
-        border-color: var(--vz-border-color);
+        border-color: var(--legience-border-hairline);
         color: var(--vz-gray-300);
       }
       
       &:focus-within .input-group-text {
-        color: var(--vz-primary);
-        background-color: rgba(var(--vz-primary-rgb), 0.15);
+        color: var(--legience-accent);
+        background-color: rgba(var(--legience-accent-rgb), 0.15);
       }
     }
     
     // Dark mode color swatch
     .color-swatch-container {
-      background-color: var(--vz-input-bg);
-      border-color: var(--vz-border-color);
+      background-color: var(--legience-bg-input);
+      border-color: var(--legience-border-hairline);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
       
       .color-preview {
@@ -604,7 +604,7 @@
       .toggle-switch {
         .toggle-label {
           background: var(--vz-gray-700);
-          border-color: var(--vz-border-color);
+          border-color: var(--legience-border-hairline);
           box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
           
           .toggle-inner {
@@ -613,11 +613,11 @@
         }
         
         input:checked + .toggle-label {
-          background-color: var(--vz-primary);
-          border-color: var(--vz-primary);
+          background-color: var(--legience-accent);
+          border-color: var(--legience-accent);
           
           .toggle-inner {
-            background-color: #fff;
+            background-color: var(--legience-bg-card, #fff);
           }
         }
       }
@@ -633,15 +633,15 @@
     .custom-reminder-input {
       .input-group-sm {
         .form-control-sm {
-          background-color: var(--vz-input-bg);
-          color: var(--vz-body-color);
-          border-color: rgba(var(--vz-info-rgb), 0.2);
+          background-color: var(--legience-bg-input);
+          color: var(--legience-text-secondary);
+          border-color: rgba(var(--legience-info-rgb), 0.2);
         }
         
         .input-group-text {
-          background-color: rgba(var(--vz-info-rgb), 0.15);
-          border-color: rgba(var(--vz-info-rgb), 0.25);
-          color: var(--vz-info);
+          background-color: rgba(var(--legience-info-rgb), 0.15);
+          border-color: rgba(var(--legience-info-rgb), 0.25);
+          color: var(--legience-info);
         }
       }
     }
@@ -651,10 +651,10 @@
       .badge {
         background-color: var(--vz-gray-700) !important;
         color: var(--vz-gray-300) !important;
-        border-color: var(--vz-border-color) !important;
+        border-color: var(--legience-border-hairline) !important;
         
         .btn:hover {
-          background-color: rgba(var(--vz-danger-rgb), 0.15);
+          background-color: rgba(var(--legience-danger-rgb), 0.15);
         }
       }
     }
@@ -662,7 +662,7 @@
     /* Dark mode color selector */
     .color-selector {
       .color-input {
-        border-color: var(--vz-border-color);
+        border-color: var(--legience-border-hairline);
       }
       
       .color-preview {
@@ -676,8 +676,8 @@
       border-color: var(--vz-gray-500);
       
       &:checked {
-        background-color: var(--vz-success);
-        border-color: var(--vz-success);
+        background-color: var(--legience-success);
+        border-color: var(--legience-success);
       }
     }
   }
@@ -692,11 +692,11 @@
 
 /* Recurrence section styling */
 .card-header.bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
 }
 
 .card-header.bg-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1);
+  background-color: rgba(var(--legience-warning-rgb), 0.1);
 }
 
 .form-check.form-switch {
@@ -709,8 +709,8 @@
 }
 
 .form-check.form-switch.form-switch-success .form-check-input:checked {
-  background-color: var(--vz-success);
-  border-color: var(--vz-success);
+  background-color: var(--legience-success);
+  border-color: var(--legience-success);
 }
 
 /* Multi-select styling */
@@ -724,12 +724,12 @@ select[multiple] {
     border-radius: 4px;
     
     &:checked {
-      background-color: rgba(var(--vz-primary-rgb), 0.15);
-      color: var(--vz-primary);
+      background-color: rgba(var(--legience-accent-rgb), 0.15);
+      color: var(--legience-accent);
     }
     
     &:hover {
-      background-color: rgba(var(--vz-light-rgb), 0.5);
+      background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
     }
   }
 }
@@ -752,7 +752,7 @@ select[multiple] {
       height: 0;
       
       &:checked + .toggle-label {
-        background-color: var(--vz-success);
+        background-color: var(--legience-success);
         
         &:before {
           transform: translateX(26px);
@@ -760,7 +760,7 @@ select[multiple] {
       }
       
       &:focus + .toggle-label {
-        box-shadow: 0 0 1px var(--vz-primary);
+        box-shadow: 0 0 1px var(--legience-accent);
       }
     }
     
@@ -795,8 +795,8 @@ select[multiple] {
     align-items: center;
     padding: 0.15rem 0.5rem;
     border-radius: 0.25rem;
-    background-color: var(--status-bg, rgba(var(--vz-secondary-rgb), 0.1));
-    color: var(--status-color, var(--vz-secondary));
+    background-color: var(--status-bg, rgba(var(--legience-secondary-rgb), 0.1));
+    color: var(--status-color, var(--legience-secondary));
     
     &::after {
       content: attr(data-status);
@@ -807,16 +807,16 @@ select[multiple] {
 
 /* Input group styling */
 .input-group-text {
-  background-color: rgba(var(--vz-light-rgb), 0.5);
-  border-color: var(--vz-border-color);
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
+  border-color: var(--legience-border-hairline);
 }
 
 .form-select, .form-control {
-  border-color: var(--vz-border-color);
+  border-color: var(--legience-border-hairline);
   
   &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
   }
 }
 
@@ -831,7 +831,7 @@ select[multiple] {
   transition: all 0.3s ease;
   
   .card-header {
-    border-bottom: 1px solid rgba(var(--vz-border-color-rgb), 0.15);
+    border-bottom: 1px solid rgba(var(--legience-border-hairline-rgb), 0.15);
     
     .reminder-icon, .deadline-icon, .recurrence-icon {
       background-color: rgba(255, 255, 255, 0.6);
@@ -853,52 +853,52 @@ select[multiple] {
 
 /* Background color utilities */
 .bg-soft-info-5 {
-  background-color: rgba(var(--vz-info-rgb), 0.05);
+  background-color: rgba(var(--legience-info-rgb), 0.05);
 }
 
 .bg-soft-primary-5 {
-  background-color: rgba(var(--vz-primary-rgb), 0.05);
+  background-color: rgba(var(--legience-accent-rgb), 0.05);
 }
 
 .bg-soft-warning-5 {
-  background-color: rgba(var(--vz-warning-rgb), 0.05);
+  background-color: rgba(var(--legience-warning-rgb), 0.05);
 }
 
 /* Alert soft styles */
 .alert-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  border-color: rgba(var(--vz-info-rgb), 0.2);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  border-color: rgba(var(--legience-info-rgb), 0.2);
+  color: var(--legience-info);
 }
 
 .alert-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1);
-  border-color: rgba(var(--vz-warning-rgb), 0.2);
-  color: var(--vz-warning);
+  background-color: rgba(var(--legience-warning-rgb), 0.1);
+  border-color: rgba(var(--legience-warning-rgb), 0.2);
+  color: var(--legience-warning);
 }
 
 .alert-soft-danger {
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
-  border-color: rgba(var(--vz-danger-rgb), 0.2);
-  color: var(--vz-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
+  border-color: rgba(var(--legience-danger-rgb), 0.2);
+  color: var(--legience-danger);
 }
 
 .alert-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  border-color: rgba(var(--vz-secondary-rgb), 0.2);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  border-color: rgba(var(--legience-secondary-rgb), 0.2);
+  color: var(--legience-secondary);
 }
 
 /* Button styling for priority selector */
 .priority-selector {
   .btn-check {
     &:checked + .btn-outline-secondary {
-      background-color: var(--vz-secondary);
+      background-color: var(--legience-secondary);
       color: #fff;
     }
     
     &:checked + .btn-outline-danger {
-      background-color: var(--vz-danger);
+      background-color: var(--legience-danger);
       color: #fff;
     }
   }
@@ -916,7 +916,7 @@ select[multiple] {
 /* Status tracking progress bar */
 .deadline-progress {
   border-radius: 1rem;
-  background-color: rgba(var(--vz-light-rgb), 0.5);
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
   
   .progress-bar {
     border-radius: 1rem;
@@ -925,21 +925,21 @@ select[multiple] {
 
 /* Form control enhancements */
 .form-select-sm.border-info-subtle {
-  border-color: rgba(var(--vz-info-rgb), 0.2);
+  border-color: rgba(var(--legience-info-rgb), 0.2);
   
   &:focus {
-    border-color: var(--vz-info);
-    box-shadow: 0 0 0 0.15rem rgba(var(--vz-info-rgb), 0.25);
+    border-color: var(--legience-info);
+    box-shadow: 0 0 0 0.15rem rgba(var(--legience-info-rgb), 0.25);
   }
 }
 
 .form-select-sm.border-primary-subtle, 
 .form-control-sm.border-primary-subtle {
-  border-color: rgba(var(--vz-primary-rgb), 0.2);
+  border-color: rgba(var(--legience-accent-rgb), 0.2);
   
   &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
   }
 }
 
@@ -968,12 +968,12 @@ select[multiple] {
       border-radius: 4px;
       
       &:checked {
-        background-color: rgba(var(--vz-info-rgb), 0.15);
-        color: var(--vz-info);
+        background-color: rgba(var(--legience-info-rgb), 0.15);
+        color: var(--legience-info);
       }
       
       &:hover:not(:checked) {
-        background-color: rgba(var(--vz-light-rgb), 0.5);
+        background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
       }
     }
   }
@@ -981,7 +981,7 @@ select[multiple] {
 
 /* Recurrence summary styling */
 .recurrence-summary {
-  border: 1px dashed rgba(var(--vz-primary-rgb), 0.3);
+  border: 1px dashed rgba(var(--legience-accent-rgb), 0.3);
 }
 
 /* Remove hover effects from settings sections */
@@ -1059,8 +1059,8 @@ select[multiple] {
     }
     
     &.btn-soft-success {
-      border-color: rgba(var(--vz-success-rgb), 0.5);
-      box-shadow: 0 2px 6px rgba(var(--vz-success-rgb), 0.15);
+      border-color: rgba(var(--legience-success-rgb), 0.5);
+      box-shadow: 0 2px 6px rgba(var(--legience-success-rgb), 0.15);
     }
     
     &.btn-outline-secondary:hover {
@@ -1090,16 +1090,16 @@ select[multiple] {
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
     border: none;
-    background-color: #e9ecef;
+    background-color: var(--legience-bg-subtle, #e9ecef);
     
     &:checked {
       background-position: right center;
       background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-      background-color: var(--vz-success);
+      background-color: var(--legience-success);
     }
     
     &:focus {
-      box-shadow: 0 0 0 0.25rem rgba(var(--vz-success-rgb), 0.25);
+      box-shadow: 0 0 0 0.25rem rgba(var(--legience-success-rgb), 0.25);
     }
   }
   
@@ -1116,11 +1116,11 @@ select[multiple] {
       padding-bottom: 0.35em;
       
       &.bg-success-subtle {
-        border: 1px solid rgba(var(--vz-success-rgb), 0.2);
+        border: 1px solid rgba(var(--legience-success-rgb), 0.2);
       }
       
       &.bg-danger-subtle {
-        border: 1px solid rgba(var(--vz-danger-rgb), 0.2);
+        border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
       }
     }
   }

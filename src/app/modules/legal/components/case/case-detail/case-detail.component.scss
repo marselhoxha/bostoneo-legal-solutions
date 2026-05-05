@@ -82,7 +82,7 @@ body, html {
 
     h2 {
       margin: 0;
-      color: #333;
+      color: var(--legience-text-primary, #333);
     }
 
     .header-actions {
@@ -137,7 +137,7 @@ body, html {
 
             p {
               margin: 0;
-              color: #333;
+              color: var(--legience-text-primary, #333);
               font-size: 16px;
             }
           }
@@ -302,32 +302,32 @@ body, html {
 }
 
 .btn-soft-primary {
-  color: var(--vz-primary);
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--legience-accent);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
   
   &:hover {
     color: #fff;
-    background-color: var(--vz-primary);
+    background-color: var(--legience-accent);
   }
 }
 
 .btn-soft-info {
-  color: var(--vz-info);
-  background-color: rgba(var(--vz-info-rgb), 0.1);
+  color: var(--legience-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
   
   &:hover {
     color: #fff;
-    background-color: var(--vz-info);
+    background-color: var(--legience-info);
   }
 }
 
 .btn-soft-danger {
-  color: var(--vz-danger);
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
+  color: var(--legience-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
   
   &:hover {
     color: #fff;
-    background-color: var(--vz-danger);
+    background-color: var(--legience-danger);
   }
 }
 
@@ -373,8 +373,8 @@ body, html {
 
 .avatar-title {
   align-items: center;
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   display: flex;
   font-weight: 500;
   height: 100%;
@@ -383,7 +383,7 @@ body, html {
 }
 
 .bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+  background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
 }
 
 // Timeline styles for assignment history
@@ -398,7 +398,7 @@ body, html {
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: #e9ecef;
+    background-color: var(--legience-bg-subtle, #e9ecef);
   }
   
   .timeline-item {
@@ -415,17 +415,17 @@ body, html {
       top: 0;
       width: 12px;
       height: 12px;
-      background-color: #fff;
-      border: 2px solid var(--vz-primary);
+      background-color: var(--legience-bg-card, #fff);
+      border: 2px solid var(--legience-accent);
       border-radius: 50%;
       z-index: 1;
     }
     
     .timeline-content {
-      background-color: #f8f9fa;
+      background-color: var(--legience-bg-card-hover, #f8f9fa);
       padding: 1rem;
       border-radius: 0.5rem;
-      border-left: 3px solid var(--vz-primary);
+      border-left: 3px solid var(--legience-accent);
     }
   }
 }
@@ -528,7 +528,7 @@ body, html {
   }
   
   &::-webkit-scrollbar-track {
-    background: #f8f9fa;
+    background: var(--legience-bg-card-hover, #f8f9fa);
     border-radius: 2px;
   }
   
@@ -601,8 +601,8 @@ body, html {
 
 .case-header-premium {
   position: relative;
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.25rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   overflow: hidden !important;
@@ -629,7 +629,7 @@ body, html {
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--vz-primary);
+  background: var(--legience-accent);
 }
 
 // Icon Box - Standard Velzon Avatar Style
@@ -641,7 +641,7 @@ body, html {
   position: relative;
   width: 80px;
   height: 80px;
-  background: var(--vz-primary);
+  background: var(--legience-accent);
   border-radius: 0.375rem;
   display: flex;
   align-items: center;
@@ -658,16 +658,16 @@ body, html {
     right: -4px;
     width: 24px;
     height: 24px;
-    background: var(--vz-card-bg);
+    background: var(--legience-bg-card);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 0 2px var(--vz-card-bg);
+    box-shadow: 0 0 0 2px var(--legience-bg-card);
 
     i {
       font-size: 16px;
-      color: var(--vz-success);
+      color: var(--legience-success);
     }
   }
 }
@@ -676,7 +676,7 @@ body, html {
 .header-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   line-height: 1.4;
   margin: 0;
 }
@@ -701,7 +701,7 @@ body, html {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8125rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
 
   @media (max-width: 575.98px) {
     font-size: 0.75rem;
@@ -713,12 +713,12 @@ body, html {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   white-space: nowrap;
 
   i {
     font-size: 0.875rem;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
 
     @media (max-width: 575.98px) {
       font-size: 0.75rem;
@@ -727,7 +727,7 @@ body, html {
 }
 
 .meta-separator {
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   opacity: 0.5;
 }
 
@@ -737,15 +737,15 @@ body, html {
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   border-radius: 0.25rem;
   font-size: 0.8125rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   font-weight: 500;
 
   i {
     font-size: 0.875rem;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
   }
 
   [data-layout-mode="dark"] & {
@@ -756,7 +756,7 @@ body, html {
 .meta-divider {
   width: 1px;
   height: 16px;
-  background: var(--vz-border-color);
+  background: var(--legience-border-hairline);
   opacity: 0.3;
 }
 
@@ -791,47 +791,47 @@ body, html {
   }
 
   &.status-open {
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
 
     .pill-dot {
-      background: var(--vz-success);
+      background: var(--legience-success);
     }
   }
 
   &.status-in-progress {
-    background: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
 
     .pill-dot {
-      background: var(--vz-warning);
+      background: var(--legience-warning);
     }
   }
 
   &.status-pending {
-    background: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+    background: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
 
     .pill-dot {
-      background: var(--vz-info);
+      background: var(--legience-info);
     }
   }
 
   &.status-closed {
-    background: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
+    background: rgba(var(--legience-danger-rgb), 0.1);
+    color: var(--legience-danger);
 
     .pill-dot {
-      background: var(--vz-danger);
+      background: var(--legience-danger);
     }
   }
 
   &.status-archived {
-    background: rgba(var(--vz-secondary-rgb), 0.1);
-    color: var(--vz-secondary);
+    background: rgba(var(--legience-secondary-rgb), 0.1);
+    color: var(--legience-secondary);
 
     .pill-dot {
-      background: var(--vz-secondary);
+      background: var(--legience-secondary);
     }
   }
 }
@@ -839,18 +839,18 @@ body, html {
 // Priority Pill Variants
 .priority-pill {
   &.priority-low {
-    background: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
 
   &.priority-medium {
-    background: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
   }
 
   &.priority-high {
-    background: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
+    background: rgba(var(--legience-danger-rgb), 0.1);
+    color: var(--legience-danger);
   }
 }
 
@@ -874,8 +874,8 @@ body, html {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.25rem;
 
   .info-icon {
@@ -899,7 +899,7 @@ body, html {
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.025em;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     opacity: 0.7;
     margin-bottom: 0.25rem;
   }
@@ -907,7 +907,7 @@ body, html {
   .info-value {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
@@ -916,22 +916,22 @@ body, html {
 
   &.info-card-primary {
     .info-icon {
-      background: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
+      background: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
     }
   }
 
   &.info-card-warning {
     .info-icon {
-      background: rgba(var(--vz-warning-rgb), 0.1);
-      color: var(--vz-warning);
+      background: rgba(var(--legience-warning-rgb), 0.1);
+      color: var(--legience-warning);
     }
   }
 
   &.info-card-info {
     .info-icon {
-      background: rgba(var(--vz-info-rgb), 0.1);
-      color: var(--vz-info);
+      background: rgba(var(--legience-info-rgb), 0.1);
+      color: var(--legience-info);
     }
   }
 }
@@ -1061,7 +1061,7 @@ body, html {
   .nav-link {
     padding: 0.625rem 1.25rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     background-color: transparent;
     border: 1px solid transparent;
     position: relative;
@@ -1072,9 +1072,9 @@ body, html {
 
     &:hover,
     &.active {
-      color: var(--vz-primary);
-      background-color: rgba(var(--vz-primary-rgb), 0.08);
-      border-color: rgba(var(--vz-primary-rgb), 0.15);
+      color: var(--legience-accent);
+      background-color: rgba(var(--legience-accent-rgb), 0.08);
+      border-color: rgba(var(--legience-accent-rgb), 0.15);
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 
@@ -1166,7 +1166,7 @@ body, html {
       opacity: 1 !important;
       min-height: auto !important;
       width: 100% !important;
-      background: var(--vz-body-bg) !important;
+      background: var(--legience-bg-page) !important;
     }
 
     .user-chat {
@@ -1303,7 +1303,7 @@ body, html {
 
 .case-details-view {
   padding: 1rem;
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
   border-radius: 0 0 0.25rem 0.25rem;
 }
 
@@ -1313,8 +1313,8 @@ body, html {
 
 // Section Styling
 .details-section {
-  background: var(--vz-card-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.5rem;
   padding: 1.5rem;
 }
@@ -1325,7 +1325,7 @@ body, html {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px dashed var(--vz-border-color);
+  border-bottom: 1px dashed var(--legience-border-hairline);
 }
 
 .section-icon {
@@ -1347,12 +1347,12 @@ body, html {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .section-subtitle {
     font-size: 0.75rem;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1378,12 +1378,12 @@ body, html {
   align-items: flex-start;
   gap: 0.875rem;
   padding: 1rem;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   border-radius: 0.375rem;
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.04);
+    background: rgba(var(--legience-accent-rgb), 0.04);
   }
 
   &.info-item-full {
@@ -1395,16 +1395,16 @@ body, html {
   width: 36px;
   height: 36px;
   border-radius: 0.375rem;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
 
   i {
     font-size: 1rem;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
   }
 }
 
@@ -1421,18 +1421,18 @@ body, html {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .info-value {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
 
   &.description-text {
     font-weight: 400;
     line-height: 1.7;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     display: block;
 
     ::ng-deep .description-paragraph {
@@ -1457,9 +1457,9 @@ body, html {
   transition: border-color 0.15s ease, background-color 0.15s ease;
 
   &.section-editing {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 1px rgba(var(--vz-primary-rgb), 0.15);
-    background: rgba(var(--vz-primary-rgb), 0.02);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 1px rgba(var(--legience-accent-rgb), 0.15);
+    background: rgba(var(--legience-accent-rgb), 0.02);
   }
 
   &.section-empty {
@@ -1469,7 +1469,7 @@ body, html {
       opacity: 0.55;
     }
     .section-title h6 {
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
   }
 
@@ -1480,12 +1480,12 @@ body, html {
 
 @keyframes section-save-flash {
   0% {
-    background: rgba(var(--vz-success-rgb), 0.18);
-    box-shadow: 0 0 0 2px rgba(var(--vz-success-rgb), 0.35);
+    background: rgba(var(--legience-success-rgb), 0.18);
+    box-shadow: 0 0 0 2px rgba(var(--legience-success-rgb), 0.35);
   }
   100% {
     background: transparent;
-    box-shadow: 0 0 0 0 rgba(var(--vz-success-rgb), 0);
+    box-shadow: 0 0 0 0 rgba(var(--legience-success-rgb), 0);
   }
 }
 
@@ -1506,7 +1506,7 @@ body, html {
 .section-edit-form {
   // Form lives inside .details-section; no outer margin needed (header provides the gap)
   .form-label {
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     font-size: 0.8125rem;
   }
 
@@ -1541,15 +1541,15 @@ body, html {
     transition: background-color 0.15s ease;
 
     + .kv-row {
-      border-top: 1px solid var(--vz-border-color);
+      border-top: 1px solid var(--legience-border-hairline);
     }
 
     &:hover {
-      background: rgba(var(--vz-primary-rgb), 0.03);
+      background: rgba(var(--legience-accent-rgb), 0.03);
     }
 
     &.kv-row-empty {
-      .kv-label { color: var(--vz-secondary-color); opacity: 0.75; }
+      .kv-label { color: var(--legience-text-muted); opacity: 0.75; }
     }
   }
 
@@ -1559,7 +1559,7 @@ body, html {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     align-self: center;
   }
 
@@ -1567,7 +1567,7 @@ body, html {
     margin: 0;
     font-size: 0.9375rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     word-break: break-word;
     align-self: center;
   }
@@ -1616,7 +1616,7 @@ body, html {
   left: 0;
   right: 0;
   height: 60px;
-  background: linear-gradient(to bottom, transparent 0%, var(--vz-light) 100%);
+  background: linear-gradient(to bottom, transparent 0%, var(--legience-bg-card-hover) 100%);
   pointer-events: none;
 }
 
@@ -1629,7 +1629,7 @@ body, html {
   padding: 0.5rem 1rem;
   background: transparent;
   border: none;
-  color: var(--vz-primary);
+  color: var(--legience-accent);
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -1643,11 +1643,11 @@ body, html {
 .combined-section-col {
   &:first-child {
     .combined-section-inner {
-      border-right: 1px solid var(--vz-border-color);
+      border-right: 1px solid var(--legience-border-hairline);
 
       @media (max-width: 991px) {
         border-right: none;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
       }
     }
   }
@@ -1676,7 +1676,7 @@ body, html {
   gap: 0.875rem;
   margin-bottom: 1.25rem;
   padding-bottom: 0.875rem;
-  border-bottom: 1px dashed var(--vz-border-color);
+  border-bottom: 1px dashed var(--legience-border-hairline);
 }
 
 .section-icon-sm {
@@ -1694,7 +1694,7 @@ body, html {
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
-  background: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.08) 0%, rgba(var(--vz-success-rgb), 0.02) 100%);
+  background: linear-gradient(135deg, rgba(var(--legience-success-rgb), 0.08) 0%, rgba(var(--legience-success-rgb), 0.02) 100%);
   border-radius: 0.5rem;
   margin-bottom: 1.25rem;
 }
@@ -1703,7 +1703,7 @@ body, html {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--vz-success);
+  background: var(--legience-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1722,12 +1722,12 @@ body, html {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .client-label {
     font-size: 0.75rem;
-    color: var(--vz-success);
+    color: var(--legience-success);
     font-weight: 500;
   }
 }
@@ -1744,7 +1744,7 @@ body, html {
   align-items: center;
   gap: 0.875rem;
   padding: 0.875rem 1rem;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   border-radius: 0.375rem;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -1753,7 +1753,7 @@ body, html {
   &.empty-state {
     justify-content: center;
     background: transparent;
-    border: 1px dashed var(--vz-border-color);
+    border: 1px dashed var(--legience-border-hairline);
   }
 }
 
@@ -1784,13 +1784,13 @@ body, html {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .contact-value {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1806,7 +1806,7 @@ body, html {
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
-  background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.08) 0%, rgba(var(--vz-warning-rgb), 0.02) 100%);
+  background: linear-gradient(135deg, rgba(var(--legience-warning-rgb), 0.08) 0%, rgba(var(--legience-warning-rgb), 0.02) 100%);
   border-radius: 0.5rem;
   margin-bottom: 1.25rem;
 }
@@ -1815,7 +1815,7 @@ body, html {
   width: 56px;
   height: 56px;
   border-radius: 0.5rem;
-  background: var(--vz-warning);
+  background: var(--legience-warning);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1833,7 +1833,7 @@ body, html {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     display: block;
     margin-bottom: 0.25rem;
   }
@@ -1842,7 +1842,7 @@ body, html {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 }
 
@@ -1857,12 +1857,12 @@ body, html {
   align-items: flex-start;
   gap: 0.875rem;
   padding: 0.875rem 1rem;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   border-radius: 0.375rem;
 
   > i {
     font-size: 1.125rem;
-    color: var(--vz-warning);
+    color: var(--legience-warning);
     margin-top: 0.125rem;
   }
 
@@ -1877,13 +1877,13 @@ body, html {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
   }
 
   .meta-value {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 }
 
@@ -1894,13 +1894,13 @@ body, html {
   justify-content: center;
   padding: 2.5rem 1rem;
   text-align: center;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 
   .empty-court-icon {
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1908,7 +1908,7 @@ body, html {
 
     i {
       font-size: 1.75rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
     }
   }
 
@@ -1944,13 +1944,13 @@ body, html {
     height: 12px;
     border-radius: 50%;
     flex-shrink: 0;
-    box-shadow: 0 0 0 4px var(--vz-card-bg), 0 0 0 5px var(--vz-border-color);
+    box-shadow: 0 0 0 4px var(--legience-bg-card), 0 0 0 5px var(--legience-border-hairline);
   }
 
   .indicator-line {
     width: 2px;
     flex: 1;
-    background: var(--vz-border-color);
+    background: var(--legience-border-hairline);
     margin-top: 4px;
   }
 }
@@ -1961,12 +1961,12 @@ body, html {
   gap: 1rem;
   flex: 1;
   padding: 1rem 1.25rem;
-  background: var(--vz-light);
+  background: var(--legience-bg-card-hover);
   border-radius: 0.5rem;
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.04);
+    background: rgba(var(--legience-accent-rgb), 0.04);
   }
 }
 
@@ -1996,13 +1996,13 @@ body, html {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .date-value {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
 }
 
 .date-badge {

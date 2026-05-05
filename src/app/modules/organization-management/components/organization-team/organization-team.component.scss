@@ -14,17 +14,17 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
   }
 
   .form-control {
     padding-left: 38px;
     border-radius: 8px;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
 
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.1);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.1);
     }
   }
 }
@@ -40,12 +40,12 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--vz-secondary-color);
-      border-bottom: 2px solid var(--vz-border-color);
+      color: var(--legience-text-muted);
+      border-bottom: 2px solid var(--legience-border-hairline);
       padding: 0.875rem 1rem;
 
       &.cursor-pointer:hover {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
       }
 
       i {
@@ -61,12 +61,12 @@
       transition: background-color 0.15s ease;
 
       &:hover {
-        background-color: rgba(var(--vz-primary-rgb), 0.03);
+        background-color: rgba(var(--legience-accent-rgb), 0.03);
       }
 
       td {
         padding: 1rem;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
         vertical-align: middle;
       }
     }
@@ -128,18 +128,18 @@
 .dropdown-menu {
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
 
   .dropdown-item {
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.08);
+      background-color: rgba(var(--legience-accent-rgb), 0.08);
     }
 
     &.text-danger:hover {
-      background-color: rgba(var(--vz-danger-rgb), 0.08);
+      background-color: rgba(var(--legience-danger-rgb), 0.08);
     }
   }
 }
@@ -148,18 +148,18 @@
 .pagination {
   .page-item {
     &.active .page-link {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
     }
 
     .page-link {
       border-radius: 6px;
       margin: 0 2px;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
 
       &:hover {
-        background-color: rgba(var(--vz-primary-rgb), 0.1);
-        color: var(--vz-primary);
+        background-color: rgba(var(--legience-accent-rgb), 0.1);
+        color: var(--legience-accent);
       }
     }
   }

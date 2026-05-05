@@ -1,5 +1,5 @@
 .collection-viewer {
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
   min-height: 100%;
 
   // Action Bar (matching document-analysis-viewer)
@@ -8,8 +8,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.5rem;
-    background: var(--vz-card-bg);
-    border-bottom: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     .action-bar-left {
       display: flex;
@@ -18,11 +18,11 @@
 
       .back-btn {
         padding: 0.5rem;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
         transition: all 0.2s;
 
         &:hover {
-          color: var(--vz-primary);
+          color: var(--legience-accent);
           transform: translateX(-2px);
         }
 
@@ -35,7 +35,7 @@
         .collection-title {
           font-size: 1.1rem;
           font-weight: 600;
-          color: var(--vz-heading-color);
+          color: var(--legience-text-primary);
           display: flex;
           align-items: center;
 
@@ -104,8 +104,8 @@
         align-items: center;
         gap: 0.75rem;
         padding: 1rem;
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.5rem;
 
         .stat-icon {
@@ -128,13 +128,13 @@
           .stat-value {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
             line-height: 1;
           }
 
           .stat-label {
             font-size: 0.75rem;
-            color: var(--vz-secondary-color);
+            color: var(--legience-text-muted);
             margin-top: 0.25rem;
           }
         }
@@ -144,14 +144,14 @@
     // Tab Navigation (matching document-analysis-viewer)
     .viewer-tabs {
       .nav-tabs-custom {
-        background: var(--vz-card-bg);
+        background: var(--legience-bg-card);
         padding: 0 1.5rem;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
 
         .nav-item {
           .nav-link {
             padding: 1rem 1.25rem;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
             border: none;
             border-bottom: 2px solid transparent;
             font-weight: 500;
@@ -162,13 +162,13 @@
             }
 
             &:hover {
-              color: var(--vz-primary);
-              border-bottom-color: rgba(var(--vz-primary-rgb), 0.3);
+              color: var(--legience-accent);
+              border-bottom-color: rgba(var(--legience-accent-rgb), 0.3);
             }
 
             &.active {
-              color: var(--vz-primary);
-              border-bottom-color: var(--vz-primary);
+              color: var(--legience-accent);
+              border-bottom-color: var(--legience-accent);
               background: transparent;
             }
           }
@@ -215,16 +215,16 @@
           left: 0.75rem;
           top: 50%;
           transform: translateY(-50%);
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
         }
 
         input {
           padding-left: 2.25rem;
-          background: var(--vz-input-bg);
-          border-color: var(--vz-border-color);
+          background: var(--legience-bg-input);
+          border-color: var(--legience-border-hairline);
 
           &:focus {
-            border-color: var(--vz-primary);
+            border-color: var(--legience-accent);
             box-shadow: none;
           }
         }
@@ -250,14 +250,14 @@
         align-items: center;
         gap: 1rem;
         padding: 1rem;
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.5rem;
         cursor: pointer;
         transition: all 0.2s;
 
         &:hover {
-          border-color: var(--vz-primary);
+          border-color: var(--legience-accent);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
           .doc-actions {
@@ -268,7 +268,7 @@
         .doc-icon {
           width: 44px;
           height: 44px;
-          background: var(--vz-light);
+          background: var(--legience-bg-card-hover);
           border-radius: 0.5rem;
           display: flex;
           align-items: center;
@@ -277,7 +277,7 @@
 
           i {
             font-size: 1.5rem;
-            color: var(--vz-primary);
+            color: var(--legience-accent);
           }
         }
 
@@ -288,7 +288,7 @@
           .doc-name {
             font-size: 0.9375rem;
             font-weight: 500;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
             margin-bottom: 0.25rem;
             white-space: nowrap;
             overflow: hidden;
@@ -321,15 +321,15 @@
             }
 
             &.btn-soft-primary i {
-              color: var(--vz-primary);
+              color: var(--legience-accent);
             }
 
             &.btn-light i {
-              color: var(--vz-secondary-color);
+              color: var(--legience-text-muted);
             }
 
             &.btn-light:hover i {
-              color: var(--vz-danger);
+              color: var(--legience-danger);
             }
           }
         }
@@ -345,22 +345,22 @@
       justify-content: center;
       padding: 3rem 2rem;
       text-align: center;
-      background: var(--vz-light);
+      background: var(--legience-bg-card-hover);
       border-radius: 0.5rem;
 
       i, .empty-icon {
         font-size: 3rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
         margin-bottom: 1rem;
       }
 
       h6 {
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
         margin-bottom: 0.5rem;
       }
 
       p {
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
         margin-bottom: 0;
         font-size: 0.875rem;
       }
@@ -376,8 +376,8 @@
         display: flex;
         gap: 1rem;
         padding: 1rem;
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.5rem;
         margin-bottom: 0.75rem;
 
@@ -387,8 +387,8 @@
           .date-badge {
             display: inline-block;
             padding: 0.25rem 0.5rem;
-            background: var(--vz-primary-bg-subtle);
-            color: var(--vz-primary);
+            background: var(--legience-accent-bg-subtle);
+            color: var(--legience-accent);
             border-radius: 0.25rem;
             font-size: 0.75rem;
             font-weight: 500;
@@ -405,13 +405,13 @@
 
             .event-icon {
               margin-right: 0.5rem;
-              color: var(--vz-primary);
+              color: var(--legience-accent);
             }
 
             .event-title {
               font-size: 0.9375rem;
               font-weight: 500;
-              color: var(--vz-heading-color);
+              color: var(--legience-text-primary);
             }
           }
 
@@ -432,8 +432,8 @@
         display: flex;
         gap: 1rem;
         padding: 1rem;
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.5rem;
         margin-bottom: 0.75rem;
 
@@ -446,7 +446,7 @@
 
           .item-description {
             font-size: 0.9375rem;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
           }
 
           .item-meta {
@@ -465,7 +465,7 @@
       .input-group {
         .form-control {
           &:focus {
-            border-color: var(--vz-primary);
+            border-color: var(--legience-accent);
             box-shadow: none;
           }
         }
@@ -479,17 +479,17 @@
       justify-content: center;
       padding: 3rem 2rem;
       text-align: center;
-      background: var(--vz-light);
+      background: var(--legience-bg-card-hover);
       border-radius: 0.5rem;
 
       i {
         font-size: 3rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
         margin-bottom: 1rem;
       }
 
       h6 {
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
         margin-bottom: 0.5rem;
       }
 
@@ -501,15 +501,15 @@
     .search-results {
       .result-card {
         padding: 1rem;
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.5rem;
         margin-bottom: 0.75rem;
         cursor: pointer;
         transition: all 0.2s;
 
         &:hover {
-          border-color: var(--vz-primary);
+          border-color: var(--legience-accent);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
@@ -525,7 +525,7 @@
 
             .source-name {
               font-weight: 500;
-              color: var(--vz-heading-color);
+              color: var(--legience-text-primary);
             }
           }
         }
@@ -536,11 +536,11 @@
 
         .result-content {
           font-size: 0.875rem;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           line-height: 1.5;
 
           ::ng-deep mark {
-            background-color: rgba(var(--vz-warning-rgb), 0.3);
+            background-color: rgba(var(--legience-warning-rgb), 0.3);
             padding: 0 2px;
             border-radius: 2px;
           }
@@ -580,18 +580,18 @@
 
           .suggestion-chip {
             padding: 0.5rem 1rem;
-            background: var(--vz-light);
-            border: 1px solid var(--vz-border-color);
+            background: var(--legience-bg-card-hover);
+            border: 1px solid var(--legience-border-hairline);
             border-radius: 2rem;
             font-size: 0.875rem;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
             cursor: pointer;
             transition: all 0.2s;
 
             &:hover {
-              background: var(--vz-primary-bg-subtle);
-              border-color: var(--vz-primary);
-              color: var(--vz-primary);
+              background: var(--legience-accent-bg-subtle);
+              border-color: var(--legience-accent);
+              color: var(--legience-accent);
             }
           }
         }
@@ -640,18 +640,18 @@
 
               .message-time {
                 font-size: 0.75rem;
-                color: var(--vz-secondary-color);
+                color: var(--legience-text-muted);
               }
             }
 
             .message-text {
               font-size: 0.9375rem;
               line-height: 1.6;
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
 
               ::ng-deep {
                 .source-citation {
-                  color: var(--vz-primary);
+                  color: var(--legience-accent);
                   font-weight: 500;
                   cursor: pointer;
 
@@ -663,7 +663,7 @@
                 .qa-header {
                   margin-top: 1rem;
                   margin-bottom: 0.5rem;
-                  color: var(--vz-heading-color);
+                  color: var(--legience-text-primary);
                   font-weight: 600;
 
                   &:first-child {
@@ -685,7 +685,7 @@
 
                 .qa-divider {
                   margin: 1rem 0;
-                  border-color: var(--vz-border-color);
+                  border-color: var(--legience-border-hairline);
                 }
 
                 .qa-list {
@@ -706,7 +706,7 @@
                   font-size: 0.875rem;
 
                   th {
-                    background: var(--vz-light);
+                    background: var(--legience-bg-card-hover);
                     font-weight: 600;
                   }
 
@@ -716,7 +716,7 @@
                 }
 
                 strong {
-                  color: var(--vz-heading-color);
+                  color: var(--legience-text-primary);
                 }
 
                 em {
@@ -728,14 +728,14 @@
             .message-sources {
               margin-top: 1rem;
               padding-top: 1rem;
-              border-top: 1px solid var(--vz-border-color);
+              border-top: 1px solid var(--legience-border-hairline);
 
               .sources-header {
                 display: flex;
                 align-items: center;
                 font-size: 0.8125rem;
                 font-weight: 600;
-                color: var(--vz-secondary-color);
+                color: var(--legience-text-muted);
                 margin-bottom: 0.5rem;
               }
 
@@ -749,18 +749,18 @@
                   align-items: flex-start;
                   gap: 0.75rem;
                   padding: 0.75rem;
-                  background: var(--vz-light);
+                  background: var(--legience-bg-card-hover);
                   border-radius: 0.375rem;
                   cursor: pointer;
                   transition: all 0.2s;
 
                   &:hover {
-                    background: var(--vz-primary-bg-subtle);
+                    background: var(--legience-accent-bg-subtle);
                   }
 
                   .source-number {
                     font-weight: 600;
-                    color: var(--vz-primary);
+                    color: var(--legience-accent);
                     font-size: 0.75rem;
                   }
 
@@ -771,7 +771,7 @@
                     .source-name {
                       font-weight: 500;
                       font-size: 0.875rem;
-                      color: var(--vz-heading-color);
+                      color: var(--legience-text-primary);
                       white-space: nowrap;
                       overflow: hidden;
                       text-overflow: ellipsis;
@@ -779,12 +779,12 @@
 
                     .source-section {
                       font-size: 0.75rem;
-                      color: var(--vz-secondary-color);
+                      color: var(--legience-text-muted);
                     }
 
                     .source-excerpt {
                       font-size: 0.8125rem;
-                      color: var(--vz-body-color);
+                      color: var(--legience-text-secondary);
                       margin-top: 0.25rem;
                       display: -webkit-box;
                       -webkit-line-clamp: 2;
@@ -812,7 +812,7 @@
               span {
                 width: 8px;
                 height: 8px;
-                background: var(--vz-primary);
+                background: var(--legience-accent);
                 border-radius: 50%;
                 animation: typing 1.4s infinite ease-in-out both;
 
@@ -824,15 +824,15 @@
 
           &.user-message {
             .message-avatar {
-              background: var(--vz-primary-bg-subtle);
-              color: var(--vz-primary);
+              background: var(--legience-accent-bg-subtle);
+              color: var(--legience-accent);
             }
           }
 
           &.assistant-message {
             .message-avatar {
               background: var(--vz-success-bg-subtle);
-              color: var(--vz-success);
+              color: var(--legience-success);
             }
           }
         }
@@ -840,19 +840,19 @@
 
       .qa-input-area {
         padding: 1rem;
-        border-top: 1px solid var(--vz-border-color);
-        background: var(--vz-card-bg);
+        border-top: 1px solid var(--legience-border-hairline);
+        background: var(--legience-bg-card);
 
         .input-group {
           .form-control {
             border-right: none;
 
             &:focus {
-              border-color: var(--vz-primary);
+              border-color: var(--legience-accent);
               box-shadow: none;
 
               + .btn {
-                border-color: var(--vz-primary);
+                border-color: var(--legience-accent);
               }
             }
           }
@@ -902,7 +902,7 @@
       align-items: center;
       padding: 0.75rem 1rem;
       background: var(--vz-info-bg-subtle);
-      border: 1px solid var(--vz-info);
+      border: 1px solid var(--legience-info);
       border-radius: 0.5rem;
       margin-bottom: 1rem;
 
@@ -910,7 +910,7 @@
         display: flex;
         align-items: center;
         font-size: 0.875rem;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
       }
 
       .compare-actions {
@@ -926,8 +926,8 @@
 
     .compare-result {
       padding: 1rem;
-      background: var(--vz-card-bg);
-      border: 1px solid var(--vz-border-color);
+      background: var(--legience-bg-card);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 0.5rem;
       margin-bottom: 1rem;
 
@@ -943,19 +943,19 @@
         align-items: center;
         margin-bottom: 1rem;
         padding-bottom: 0.75rem;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
       }
 
       .compare-result-content {
         font-size: 0.9375rem;
         line-height: 1.6;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
 
         ::ng-deep {
           .qa-header {
             margin-top: 1rem;
             margin-bottom: 0.5rem;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
             font-weight: 600;
 
             &:first-child {
@@ -969,7 +969,7 @@
 
           .qa-divider {
             margin: 1rem 0;
-            border-color: var(--vz-border-color);
+            border-color: var(--legience-border-hairline);
           }
 
           .qa-list {
@@ -990,7 +990,7 @@
             font-size: 0.875rem;
 
             th {
-              background: var(--vz-light);
+              background: var(--legience-bg-card-hover);
               font-weight: 600;
             }
 
@@ -1000,7 +1000,7 @@
           }
 
           strong {
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
           }
 
           em {
@@ -1008,7 +1008,7 @@
           }
 
           .source-citation {
-            color: var(--vz-primary);
+            color: var(--legience-accent);
             font-weight: 500;
           }
         }
@@ -1017,14 +1017,14 @@
       .compare-sources {
         margin-top: 1rem;
         padding-top: 1rem;
-        border-top: 1px solid var(--vz-border-color);
+        border-top: 1px solid var(--legience-border-hairline);
 
         .sources-header {
           display: flex;
           align-items: center;
           font-size: 0.8125rem;
           font-weight: 600;
-          color: var(--vz-secondary-color);
+          color: var(--legience-text-muted);
           margin-bottom: 0.5rem;
         }
       }
@@ -1035,14 +1035,14 @@
         cursor: pointer;
 
         &:hover {
-          border-color: var(--vz-primary);
+          border-color: var(--legience-accent);
         }
       }
 
       &.selected-for-compare {
-        border-color: var(--vz-primary);
-        background: var(--vz-primary-bg-subtle);
-        box-shadow: 0 0 0 2px rgba(var(--vz-primary-rgb), 0.2);
+        border-color: var(--legience-accent);
+        background: var(--legience-accent-bg-subtle);
+        box-shadow: 0 0 0 2px rgba(var(--legience-accent-rgb), 0.2);
       }
 
       .compare-checkbox {

@@ -1,0 +1,54 @@
+// =====================================================================
+// Layout overrides for the Rox design — flex-column foundation
+//
+// Velzon's stock layout uses `.footer { position: absolute; bottom: 0 }`
+// with `.page-content { padding-bottom }` to clear it. That dance overlaps
+// content whenever a page's last section runs to its container edge —
+// affects every page except the attorney dashboard (where card margins
+// happen to mask it).
+//
+// The fix: make `.main-content` a flex column. Footer joins normal flow
+// at `margin-top: auto`, page-content takes `flex: 1` to fill space.
+// On short pages, `min-height: calc(100vh - <header zone>)` keeps the
+// footer at the visual bottom. No more padding-bottom hack, no more
+// content-behind-footer overlap.
+//
+// Spec: docs/superpowers/specs/2026-05-04-layout-flex-column-design.md
+// =====================================================================
+:root[data-design="rox"] {
+  // Layout-zone heights — single source of truth. If the topbar gets
+  // taller (e.g. add a search row), update --legience-topbar-h here and
+  // the whole layout adjusts.
+  --legience-topbar-h: 70px;             // primary sticky topbar (search/notifications/user)
+  --legience-topbar-secondary-h: 47px;   // horizontal nav row (Dashboard/Cases/etc.)
+  --legience-topbar-zone-h: calc(var(--legience-topbar-h) + var(--legience-topbar-secondary-h));
+
+  // Main content — flex column so footer joins normal flow.
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - var(--legience-topbar-zone-h));
+  }
+
+  // Page content — fills the gap between the header zone and the footer.
+  // Padding-bottom no longer has to clear the footer height (it's in flow now).
+  // padding-top sized so first-card edge sits clearly below the horizontal nav
+  // (visually too tight at 16px or 24px, feels right at 32px).
+  .page-content {
+    flex: 1;
+    padding-top: 32px;
+    padding-bottom: 24px;
+  }
+
+  // Footer — cancel Velzon's absolute positioning so it joins flow.
+  // `margin-top: auto` pushes it to the visual bottom on short pages.
+  .footer {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    height: auto;
+    padding: 16px 12px;
+    margin-top: auto;
+  }
+}

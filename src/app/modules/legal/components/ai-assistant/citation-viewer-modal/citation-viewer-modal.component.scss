@@ -27,7 +27,7 @@
   border: none;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.08);
-  color: #333;
+  color: var(--legience-text-primary, #333);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -50,7 +50,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   z-index: 10;
 }
 
@@ -81,7 +81,7 @@
 
   .page {
     margin: 0 auto !important;
-    background: #fff !important;
+    background: var(--legience-bg-card, #fff) !important;
     border: none !important;
     box-shadow: none !important;
   }

@@ -1,5 +1,26 @@
 // Attorney Dashboard - Velzon Theme
 
+// =============================================
+// VERTICAL RHYTHM — top-level dashboard rows
+//
+// Without this rule, consecutive top-level rows touch when the cards inside
+// them have explicit `mb-0` (e.g. the cases card uses `mb-0` so it can
+// stretch with its right rail via `h-100`). Velzon's default
+// `.card { margin-bottom: 1.5rem }` only adds spacing when the card itself
+// has the default margin — so rows that intentionally remove that margin
+// for stretching purposes end up flush with the next row.
+//
+// Targeting `:host > .row > .col > .h-100 > .row` reliably hits every
+// top-level dashboard row and gives them all consistent 1.5rem bottom
+// spacing. The last row clears its margin so the dashboard doesn't have
+// a trailing void at the bottom.
+// =============================================
+:host > .row > .col > .h-100 > .row {
+  margin-bottom: 1.5rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
 // Dashboard Greeting - Clean Editorial Design
 .dashboard-greeting {
   padding: 1.25rem 0 2rem;
@@ -14,7 +35,7 @@
     top: 1.25rem;
     bottom: 2rem;
     width: 3px;
-    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.2) 100%);
     border-radius: 2px;
   }
 
@@ -24,7 +45,7 @@
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.12em;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     margin-bottom: 0.5rem;
     text-transform: uppercase;
   }
@@ -32,7 +53,7 @@
   .greeting-title {
     font-size: 1.625rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin: 0 0 1rem 0;
     line-height: 1.3;
 
@@ -45,7 +66,7 @@
     p {
       font-size: 1.25rem;
       line-height: 1.7;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       margin: 0;
       font-weight: 300;
       font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -92,7 +113,7 @@
 
 // Table row hover
 .table tbody tr.cursor-pointer:hover {
-  background-color: rgba(var(--vz-primary-rgb), 0.04);
+  background-color: rgba(var(--legience-accent-rgb), 0.04);
   transition: background-color 0.15s ease;
 }
 
@@ -101,9 +122,14 @@
   height: calc(100% - 24px);
 }
 
-// Activity & Urgent Items cards - consistent height
+// Activity & Urgent Items cards
+// Removed `min-height: 420px` — the activity card now sits in a single
+// column without a horizontal sibling, so the fixed-height pairing it was
+// designed for no longer applies. With short activity lists, the floor
+// created dead space that bled into the footer.
+// The activity-feed inner list keeps a scroll cap so very long lists don't
+// blow the card out vertically.
 .activity-urgent-card {
-  min-height: 420px;
   display: flex;
   flex-direction: column;
 
@@ -115,7 +141,7 @@
 // CRM Widget styling
 .crm-widget {
   .col {
-    border-right: 1px solid var(--vz-border-color);
+    border-right: 1px solid var(--legience-border-hairline);
 
     &:last-child {
       border-right: none;
@@ -123,13 +149,13 @@
   }
 
   .border-start {
-    border-left: 1px dashed var(--vz-border-color) !important;
+    border-left: 1px dashed var(--legience-border-hairline) !important;
   }
 
   h2 {
     font-size: 1.75rem;
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .display-6 {
@@ -145,7 +171,7 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-weight: 400;
   }
 
@@ -181,13 +207,13 @@
 .schedule-date-badge {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, var(--vz-primary) 0%, #5c6bc0 100%);
+  background: linear-gradient(135deg, var(--legience-accent) 0%, #5c6bc0 100%);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+  box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.25);
 
   .day {
     font-size: 1.5rem;
@@ -208,7 +234,7 @@
 .schedule-event-card {
   transition: all 0.25s ease;
   position: relative;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
 
   &:hover {
     transform: translateY(-4px);
@@ -223,7 +249,7 @@
   // Past events - greyed out appearance
   &.event-past {
     opacity: 0.6;
-    border-color: var(--vz-border-color) !important;
+    border-color: var(--legience-border-hairline) !important;
 
     &:hover {
       opacity: 0.8;
@@ -232,7 +258,7 @@
     }
 
     h5, p {
-      color: var(--vz-secondary-color) !important;
+      color: var(--legience-text-muted) !important;
     }
 
     .avatar-title {
@@ -242,12 +268,12 @@
 
   // In progress events - highlighted with subtle pulse
   &.event-in-progress {
-    border-color: var(--vz-success) !important;
-    box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.15);
+    border-color: var(--legience-success) !important;
+    box-shadow: 0 0 0 3px rgba(var(--legience-success-rgb), 0.15);
     animation: eventPulse 2s ease-in-out infinite;
 
     &:hover {
-      box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.2), 0 8px 25px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 0 3px rgba(var(--legience-success-rgb), 0.2), 0 8px 25px rgba(0, 0, 0, 0.1);
     }
 
     .event-time-header {
@@ -276,16 +302,16 @@
 
     &:hover {
       transform: translateY(-2px);
-      background-color: rgba(var(--vz-primary-rgb), 0.02);
-      border-color: var(--vz-primary) !important;
+      background-color: rgba(var(--legience-accent-rgb), 0.02);
+      border-color: var(--legience-accent) !important;
 
       .avatar-title {
-        background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
-        color: var(--vz-primary) !important;
+        background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
+        color: var(--legience-accent) !important;
       }
 
       h6, p {
-        color: var(--vz-primary) !important;
+        color: var(--legience-accent) !important;
       }
     }
   }
@@ -294,10 +320,10 @@
 // Keyframes for in-progress event pulse
 @keyframes eventPulse {
   0%, 100% {
-    box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.15);
+    box-shadow: 0 0 0 3px rgba(var(--legience-success-rgb), 0.15);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(var(--vz-success-rgb), 0.1);
+    box-shadow: 0 0 0 5px rgba(var(--legience-success-rgb), 0.1);
   }
 }
 
@@ -327,7 +353,7 @@
     position: relative;
 
     &.ribbon-warning {
-      background-color: var(--vz-warning);
+      background-color: var(--legience-warning);
       color: #000;
     }
 
@@ -406,7 +432,7 @@
     top: 24px;
     bottom: 24px;
     width: 0;
-    border-left: 2px dashed rgba(var(--vz-primary-rgb), 0.25);
+    border-left: 2px dashed rgba(var(--legience-accent-rgb), 0.25);
   }
 
   // Scrollable state - same height, enables vertical scroll only
@@ -424,11 +450,11 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(var(--vz-primary-rgb), 0.2);
+      background: rgba(var(--legience-accent-rgb), 0.2);
       border-radius: 4px;
 
       &:hover {
-        background: rgba(var(--vz-primary-rgb), 0.3);
+        background: rgba(var(--legience-accent-rgb), 0.3);
       }
     }
   }
@@ -441,10 +467,10 @@
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.04);
+      background-color: rgba(var(--legience-accent-rgb), 0.04);
 
       .activity-title {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
       }
     }
 
@@ -461,46 +487,46 @@
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
 
       &-primary {
-        background-color: var(--vz-card-bg);
-        background-image: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.18) 0%, rgba(var(--vz-primary-rgb), 0.28) 100%);
-        color: var(--vz-primary);
+        background-color: var(--legience-bg-card);
+        background-image: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.18) 0%, rgba(var(--legience-accent-rgb), 0.28) 100%);
+        color: var(--legience-accent);
       }
 
       &-success {
-        background-color: var(--vz-card-bg);
-        background-image: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.18) 0%, rgba(var(--vz-success-rgb), 0.28) 100%);
-        color: var(--vz-success);
+        background-color: var(--legience-bg-card);
+        background-image: linear-gradient(135deg, rgba(var(--legience-success-rgb), 0.18) 0%, rgba(var(--legience-success-rgb), 0.28) 100%);
+        color: var(--legience-success);
       }
 
       &-warning {
-        background-color: var(--vz-card-bg);
-        background-image: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.18) 0%, rgba(var(--vz-warning-rgb), 0.28) 100%);
-        color: var(--vz-warning);
+        background-color: var(--legience-bg-card);
+        background-image: linear-gradient(135deg, rgba(var(--legience-warning-rgb), 0.18) 0%, rgba(var(--legience-warning-rgb), 0.28) 100%);
+        color: var(--legience-warning);
       }
 
       &-info {
-        background-color: var(--vz-card-bg);
-        background-image: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.18) 0%, rgba(var(--vz-info-rgb), 0.28) 100%);
-        color: var(--vz-info);
+        background-color: var(--legience-bg-card);
+        background-image: linear-gradient(135deg, rgba(var(--legience-info-rgb), 0.18) 0%, rgba(var(--legience-info-rgb), 0.28) 100%);
+        color: var(--legience-info);
       }
 
       &-danger {
-        background-color: var(--vz-card-bg);
-        background-image: linear-gradient(135deg, rgba(var(--vz-danger-rgb), 0.18) 0%, rgba(var(--vz-danger-rgb), 0.28) 100%);
-        color: var(--vz-danger);
+        background-color: var(--legience-bg-card);
+        background-image: linear-gradient(135deg, rgba(var(--legience-danger-rgb), 0.18) 0%, rgba(var(--legience-danger-rgb), 0.28) 100%);
+        color: var(--legience-danger);
       }
 
       &-secondary {
-        background-color: var(--vz-card-bg);
+        background-color: var(--legience-bg-card);
         background-image: linear-gradient(135deg, rgba(var(--vz-secondary-rgb), 0.15) 0%, rgba(var(--vz-secondary-rgb), 0.25) 100%);
-        color: var(--vz-secondary);
+        color: var(--legience-text-muted);
       }
     }
 
     .activity-title {
       font-size: 14px;
       font-weight: 600;
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
       transition: color 0.2s ease;
     }
 
@@ -514,39 +540,39 @@
       flex-shrink: 0;
 
       &-primary {
-        background-color: rgba(var(--vz-primary-rgb), 0.12);
-        color: var(--vz-primary);
+        background-color: rgba(var(--legience-accent-rgb), 0.12);
+        color: var(--legience-accent);
       }
 
       &-success {
-        background-color: rgba(var(--vz-success-rgb), 0.12);
-        color: var(--vz-success);
+        background-color: rgba(var(--legience-success-rgb), 0.12);
+        color: var(--legience-success);
       }
 
       &-warning {
-        background-color: rgba(var(--vz-warning-rgb), 0.12);
-        color: var(--vz-warning);
+        background-color: rgba(var(--legience-warning-rgb), 0.12);
+        color: var(--legience-warning);
       }
 
       &-info {
-        background-color: rgba(var(--vz-info-rgb), 0.12);
-        color: var(--vz-info);
+        background-color: rgba(var(--legience-info-rgb), 0.12);
+        color: var(--legience-info);
       }
 
       &-danger {
-        background-color: rgba(var(--vz-danger-rgb), 0.12);
-        color: var(--vz-danger);
+        background-color: rgba(var(--legience-danger-rgb), 0.12);
+        color: var(--legience-danger);
       }
 
       &-secondary {
         background-color: rgba(var(--vz-secondary-rgb), 0.12);
-        color: var(--vz-secondary);
+        color: var(--legience-text-muted);
       }
     }
 
     .activity-desc {
       font-size: 13px;
-      color: var(--vz-body-color);
+      color: var(--legience-text-secondary);
       line-height: 1.5;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -563,7 +589,7 @@
       .activity-user {
         display: inline-flex;
         align-items: center;
-        color: var(--vz-primary);
+        color: var(--legience-accent);
 
         i {
           font-size: 11px;
@@ -581,7 +607,7 @@
         }
 
         &:hover {
-          color: var(--vz-primary) !important;
+          color: var(--legience-accent) !important;
         }
       }
     }
@@ -595,7 +621,7 @@
       span {
         display: flex;
         align-items: center;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
 
         i {
           margin-right: 4px;
@@ -604,11 +630,11 @@
       }
 
       .activity-time {
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-muted);
       }
 
       .activity-case {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
         font-weight: 500;
       }
     }
@@ -631,15 +657,15 @@
 
     // Priority-based left borders
     &.bg-danger-subtle {
-      border-left-color: var(--vz-danger);
+      border-left-color: var(--legience-danger);
     }
 
     &.bg-warning-subtle {
-      border-left-color: var(--vz-warning);
+      border-left-color: var(--legience-warning);
     }
 
     &.bg-info-subtle {
-      border-left-color: var(--vz-info);
+      border-left-color: var(--legience-info);
     }
   }
 }
@@ -653,7 +679,7 @@
   padding-right: 8px !important;
 
   &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.04);
+    background-color: rgba(var(--legience-accent-rgb), 0.04);
   }
 }
 
@@ -667,17 +693,17 @@
 
       .border-start {
         border-left: none !important;
-        border-top: 1px dashed var(--vz-border-color) !important;
+        border-top: 1px dashed var(--legience-border-hairline) !important;
       }
     }
   }
 
-  .activity-urgent-card {
-    min-height: 360px;
-  }
+  // Removed `min-height: 360px` from .activity-urgent-card — was the
+  // tablet-landscape variant of the same dead-space bug.
 
   .activity-feed {
-    height: 320px;
+    max-height: 320px;     // cap at scrollable height; was `height` (forced fill)
+    overflow-y: auto;
   }
 }
 
@@ -1058,28 +1084,32 @@
 
 // Minimal Case Cards - Velzon Theme
 .case-card-minimal {
-  background-color: var(--vz-light);
-  border: 1px solid var(--vz-border-color);
+  // Was var(--vz-light) which renders as a gray tint and makes the cards
+  // look "off" against the page bg. Use the regular card surface so each
+  // case card reads as a clean white surface (or dark-mode card bg in
+  // dark mode) — same visual weight as the parent cases card.
+  background-color: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   transition: all 0.25s ease;
   min-height: 180px;
 
   &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
-    border-color: rgba(var(--vz-primary-rgb), 0.3);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
+    border-color: rgba(var(--legience-accent-rgb), 0.3);
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(var(--vz-primary-rgb), 0.12);
+    box-shadow: 0 5px 15px rgba(var(--legience-accent-rgb), 0.12);
 
     h5 {
-      color: var(--vz-primary) !important;
+      color: var(--legience-accent) !important;
     }
 
     .case-card-arrow {
-      background-color: var(--vz-primary);
+      background-color: var(--legience-accent);
       color: #fff;
     }
 
     .avatar-title {
-      box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+      box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.25);
     }
   }
 
@@ -1101,34 +1131,34 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background-color: var(--vz-light);
-    border: 1px solid var(--vz-border-color);
-    color: var(--vz-secondary-color);
+    background-color: var(--legience-bg-card-hover);
+    border: 1px solid var(--legience-border-hairline);
+    color: var(--legience-text-muted);
     transition: all 0.2s ease;
 
     &:hover {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
       color: #fff;
     }
   }
 
   // Add case variant
   &.case-card-add {
-    border: 2px dashed var(--vz-border-color);
+    border: 2px dashed var(--legience-border-hairline);
     background-color: transparent;
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.04);
-      border-color: var(--vz-primary);
+      background-color: rgba(var(--legience-accent-rgb), 0.04);
+      border-color: var(--legience-accent);
 
       h6, p {
-        color: var(--vz-primary) !important;
+        color: var(--legience-accent) !important;
       }
 
       .avatar-title {
-        background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
-        color: var(--vz-primary) !important;
+        background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
+        color: var(--legience-accent) !important;
       }
     }
   }
@@ -1178,58 +1208,58 @@
 
 .case-badge-muted {
   background-color: rgba(var(--vz-secondary-rgb), 0.12);
-  color: var(--vz-secondary);
+  color: var(--legience-text-muted);
 }
 
 .case-badge-light {
   background-color: rgba(var(--vz-secondary-rgb), 0.08);
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
 }
 
 .case-badge-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  color: var(--legience-info);
 }
 
 .case-badge-urgent {
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
-  color: var(--vz-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
+  color: var(--legience-danger);
 }
 
 .case-badge-dark {
   background-color: rgba(var(--vz-dark-rgb), 0.08);
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
 }
 
 .case-badge-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1);
-  color: var(--vz-success);
+  background-color: rgba(var(--legience-success-rgb), 0.1);
+  color: var(--legience-success);
 }
 
 .case-badge-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1);
-  color: var(--vz-warning);
+  background-color: rgba(var(--legience-warning-rgb), 0.1);
+  color: var(--legience-warning);
 }
 
 .case-badge-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
 }
 
 // Dark mode
 [data-bs-theme="dark"] {
   .crm-widget {
     .border-start {
-      border-color: var(--vz-border-color) !important;
+      border-color: var(--legience-border-hairline) !important;
     }
   }
 
   .table tbody tr.cursor-pointer:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
   }
 
   .card-body .d-flex.align-items-center.py-3:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.08);
+    background-color: rgba(var(--legience-accent-rgb), 0.08);
   }
 
   .schedule-event-card {
@@ -1238,7 +1268,7 @@
     }
 
     &.event-hearing {
-      background: rgba(var(--vz-warning-rgb), 0.15);
+      background: rgba(var(--legience-warning-rgb), 0.15);
     }
 
     &.event-past {
@@ -1251,7 +1281,7 @@
     }
 
     &.event-in-progress {
-      box-shadow: 0 0 0 3px rgba(var(--vz-success-rgb), 0.25);
+      box-shadow: 0 0 0 3px rgba(var(--legience-success-rgb), 0.25);
     }
   }
 
@@ -1261,12 +1291,12 @@
 
   .activity-feed {
     &::before {
-      border-left-color: rgba(var(--vz-primary-rgb), 0.3);
+      border-left-color: rgba(var(--legience-accent-rgb), 0.3);
     }
 
     .activity-feed-item {
       &:hover {
-        background-color: rgba(var(--vz-primary-rgb), 0.08);
+        background-color: rgba(var(--legience-accent-rgb), 0.08);
       }
 
       .activity-icon {
@@ -1277,24 +1307,24 @@
 
   .case-card-minimal {
     background-color: rgba(255, 255, 255, 0.03);
-    border-color: var(--vz-border-color);
+    border-color: var(--legience-border-hairline);
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.12);
-      border-color: rgba(var(--vz-primary-rgb), 0.4);
+      background-color: rgba(var(--legience-accent-rgb), 0.12);
+      border-color: rgba(var(--legience-accent-rgb), 0.4);
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     }
 
     .case-card-arrow {
       background-color: rgba(255, 255, 255, 0.05);
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
     }
 
     &.case-card-add {
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
 
       &:hover {
-        background-color: rgba(var(--vz-primary-rgb), 0.1);
+        background-color: rgba(var(--legience-accent-rgb), 0.1);
       }
     }
   }
@@ -1324,13 +1354,13 @@
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  box-shadow: 0 4px 15px rgba(var(--vz-primary-rgb), 0.35);
+  box-shadow: 0 4px 15px rgba(var(--legience-accent-rgb), 0.35);
   transition: all 0.3s ease;
   border: none;
 
   &:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(var(--vz-primary-rgb), 0.45);
+    box-shadow: 0 6px 20px rgba(var(--legience-accent-rgb), 0.45);
   }
 
   i {
@@ -1419,5 +1449,1944 @@
 
   .fab-action span {
     display: none;
+  }
+}
+
+// =============================================
+// DASHBOARD FOCUS CARD
+// "Right now, you should focus on..." — adapted from PI focus pattern.
+// Tone-coded: urgent (orange/red) / soon (yellow) / calm (blue/green)
+// =============================================
+.dashboard-focus-card {
+  // Default tone variables (overridden per .tone-* class)
+  --fc-accent: #f97006;
+  --fc-accent-rgb: 249, 112, 6;
+  --fc-accent-dark: #c2410c;
+  --fc-glow: rgba(249, 112, 6, 0.10);
+
+  position: relative;
+  // Anchor the gradient on white so the headline stays crisp; bottom-right
+  // washes into the tone tint for an ambient signal — same pattern as
+  // .pi-focus-card. This is the hero treatment; other dashboard cards
+  // get the same gradient via a scoped rule below so the design reads
+  // as one consistent system.
+  background:
+    linear-gradient(135deg,
+      #ffffff 0%,
+      rgba(var(--fc-accent-rgb), 0.035) 50%,
+      rgba(var(--fc-accent-rgb), 0.10) 100%);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  padding: 22px 26px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  box-shadow: var(--legience-shadow-sm);
+  transition: box-shadow 0.15s ease;
+
+  // Flex column so the CTAs can pin to the bottom via `margin-top: auto`
+  // when the card stretches (h-100) to match Comm Health's height. Stops
+  // the empty-space-below-buttons problem when the right column is taller.
+  display: flex;
+  flex-direction: column;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, var(--fc-glow) 0%, transparent 60%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -60px;
+    left: 30%;
+    width: 250px;
+    height: 100px;
+    background: radial-gradient(ellipse, rgba(var(--fc-accent-rgb), 0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  > * { position: relative; z-index: 1; }
+
+  // Tones
+  &.tone-urgent {
+    --fc-accent: #f97006;
+    --fc-accent-rgb: 249, 112, 6;
+    --fc-accent-dark: #c2410c;
+    --fc-glow: rgba(249, 112, 6, 0.12);
+  }
+  &.tone-soon {
+    --fc-accent: #d97706;
+    --fc-accent-rgb: 217, 119, 6;
+    --fc-accent-dark: #92400e;
+    --fc-glow: rgba(249, 183, 3, 0.12);
+  }
+  &.tone-calm {
+    --fc-accent: #16a34a;
+    --fc-accent-rgb: 22, 163, 74;
+    --fc-accent-dark: #14532d;
+    --fc-glow: rgba(22, 163, 74, 0.10);
+  }
+  // ── INFO (Action Cockpit default) — blueprint blue.
+  // Tone variables only; layout/typography inherit from the shared base
+  // above (which now mirrors the PI focus card directly).
+  &.tone-info {
+    --fc-accent: #2563eb;       // tailwind blue-600
+    --fc-accent-rgb: 37, 99, 235;
+    --fc-accent-dark: #1d4ed8;  // tailwind blue-700
+    --fc-glow: rgba(37, 99, 235, 0.10);
+  }
+
+  // ── Eyebrow ── (PI .focus-eye dimensions)
+  .focus-eye {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    font-weight: 700;            // PI uses 700 (was 600)
+    text-transform: uppercase;
+    color: var(--fc-accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    .eye-icon {
+      width: 18px;                // PI uses 18px (was 22px)
+      height: 18px;
+      border-radius: 4px;          // PI uses 4px (was 5px)
+      background: rgba(var(--fc-accent-rgb), 0.14);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--fc-accent);
+
+      i {
+        font-size: 11px;           // PI uses 11px (was 12px)
+        line-height: 1;
+      }
+    }
+  }
+
+  // ── Headline ──
+  // Bumped from 22px → 28px so the greeting reads as a real hero (not a
+  // section title). Removed the 720px max-width — at 720px in an 8-col
+  // container (~1100-1300px wide on desktop) the hero text only fills ~55%
+  // of the card and leaves a big visual void on the right. Letting the
+  // headline flow naturally inside the card padding fills the space.
+  .focus-headline {
+    font-family: var(--vz-font-sans-serif);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--legience-text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.018em;
+    margin: 10px 0 14px;
+
+    .accent {
+      background: linear-gradient(120deg, var(--fc-accent) 0%, var(--fc-accent-dark) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+    }
+  }
+
+  // ── Description ──
+  // 19px / weight 300 — bigger and slimmer for elegance. Geist 300 reads
+  // clean at this size on the blue-tinted gradient. Strong drops from 600
+  // to 500 to keep the emphasis distinguishable but in proportion to the
+  // lighter base weight.
+  .focus-desc {
+    font-size: 19px;
+    font-weight: 300;
+    color: var(--legience-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+    letter-spacing: -0.014em;
+
+    strong {
+      color: var(--legience-text-primary);
+      font-weight: 500;
+    }
+  }
+
+  // ── Stat pills ── (PI .focus-pills, .focus-pill)
+  .focus-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .focus-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 8px;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    color: var(--legience-text-muted);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    // No transform on hover — caused flicker in PI card (see PI focus card
+    // comment) when cursor sat on the pill.
+    &:hover {
+      border-color: rgba(var(--fc-accent-rgb), 0.35);
+      box-shadow: 0 2px 6px -3px rgba(var(--fc-accent-rgb), 0.30);
+    }
+
+    .pill-icon {
+      color: var(--fc-accent);
+      font-size: 14px;
+      line-height: 1;
+      flex-shrink: 0;
+      display: inline-flex;
+    }
+
+    strong {
+      color: var(--legience-text-primary);
+      font-weight: 600;
+      margin-left: 1px;
+      font-family: var(--vz-font-sans-serif);
+    }
+  }
+
+  // ── Today's pulse pills ──
+  // Small inline stat pills sitting between the description and the CTAs.
+  // Not navigable (no click handlers); these are info-only context woven
+  // into the briefing — fills the vertical space without inflating to
+  // KPI-tile prominence.
+  .focus-pulse {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  // !important guards against any global pill/badge utility (Bootstrap
+  // .badge, Velzon variants, etc.) winning the cascade for size/weight.
+  .focus-pulse-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 9px 18px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    border: 1px solid var(--legience-border-hairline) !important;
+    font-family: 'Geist', system-ui, sans-serif !important;
+    font-size: 15px !important;
+    font-weight: 300 !important;
+    color: var(--legience-text-secondary) !important;
+    letter-spacing: -0.012em !important;
+    line-height: 1.3 !important;
+
+    i {
+      font-size: 16px !important;
+      color: var(--legience-text-muted) !important;
+      line-height: 1 !important;
+    }
+
+    strong {
+      color: var(--legience-text-primary) !important;
+      font-weight: 500 !important;
+      font-size: 16px !important;
+    }
+
+    // Urgent variant — red icon + bg tint when there are urgent items
+    &.has-urgent {
+      background: rgba(var(--legience-danger-rgb), 0.08) !important;
+      border-color: rgba(var(--legience-danger-rgb), 0.20) !important;
+
+      i { color: var(--legience-danger) !important; }
+      strong { color: var(--legience-danger) !important; }
+    }
+
+    // Pending variant — orange tint for pending appointment requests
+    &.has-pending {
+      background: rgba(var(--legience-warning-rgb), 0.10) !important;
+      border-color: rgba(var(--legience-warning-rgb), 0.20) !important;
+
+      i { color: var(--legience-warning) !important; }
+      strong { color: var(--legience-warning) !important; }
+    }
+  }
+
+  // ── CTAs ── (PI .focus-cta — Velzon .btn dimensions, solid fill on primary,
+  // outline-only hover on secondary). `margin-top: auto` pins the CTA row
+  // to the bottom of the card body when the card stretches (h-100) — fills
+  // any vertical space between the description/pulse-pills and the buttons.
+  .focus-cta {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  // Shared reset on both CTAs — neutralise UA <button> defaults so the
+  // intentional styling below is what the user actually sees. Sized to match
+  // Velzon's .btn (0.47rem 0.9rem padding, 0.8125rem font, 0.25rem radius).
+  .focus-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    margin: 0;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-decoration: none;
+    text-transform: none;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0.47rem 0.9rem;
+    border-radius: 0.25rem;
+    border: 1px solid transparent;
+    transition: color 0.15s ease, background-color 0.15s ease,
+                border-color 0.15s ease, box-shadow 0.15s ease;
+
+    i { font-size: 14px; line-height: 1; }
+
+    &:focus { outline: none; }
+    &:focus-visible {
+      box-shadow: 0 0 0 0.25rem rgba(var(--fc-accent-rgb), 0.25);
+    }
+  }
+
+  // Primary CTA — solid tone background. Mirrors Velzon .btn-primary but uses
+  // --fc-accent so each tone has its own colour. No gradient (PI standard).
+  .focus-btn-pri {
+    background: var(--fc-accent);
+    border-color: var(--fc-accent);
+    color: #fff;
+
+    &:hover {
+      background: var(--fc-accent-dark);
+      border-color: var(--fc-accent-dark);
+      color: #fff;
+    }
+    &:active {
+      background: var(--fc-accent-dark);
+      border-color: var(--fc-accent-dark);
+      color: #fff;
+    }
+  }
+
+  // Secondary CTA — outline-only hover (no fill). Hover changes border + text
+  // colour to the tone; surface stays transparent so it reads quieter.
+  .focus-btn-soft {
+    background: transparent;
+    border-color: var(--legience-border-hairline);
+    color: var(--legience-text-secondary);
+
+    i { color: var(--legience-text-muted); }
+
+    &:hover {
+      background: transparent;
+      border-color: var(--fc-accent);
+      color: var(--fc-accent);
+      i { color: var(--fc-accent); }
+    }
+  }
+}
+
+// Dark mode — same gradient pattern as light mode, anchored on the dark
+// card surface instead of white. The decorative pseudos stay killed in
+// dark mode because they create a metallic/spotlit look on dark bg.
+[data-bs-theme="dark"] .dashboard-focus-card {
+  background: linear-gradient(135deg,
+    var(--legience-bg-card) 0%,
+    rgba(var(--fc-accent-rgb), 0.10) 100%);
+
+  &::before { display: none; }
+  &::after  { display: none; }
+
+  // Headline + accent — pure white headline; accent uses a brighter blue
+  // (the gradient-text from light mode renders muddy on dark surfaces).
+  .focus-headline {
+    color: #ffffff;
+    .accent {
+      background: none;
+      -webkit-background-clip: unset;
+      background-clip: unset;
+      color: #5b9dff;     // brighter blue accent for dark contrast
+    }
+  }
+
+  // Description — the screenshot showed this barely visible. Bump to
+  // ~80% white so it reads as readable secondary text against the dark bg.
+  .focus-desc {
+    color: rgba(255, 255, 255, 0.80);
+
+    strong { color: #ffffff; font-weight: 600; }
+  }
+
+  // Pulse pills in dark mode — solid status-pill treatment instead of
+  // ghostly translucent white. Chip uses a darker surface than the hero
+  // card itself so it reads as a raised pill, not a watermark. Bright
+  // accent color on the icon + number for instant scan-ability.
+  .focus-pulse-pill {
+    background: #1c1917 !important;       // solid dark stone, lifted above hero gradient
+    border-color: #44403c !important;     // visible warm-grey edge
+    color: #d4d2d1 !important;            // body text, readable but secondary
+
+    i {
+      color: #5b9dff !important;           // bright blue icon = info accent
+      font-weight: 500 !important;
+    }
+    strong {
+      color: #ffffff !important;
+      font-weight: 600 !important;
+    }
+
+    // Has-urgent — solid red-tinted chip
+    &.has-urgent {
+      background: rgba(var(--legience-danger-rgb), 0.18) !important;
+      border-color: var(--legience-danger) !important;
+      color: #ffd1d1 !important;
+
+      i { color: #ff6b6b !important; }
+      strong { color: #ff8d8d !important; }
+    }
+
+    // Has-pending — solid amber-tinted chip
+    &.has-pending {
+      background: rgba(var(--legience-warning-rgb), 0.18) !important;
+      border-color: var(--legience-warning) !important;
+      color: #ffe9b8 !important;
+
+      i { color: #ffc24d !important; }
+      strong { color: #ffd97a !important; }
+    }
+  }
+
+  // Eyebrow — keep the blue accent but on dark bg it needs a brighter blue
+  .focus-eye {
+    color: #5b9dff;
+    .eye-icon {
+      background: rgba(91, 157, 255, 0.18);
+      color: #5b9dff;
+    }
+  }
+
+  .focus-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.78);
+
+    .pill-icon { color: #5b9dff; }
+    strong { color: #ffffff; }
+  }
+
+  // Primary CTA — use bright blue; the muddy gradient-derived primary
+  // doesn't pop on dark surface.
+  .focus-btn-pri {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+
+    &:hover { background: #1d4ed8; border-color: #1d4ed8; }
+  }
+
+  // Secondary CTA in dark mode — outline only, white text.
+  .focus-btn-soft {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.90);
+    border-color: rgba(255, 255, 255, 0.18);
+
+    i { color: rgba(255, 255, 255, 0.70); }
+
+    &:hover {
+      background: transparent;
+      border-color: #5b9dff;
+      color: #5b9dff;
+      i { color: #5b9dff; }
+    }
+  }
+}
+
+// Mobile responsive — scale down the bumped hero text so it stays readable
+// on phones without overflowing the card padding.
+@media (max-width: 575.98px) {
+  .dashboard-focus-card {
+    padding: 18px 20px;
+
+    .focus-headline {
+      font-size: 22px;
+    }
+
+    .focus-desc {
+      font-size: 14px;
+    }
+
+    .focus-pill {
+      font-size: 11.5px;
+      padding: 6px 11px;
+    }
+
+    .focus-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+// =============================================
+// COMPACT EMPTY STATES — single-row inline empty states for Schedule and
+// Urgent Items. Replace 280px-tall centered placeholders with ~60px rows
+// that present the same information in less vertical space.
+// =============================================
+.schedule-empty-inline,
+.urgent-empty-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--legience-border-hairline);
+
+  .schedule-empty-icon,
+  .urgent-empty-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+
+  .schedule-empty-meta,
+  .urgent-empty-meta {
+    flex-grow: 1;
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--legience-text-primary);
+      line-height: 1.3;
+    }
+
+    span {
+      font-size: 12.5px;
+      color: var(--legience-text-muted);
+      line-height: 1.4;
+    }
+  }
+}
+
+.schedule-empty-inline {
+  background: linear-gradient(180deg, var(--vz-light), var(--legience-bg-card) 70%);
+
+  .schedule-empty-icon {
+    background: rgba(var(--legience-success-rgb), 0.12);
+    color: var(--legience-success);
+  }
+}
+
+.urgent-empty-inline {
+  background: rgba(var(--legience-success-rgb), 0.06);
+  border-color: rgba(var(--legience-success-rgb), 0.20);
+
+  .urgent-empty-icon {
+    background: rgba(var(--legience-success-rgb), 0.14);
+    color: var(--legience-success);
+  }
+}
+
+// =============================================
+// KPI TILE STACK — anchors the hero row's right column
+// 4 actionable numbers (active cases · open tasks · unbilled $ · hours/week)
+// stacked vertically. Each tile is clickable and navigates to its detail
+// surface. Designed to fill the same vertical height as the focus card via
+// `h-100` on the parent + grid distribution here.
+// =============================================
+.kpi-tile-stack {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.kpi-tile {
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--legience-shadow-sm);
+  min-height: 64px;
+
+  &:hover {
+    border-color: rgba(var(--legience-accent-rgb), 0.40);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(var(--legience-accent-rgb), 0.20);
+
+    .kpi-tile-arrow { color: var(--legience-accent); transform: translate(2px, -2px); }
+  }
+}
+
+.kpi-tile-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+
+  &.kpi-tile-blue   { background: var(--legience-cat-blue-soft);   color: var(--legience-cat-blue); }
+  &.kpi-tile-orange { background: var(--legience-cat-orange-soft); color: var(--legience-cat-orange); }
+  &.kpi-tile-green  { background: var(--legience-cat-green-soft);  color: var(--legience-cat-green); }
+  &.kpi-tile-violet { background: var(--legience-cat-violet-soft); color: var(--legience-cat-violet); }
+}
+
+.kpi-tile-meta {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.kpi-tile-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--legience-text-muted);
+  line-height: 1.3;
+}
+
+.kpi-tile-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--legience-text-primary);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-top: 1px;
+}
+
+.kpi-tile-arrow {
+  font-size: 14px;
+  color: var(--legience-text-muted);
+  flex-shrink: 0;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+// Mobile: collapse to 2x2 grid below xl breakpoint where the col stacks
+@media (max-width: 575.98px) {
+  .kpi-tile-stack {
+    grid-template-rows: auto;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi-tile { min-height: 56px; }
+  .kpi-tile-value { font-size: 17px; }
+}
+
+// =============================================
+// TIER 3 DIFFERENTIATORS — Action Cockpit add-ons
+// AI Insights row, Risk Alerts band, Cross-Matter Intelligence, Client
+// Communication Health. All styled as standalone surfaces (no Velzon .card
+// wrapper) so they sit between the focus card and the matter grid without
+// stealing visual weight from either.
+// =============================================
+
+// ── AI INSIGHTS GRID ──────────────────────────────────────────────────
+// Four side-by-side predictive prompts. Each card carries a category accent
+// (orange/green/violet/blue) on its left border + icon chip so the row reads
+// as "what AI noticed" at a glance. Click anywhere on the card to act.
+.ai-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.ai-insight-card {
+  // Default accent — overridden per .accent-* variant. References Tier 2
+  // category seed tokens so the palette can shift centrally.
+  --ai-accent: var(--legience-cat-blue);
+  --ai-accent-rgb: var(--legience-cat-blue-rgb);
+  --ai-accent-soft: var(--legience-cat-blue-soft);
+
+  position: relative;
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
+  border-left: 3px solid var(--ai-accent);
+  border-radius: 8px;
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 110px;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(var(--ai-accent-rgb), 0.25);
+    border-color: var(--legience-border-hairline);
+    border-left-color: var(--ai-accent);
+  }
+
+  // Header row — accent icon chip + uppercase category label
+  .ai-insight-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ai-insight-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    i { font-size: 12px; line-height: 1; }
+  }
+
+  .ai-insight-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ai-accent);
+  }
+
+  // Body — short narrative with bolded matter name
+  .ai-insight-body {
+    font-size: 13px;
+    color: var(--legience-text-muted);
+    line-height: 1.45;
+    flex-grow: 1;
+
+    strong {
+      color: var(--legience-text-primary);
+      font-weight: 600;
+    }
+  }
+
+  // Action — small accent-coloured CTA at bottom
+  .ai-insight-action {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ai-accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    i {
+      font-size: 14px;
+      transition: transform 0.15s ease;
+    }
+  }
+
+  &:hover .ai-insight-action i { transform: translateX(2px); }
+
+  // Accent variants — map to Tier 2 category seed tokens
+  &.accent-orange {
+    --ai-accent: var(--legience-cat-orange);
+    --ai-accent-rgb: var(--legience-cat-orange-rgb);
+    --ai-accent-soft: var(--legience-cat-orange-soft);
+  }
+  &.accent-green {
+    --ai-accent: var(--legience-cat-green);
+    --ai-accent-rgb: var(--legience-cat-green-rgb);
+    --ai-accent-soft: var(--legience-cat-green-soft);
+  }
+  &.accent-violet {
+    --ai-accent: var(--legience-cat-violet);
+    --ai-accent-rgb: var(--legience-cat-violet-rgb);
+    --ai-accent-soft: var(--legience-cat-violet-soft);
+  }
+  &.accent-blue {
+    --ai-accent: var(--legience-cat-blue);
+    --ai-accent-rgb: var(--legience-cat-blue-rgb);
+    --ai-accent-soft: var(--legience-cat-blue-soft);
+  }
+}
+
+// Dark-mode tweak — keep the left-border accent vivid; soften the surface
+[data-bs-theme="dark"] .ai-insight-card {
+  background: var(--legience-bg-card);
+  border-color: var(--legience-border-hairline);
+
+  .ai-insight-icon { background: rgba(var(--ai-accent-rgb), 0.18); }
+}
+
+// ── RISK ALERTS BAND ──────────────────────────────────────────────────
+// Single full-width banner that lists open compliance/exposure flags. Border
+// + soft tint shifts to red when any alert is critical, otherwise neutral.
+.risk-alerts-band {
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 1.5rem;
+
+  // Critical state — red surface tint + red left rail
+  &.has-critical {
+    background: linear-gradient(90deg,
+      rgba(var(--legience-danger-rgb), 0.05) 0%,
+      var(--legience-bg-card) 60%);
+    border-color: rgba(var(--legience-danger-rgb), 0.25);
+    border-left: 3px solid var(--legience-danger);
+  }
+
+  .risk-alerts-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+
+    .risk-alerts-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(var(--legience-danger-rgb), 0.10);
+      color: var(--legience-danger);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      i { font-size: 14px; line-height: 1; }
+    }
+
+    .risk-alerts-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--legience-text-primary);
+      flex-grow: 1;
+    }
+
+    .btn-sm {
+      font-size: 12px;
+      padding: 0.35rem 0.75rem;
+    }
+  }
+
+  .risk-alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 38px; // align list with header text (icon width + gap)
+  }
+
+  .risk-alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px dashed rgba(var(--vz-border-rgb, 0,0,0), 0.06);
+
+    &:first-child { border-top: 0; }
+
+    .risk-alert-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+      background: var(--legience-text-muted);
+    }
+
+    .risk-alert-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--legience-text-primary);
+      line-height: 1.3;
+    }
+
+    .risk-alert-desc {
+      font-size: 12.5px;
+      color: var(--legience-text-muted);
+      line-height: 1.45;
+      margin-top: 2px;
+    }
+
+    // Severity tones — only the dot colour shifts
+    &.severity-critical .risk-alert-dot { background: var(--legience-danger); }
+    &.severity-warning  .risk-alert-dot { background: var(--legience-warning); }
+    &.severity-info     .risk-alert-dot { background: var(--legience-info); }
+  }
+}
+
+// ── CROSS-MATTER INTELLIGENCE ──────────────────────────────────────────
+// Single conditional card that surfaces patterns AI detects across multiple
+// matters (e.g. similar treatment paths, comparable settlement ranges).
+// Violet tint is the consistent "AI-derived insight" colour signal.
+.cross-matter-intel {
+  --cmi-accent: var(--legience-cat-violet);
+  --cmi-accent-rgb: var(--legience-cat-violet-rgb);
+  --cmi-accent-dark: #4d2d8a;  // hover/active darken — derived from cat-violet
+
+  position: relative;
+  background:
+    linear-gradient(135deg,
+      var(--legience-bg-card) 0%,
+      rgba(var(--cmi-accent-rgb), 0.04) 50%,
+      rgba(var(--cmi-accent-rgb), 0.10) 100%);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  padding: 18px 22px;
+  margin-bottom: 1.5rem;
+
+  .cmi-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+
+    .cmi-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(var(--cmi-accent-rgb), 0.14);
+      color: var(--cmi-accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      i { font-size: 14px; line-height: 1; }
+    }
+
+    h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--legience-text-primary);
+      letter-spacing: -0.01em;
+    }
+  }
+
+  .cmi-summary {
+    font-size: 13.5px;
+    color: var(--legience-text-muted);
+    line-height: 1.5;
+    margin: 0 0 12px;
+    max-width: 720px;
+  }
+
+  // Matter pills — avatar bubble + name, white surface
+  .cmi-matters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .cmi-matter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--legience-text-primary);
+  }
+
+  .cmi-matter-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cmi-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .cmi-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.47rem 0.9rem;
+    border-radius: 0.25rem;
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+    i { font-size: 14px; line-height: 1; }
+  }
+
+  .cmi-btn-pri {
+    background: var(--cmi-accent);
+    border-color: var(--cmi-accent);
+    color: #fff;
+
+    &:hover {
+      background: var(--cmi-accent-dark);
+      border-color: var(--cmi-accent-dark);
+    }
+  }
+
+  .cmi-btn-out {
+    background: transparent;
+    border-color: var(--legience-border-hairline);
+    color: var(--legience-text-secondary);
+
+    &:hover {
+      border-color: var(--cmi-accent);
+      color: var(--cmi-accent);
+    }
+  }
+}
+
+// ── CLIENT COMMUNICATION HEALTH ────────────────────────────────────────
+// Lists clients who haven't been updated recently. Sits in the side column
+// next to the schedule/recent-activity row. Flags overdue counts in red.
+.client-comm-health {
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  padding: 16px 18px;
+
+  // Hero variant — used when this card replaces the KPI tile stack in the
+  // hero row. Needs to stretch with `h-100` to match the focus card height,
+  // so flex-column with the list growing to fill space and the action link
+  // pinned to the bottom.
+  &.client-comm-health-hero {
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--legience-shadow-sm);
+    padding: 18px 20px;
+
+    .cch-header {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--legience-border-hairline);
+
+      .cch-title {
+        font-size: 14px;
+        text-transform: none;
+        letter-spacing: -0.012em;
+      }
+    }
+
+    .cch-list {
+      flex-grow: 1;
+      gap: 12px;       // a touch more breathing room between rows in the larger card
+
+      .cch-item {
+        padding: 8px 0;
+      }
+    }
+
+    .cch-action {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--legience-border-hairline);
+    }
+  }
+
+  .cch-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    .cch-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      background: rgba(var(--legience-warning-rgb), 0.12);
+      color: var(--legience-warning);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      i { font-size: 13px; line-height: 1; }
+    }
+
+    .cch-title {
+      flex-grow: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--legience-text-primary);
+    }
+
+    .cch-overdue {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--legience-danger);
+      background: rgba(var(--legience-danger-rgb), 0.10);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+  }
+
+  .cch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid var(--legience-border-hairline);
+
+    &:first-child { border-top: 0; padding-top: 0; }
+  }
+
+  .cch-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cch-meta {
+    flex-grow: 1;
+    min-width: 0;
+
+    .cch-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--legience-text-primary);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cch-last {
+      font-size: 11.5px;
+      color: var(--legience-text-muted);
+      line-height: 1.3;
+    }
+  }
+
+  .cch-status {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+
+    &.status-overdue {
+      color: var(--legience-danger);
+      background: rgba(var(--legience-danger-rgb), 0.10);
+    }
+    &.status-soon {
+      color: var(--legience-warning);
+      background: rgba(var(--legience-warning-rgb), 0.12);
+    }
+    &.status-on-track {
+      color: var(--legience-success);
+      background: rgba(var(--legience-success-rgb), 0.10);
+    }
+  }
+
+  .cch-action {
+    margin-top: 12px;
+    text-align: center;
+
+    a {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--legience-accent);
+      text-decoration: none;
+
+      &:hover { text-decoration: underline; }
+    }
+  }
+}
+
+// =============================================
+// SCHEDULE / URGENT / ACTIVITY — mockup-A-cockpit derived styles
+// Compact list patterns ported from mockups/attorney-dashboard-redesign/
+// mockup-a-cockpit.html. Shared design language: hairline row separators
+// (`var(--legience-border-hairline)`), tight 11–13px typography, hover
+// state of `#fafaf9`, no chunky avatars/borders/shadows.
+// =============================================
+
+// ── SHARED CARD HEADER POLISH ────────────────────────────────────
+// All three cards (Schedule, Urgent Items, Recent Activity) get a
+// consistent header strip — title + count + actions on the right —
+// matching the mockup's `.card-head` pattern.
+:host {
+  app-attorney-dashboard,
+  & {
+    .card > .card-header.align-items-center {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--legience-border-hairline);
+
+      .card-title {
+        font-family: 'Geist', system-ui, sans-serif;
+        font-size: 15px;
+        font-weight: 500;
+        letter-spacing: -0.012em;
+        text-transform: none;
+        color: var(--legience-text-primary);
+      }
+    }
+  }
+}
+
+// ── TODAY'S SCHEDULE — compact list ──────────────────────────────
+.sched-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sched-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px 18px 12px 18px;
+  border-top: 1px solid var(--legience-border-hairline);
+  cursor: pointer;
+  transition: background-color 0.12s ease, padding-left 0.12s ease;
+  align-items: center;
+  // Always relative so the ::before bar (used by .is-now) positions
+  // against the row, and so it shows correctly even on first/last row.
+  position: relative;
+
+  // Pre-create the left rail bar (transparent by default). State classes
+  // below paint it. Using top:0 / bottom:0 instead of height:100% so the
+  // bar tracks the row's full vertical regardless of border-top / padding.
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+
+  &:first-child { border-top: 0; }
+
+  &:hover {
+    background: var(--legience-bg-card-hover);
+  }
+
+  // CURRENT EVENT — visible blue rail + soft blue tint + slight padding-left
+  // bump so the content shifts a hair right, making the bar feel like a
+  // "this one" indicator rather than a random stripe.
+  &.is-now {
+    background: rgba(var(--legience-accent-rgb), 0.06);
+    padding-left: 22px;
+
+    &::before {
+      background: var(--legience-accent);
+    }
+
+    .sched-time {
+      color: var(--legience-accent);
+    }
+  }
+
+  // PAST — desaturate but keep readable
+  &.is-past {
+    opacity: 0.55;
+
+    .sched-tag { opacity: 0.7; }
+  }
+}
+
+.sched-time {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  color: var(--legience-text-primary);
+  width: 70px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.1;
+
+  small {
+    font-family: system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--legience-text-muted);
+    letter-spacing: 0;
+  }
+}
+
+.sched-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sched-title {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-primary);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.sched-sub {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12px;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.sched-tag {
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  align-self: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  &.tag-court   { background: rgba(var(--legience-danger-rgb), 0.10);  color: var(--legience-danger); }
+  &.tag-call    { background: rgba(var(--legience-accent-rgb), 0.10);  color: var(--legience-accent); }
+  &.tag-review  { background: rgba(var(--legience-warning-rgb), 0.12); color: var(--legience-warning); }
+  &.tag-prep    { background: rgba(var(--legience-cat-violet-rgb), 0.10); color: var(--legience-cat-violet); }
+  // NOW — solid green pill, slightly larger to draw the eye to the active row
+  &.tag-now {
+    background: var(--legience-success);
+    color: #fff;
+    padding: 4px 10px;
+    box-shadow: 0 0 0 3px rgba(var(--legience-success-rgb), 0.18);
+  }
+  &.tag-default { background: var(--legience-bg-card-hover); color: var(--legience-text-muted); }
+}
+
+// Schedule empty wrap — center the inline empty state with proper padding
+.schedule-empty-wrap {
+  padding: 14px 18px;
+}
+
+// ── URGENT ITEMS — queue list with priority dot ──────────────────
+.queue-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.queue-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 11px 18px;
+  border-top: 1px solid var(--legience-border-hairline);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+
+  &:first-child { border-top: 0; }
+  &:hover { background: var(--legience-bg-card-hover); }
+}
+
+.queue-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+  background: var(--legience-text-muted);
+  transition: box-shadow 0.15s ease;
+}
+
+.queue-item.priority-critical .queue-dot {
+  background: var(--legience-danger);
+  box-shadow: 0 0 0 3px rgba(var(--legience-danger-rgb), 0.18);
+}
+.queue-item.priority-high .queue-dot {
+  background: #f97006;
+  box-shadow: 0 0 0 3px rgba(249, 112, 6, 0.18);
+}
+.queue-item.priority-medium .queue-dot {
+  background: var(--legience-warning);
+  box-shadow: 0 0 0 3px rgba(var(--legience-warning-rgb), 0.18);
+}
+
+.queue-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-title {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-primary);
+  margin-bottom: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-meta {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12px;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  strong {
+    color: var(--legience-text-secondary);
+    font-weight: 600;
+  }
+}
+
+.queue-due-chip {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0;
+  background: var(--legience-bg-card-hover);
+  color: var(--legience-text-muted);
+}
+
+// ── RECENT ACTIVITY — slim feed list ─────────────────────────────
+.feed-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.feed-list-scrollable {
+  max-height: 800px;   // bumped from 540 so expanded feed shows ~10-12 items
+  overflow-y: auto;
+}
+
+.feed-day-label {
+  font-family: system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--legience-text-muted);
+  padding: 12px 18px 6px;
+  border-top: 1px solid var(--legience-border-hairline);
+
+  &:first-of-type { border-top: 0; padding-top: 8px; }
+}
+
+.feed-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 18px;
+  border-top: 1px solid var(--legience-border-hairline);
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  text-decoration: none;
+
+  &:hover { background: var(--legience-bg-card-hover); }
+}
+
+// Day-label is followed by feed-item; suppress the top border on the
+// item that immediately follows a label (label already provides a divider).
+.feed-day-label + .feed-item {
+  border-top: 0;
+}
+
+.feed-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--legience-bg-card-hover);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--legience-text-muted);
+  margin-top: 1px;
+
+  // Activity-color variants — keep monochrome but tint per type
+  &.feed-icon-primary { background: rgba(var(--legience-accent-rgb), 0.10);  color: var(--legience-accent); }
+  &.feed-icon-success { background: rgba(var(--legience-success-rgb), 0.10); color: var(--legience-success); }
+  &.feed-icon-warning { background: rgba(var(--legience-warning-rgb), 0.12); color: var(--legience-warning); }
+  &.feed-icon-danger  { background: rgba(var(--legience-danger-rgb), 0.10);  color: var(--legience-danger); }
+  &.feed-icon-info    { background: rgba(var(--legience-cat-violet-rgb), 0.10); color: var(--legience-cat-violet); }
+  &.feed-icon-secondary { background: var(--legience-bg-card-hover); color: var(--legience-text-muted); }
+}
+
+.feed-text {
+  flex: 1;
+  line-height: 1.55;
+  min-width: 0;
+
+  strong {
+    color: var(--legience-text-primary);
+    font-weight: 600;
+  }
+
+  .feed-case a,
+  .feed-case-num {
+    color: var(--legience-text-muted);
+    text-decoration: none;
+  }
+
+  .feed-case a:hover { color: var(--legience-accent); text-decoration: underline; }
+}
+
+.feed-time {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--legience-text-muted);
+  letter-spacing: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+// Activity empty state — matches the schedule-empty-inline pattern
+.feed-empty {
+  padding: 14px 18px;
+}
+
+.feed-empty-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-card-hover);
+
+  .feed-empty-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--legience-bg-card);
+    color: var(--legience-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+
+  strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--legience-text-primary);
+    line-height: 1.3;
+  }
+
+  span {
+    font-size: 12.5px;
+    color: var(--legience-text-muted);
+    line-height: 1.4;
+  }
+}
+
+.feed-show-more {
+  text-align: center;
+  padding: 12px 18px;
+  border-top: 1px solid var(--legience-border-hairline);
+
+  a {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--legience-accent);
+    text-decoration: none;
+    letter-spacing: -0.012em;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// =============================================
+// PENDING APPOINTMENT REQUESTS / RESCHEDULE — high-visibility action card
+// Lives in the right rail right after Urgent Items because clients are
+// blocked waiting for the attorney's confirmation. Distinct from the
+// generic .card pattern: top accent stripe (orange for pending, blue for
+// reschedule), bigger pulse-able count badge, prominent Approve / Decline.
+// =============================================
+.appt-action-card {
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  box-shadow: var(--legience-shadow-sm);
+  overflow: hidden;
+  position: relative;
+
+  // Top accent stripe — visual marker that this card needs action.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--legience-warning);
+  }
+
+  &.appt-action-card-info::before { background: var(--legience-cat-blue); }
+}
+
+.appt-action-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+}
+
+.appt-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(var(--legience-warning-rgb), 0.12);
+  color: var(--legience-warning);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+
+  .appt-action-card-info & {
+    background: rgba(var(--legience-cat-blue-rgb), 0.10);
+    color: var(--legience-cat-blue);
+  }
+}
+
+.appt-action-meta {
+  flex: 1;
+  min-width: 0;
+
+  h4 {
+    margin: 0;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    color: var(--legience-text-primary);
+    line-height: 1.25;
+  }
+
+  .appt-action-sub {
+    display: block;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 11.5px;
+    color: var(--legience-text-muted);
+    letter-spacing: -0.012em;
+    margin-top: 1px;
+  }
+}
+
+.appt-action-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--legience-warning);
+  color: #fff;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+
+  // Soft pulse so the badge attracts attention on first paint.
+  animation: apptPulse 2s ease-in-out infinite;
+
+  .appt-action-card-info & { background: var(--legience-cat-blue); }
+}
+
+@keyframes apptPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--legience-warning-rgb), 0.30); }
+  50%      { box-shadow: 0 0 0 4px rgba(var(--legience-warning-rgb), 0.00); }
+}
+
+.appt-action-refresh {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  color: var(--legience-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--legience-bg-card-hover);
+    color: var(--legience-text-secondary);
+  }
+}
+
+.appt-action-body {
+  padding: 12px 16px 14px;
+}
+
+.appt-loading {
+  text-align: center;
+  padding: 16px 0;
+
+  p {
+    font-size: 12px;
+    color: var(--legience-text-muted);
+    margin: 8px 0 0;
+  }
+}
+
+.appt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.appt-item {
+  background: var(--legience-bg-card-hover);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: rgba(var(--legience-warning-rgb), 0.30);
+  }
+}
+
+.appt-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.appt-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.appt-item-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.appt-name {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--legience-text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appt-when {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11.5px;
+  color: var(--legience-text-muted);
+  letter-spacing: -0.012em;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  i { font-size: 12px; }
+
+  .appt-when-sep { opacity: 0.5; }
+}
+
+// Reschedule-specific time row (old → new with arrow)
+.appt-reschedule {
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11.5px;
+  letter-spacing: -0.012em;
+  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+
+  .appt-old {
+    color: var(--legience-danger);
+    text-decoration: line-through;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+
+    i { font-size: 11px; }
+  }
+
+  .appt-new {
+    color: var(--legience-success);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+
+    i { font-size: 11px; }
+  }
+
+  .appt-arr {
+    color: var(--legience-text-muted);
+    font-size: 12px;
+  }
+}
+
+.appt-type-pill {
+  font-family: system-ui, sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(var(--legience-cat-violet-rgb), 0.10);
+  color: var(--legience-cat-violet);
+  flex-shrink: 0;
+
+  &.appt-type-pill-info {
+    background: rgba(var(--legience-cat-blue-rgb), 0.10);
+    color: var(--legience-cat-blue);
+  }
+}
+
+.appt-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.appt-btn {
+  appearance: none;
+  flex: 1;
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  i { font-size: 13px; line-height: 1; }
+}
+
+.appt-btn-approve {
+  background: var(--legience-success);
+  border-color: var(--legience-success);
+  color: #fff;
+
+  &:hover { filter: brightness(0.92); }
+}
+
+.appt-btn-decline {
+  background: transparent;
+  border-color: var(--legience-border-hairline);
+  color: var(--legience-text-secondary);
+
+  &:hover {
+    border-color: var(--legience-danger);
+    color: var(--legience-danger);
+  }
+}
+
+.appt-view-all {
+  text-align: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--legience-border-hairline);
+
+  a {
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--legience-accent);
+    text-decoration: none;
+    letter-spacing: -0.012em;
+
+    &:hover { text-decoration: underline; }
   }
 }

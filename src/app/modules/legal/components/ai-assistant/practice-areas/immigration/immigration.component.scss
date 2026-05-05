@@ -1,5 +1,5 @@
 .petition-preview {
-  background-color: #f8f9fa;
+  background-color: var(--legience-bg-card-hover, #f8f9fa);
   padding: 20px;
   border-radius: 5px;
   font-family: 'Courier New', monospace;
@@ -23,19 +23,19 @@
 
 .nav-tabs-custom {
   .nav-link {
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     background-color: transparent;
     border: none;
     padding: 12px 20px;
     font-weight: 500;
     
     &:hover {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background-color: rgba(64, 81, 137, 0.05);
     }
     
     &.active {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background-color: transparent;
       border-bottom: 3px solid #405189;
     }
@@ -47,12 +47,12 @@
   transition: all 0.2s ease;
   
   &:hover {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
   }
   
   &.active {
-    background-color: #405189;
-    border-color: #405189;
+    background-color: var(--legience-accent, #405189);
+    border-color: var(--legience-accent, #405189);
     
     h6, small {
       color: white !important;
@@ -71,7 +71,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #e9ecef;
+    background: var(--legience-bg-subtle, #e9ecef);
   }
   
   .timeline-item {
@@ -90,7 +90,7 @@
     }
     
     .timeline-content {
-      background: #f8f9fa;
+      background: var(--legience-bg-card-hover, #f8f9fa);
       padding: 10px 15px;
       border-radius: 5px;
     }
@@ -111,7 +111,7 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #405189;
+      background: var(--legience-accent, #405189);
     }
     
     &::after {
@@ -121,7 +121,7 @@
       top: 16px;
       bottom: 0;
       width: 2px;
-      background: #e9ecef;
+      background: var(--legience-bg-subtle, #e9ecef);
     }
     
     &:last-child::after {
@@ -133,7 +133,7 @@
 .accordion-button {
   &:not(.collapsed) {
     background-color: rgba(64, 81, 137, 0.05);
-    color: #405189;
+    color: var(--legience-accent, #405189);
   }
   
   &:focus {
@@ -144,14 +144,14 @@
 
 .progress {
   height: 20px;
-  background-color: #e9ecef;
+  background-color: var(--legience-bg-subtle, #e9ecef);
 }
 
 .table {
   th {
     font-weight: 600;
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
+    border-bottom: 2px solid var(--legience-border-hairline, #dee2e6);
   }
   
   .table-success {
@@ -160,8 +160,8 @@
 }
 
 .form-check-input:checked {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
 }
 
 .alert {
@@ -190,15 +190,15 @@
 }
 
 .bg-primary {
-  background-color: #405189 !important;
+  background-color: var(--legience-accent, #405189) !important;
 }
 
 .bg-success {
-  background-color: #0ab39c !important;
+  background-color: var(--legience-success, #0ab39c) !important;
 }
 
 .bg-secondary {
-  background-color: #6c757d !important;
+  background-color: var(--legience-text-muted, #6c757d) !important;
 }
 
 .bg-info-subtle {

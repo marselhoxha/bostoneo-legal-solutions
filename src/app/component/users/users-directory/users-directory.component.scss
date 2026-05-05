@@ -69,7 +69,7 @@
       transition: color 0.2s ease;
       
       &:hover {
-        color: var(--vz-primary) !important;
+        color: var(--legience-accent) !important;
       }
     }
   }
@@ -88,7 +88,7 @@
     top: 50%;
     right: 12px;
     transform: translateY(-50%);
-    color: #adb5bd;
+    color: var(--legience-text-muted, #adb5bd);
     font-size: 16px;
     pointer-events: none;
   }
@@ -107,16 +107,16 @@
 // Pagination
 .pagination-wrap {
   .page-item {
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     text-decoration: none;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 0.375rem;
     transition: all 0.15s ease-in-out;
     
     &:hover:not(.disabled) {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
       color: #fff;
     }
     
@@ -124,7 +124,7 @@
       color: var(--vz-gray-500);
       pointer-events: none;
       background-color: var(--vz-gray-100);
-      border-color: var(--vz-border-color);
+      border-color: var(--legience-border-hairline);
     }
   }
   
@@ -133,22 +133,22 @@
       display: inline-block;
       padding: 0.5rem 0.75rem;
       text-decoration: none;
-      border: 1px solid var(--vz-border-color);
-      color: var(--vz-body-color);
+      border: 1px solid var(--legience-border-hairline);
+      color: var(--legience-text-secondary);
       margin: 0 2px;
       border-radius: 0.375rem;
       transition: all 0.15s ease-in-out;
       
       &:hover {
-        background-color: var(--vz-primary);
-        border-color: var(--vz-primary);
+        background-color: var(--legience-accent);
+        border-color: var(--legience-accent);
         color: #fff;
       }
     }
     
     .active .page {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
       color: #fff;
     }
   }
@@ -158,17 +158,17 @@
 .badge {
   &.bg-success {
     background-color: rgba(25, 135, 84, 0.1) !important;
-    color: #198754 !important;
+    color: var(--legience-success, #198754) !important;
   }
   
   &.bg-warning {
     background-color: rgba(255, 193, 7, 0.1) !important;
-    color: #ffc107 !important;
+    color: var(--legience-warning, #ffc107) !important;
   }
   
   &.bg-danger {
     background-color: rgba(220, 53, 69, 0.1) !important;
-    color: #dc3545 !important;
+    color: var(--legience-danger, #dc3545) !important;
   }
 }
 
@@ -178,7 +178,7 @@
     transition: color 0.2s ease;
     
     &:hover {
-      color: var(--vz-primary-rgb) !important;
+      color: var(--legience-accent-rgb) !important;
       transform: scale(1.1);
     }
   }
@@ -285,12 +285,12 @@
   .dropdown-item {
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     transition: all 0.2s ease;
     
     &:hover {
-      background-color: var(--vz-primary-bg-subtle);
-      color: var(--vz-primary);
+      background-color: var(--legience-accent-bg-subtle);
+      color: var(--legience-accent);
     }
     
     i {

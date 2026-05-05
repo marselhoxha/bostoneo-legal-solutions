@@ -27,12 +27,12 @@
 
 .btn-soft-primary {
   background-color: rgba(85, 110, 230, 0.1);
-  color: #556ee6;
+  color: var(--legience-accent, #556ee6);
   border: none;
   
   &:hover {
     background-color: rgba(85, 110, 230, 0.2);
-    color: #556ee6;
+    color: var(--legience-accent, #556ee6);
   }
 }
 
@@ -108,7 +108,7 @@
     }
     
     &.text-primary {
-      color: #556ee6;
+      color: var(--legience-accent, #556ee6);
     }
   }
 } 

@@ -32,7 +32,7 @@
     left: 13px;
     top: 50%;
     transform: translateY(-50%);
-    color: #878a99;
+    color: var(--legience-text-muted, #878a99);
   }
   
   .search {
@@ -58,12 +58,12 @@
 }
 
 // Practice area specific colors
-.text-primary { color: #405189 !important; }
-.text-success { color: #0ab39c !important; }
-.text-info { color: #299cdb !important; }
-.text-warning { color: #f7b84b !important; }
-.text-danger { color: #f06548 !important; }
-.text-dark { color: #212529 !important; }
+.text-primary { color: var(--legience-accent, #405189) !important; }
+.text-success { color: var(--legience-success, #0ab39c) !important; }
+.text-info { color: var(--legience-info, #299cdb) !important; }
+.text-warning { color: var(--legience-warning, #f7b84b) !important; }
+.text-danger { color: var(--legience-danger, #f06548) !important; }
+.text-dark { color: var(--legience-text-secondary, #212529) !important; }
 
 .bg-primary-subtle { background-color: rgba(64, 81, 137, 0.1) !important; }
 .bg-success-subtle { background-color: rgba(10, 179, 156, 0.1) !important; }
@@ -77,5 +77,5 @@
 }
 
 .ff-secondary {
-  font-family: var(--vz-font-sans-serif);
+  font-family: var(--legience-font-sans);
 }

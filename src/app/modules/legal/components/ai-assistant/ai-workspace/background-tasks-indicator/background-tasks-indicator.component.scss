@@ -13,10 +13,10 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 20px;
-  background: var(--vz-card-bg, #fff);
-  color: var(--vz-body-color, #495057);
+  background: var(--legience-bg-card, #fff);
+  color: var(--legience-text-secondary, #495057);
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -24,48 +24,48 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
   &:hover {
-    border-color: var(--vz-primary, #405189);
-    background: var(--vz-light, #f3f6f9);
+    border-color: var(--legience-accent, #405189);
+    background: var(--legience-bg-card-hover, #f3f6f9);
   }
 
   &.has-active {
-    border-color: var(--vz-primary, #405189);
+    border-color: var(--legience-accent, #405189);
     background: rgba(64, 81, 137, 0.08);
 
     .badge-icon {
-      color: var(--vz-primary, #405189);
+      color: var(--legience-accent, #405189);
     }
 
     .task-count {
-      background: var(--vz-primary, #405189);
+      background: var(--legience-accent, #405189);
       color: #fff;
     }
   }
 
   &.has-completed {
-    border-color: var(--vz-success, #0ab39c);
+    border-color: var(--legience-success, #0ab39c);
     background: rgba(10, 179, 156, 0.08);
 
     .badge-icon {
-      color: var(--vz-success, #0ab39c);
+      color: var(--legience-success, #0ab39c);
     }
 
     .task-count {
-      background: var(--vz-success, #0ab39c);
+      background: var(--legience-success, #0ab39c);
       color: #fff;
     }
   }
 
   &.has-waiting {
-    border-color: var(--vz-warning, #f7b84b);
+    border-color: var(--legience-warning, #f7b84b);
     background: rgba(247, 184, 75, 0.08);
 
     .badge-icon {
-      color: var(--vz-warning, #f7b84b);
+      color: var(--legience-warning, #f7b84b);
     }
 
     .task-count {
-      background: var(--vz-warning, #f7b84b);
+      background: var(--legience-warning, #f7b84b);
       color: #fff;
     }
   }
@@ -102,8 +102,8 @@
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: var(--vz-secondary-bg, #f3f6f9);
-    color: var(--vz-body-color, #495057);
+    background: var(--legience-bg-card, #f3f6f9);
+    color: var(--legience-text-secondary, #495057);
     font-size: 0.75rem;
     font-weight: 600;
   }
@@ -125,8 +125,8 @@
   right: 0;
   width: 360px;
   max-height: 400px;
-  background: var(--vz-secondary-bg, #fff);
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  background: var(--legience-bg-card, #fff);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   overflow: hidden;
@@ -138,13 +138,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--vz-border-color, #e9ebec);
-  background: var(--vz-light, #f3f6f9);
+  border-bottom: 1px solid var(--legience-border-hairline, #e9ebec);
+  background: var(--legience-bg-card-hover, #f3f6f9);
 
   .header-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--vz-heading-color, #212529);
+    color: var(--legience-text-primary, #212529);
   }
 
   .clear-btn {
@@ -152,7 +152,7 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--vz-primary, #405189);
+    color: var(--legience-accent, #405189);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
@@ -178,7 +178,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--vz-border-color, #e9ebec);
+    background: var(--legience-border-hairline, #e9ebec);
     border-radius: 2px;
   }
 }
@@ -189,7 +189,7 @@
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  color: var(--vz-secondary-color, #878a99);
+  color: var(--legience-text-muted, #878a99);
 
   i {
     font-size: 32px;
@@ -214,34 +214,34 @@
   }
 
   &:hover {
-    background: var(--vz-light, #f3f6f9);
+    background: var(--legience-bg-card-hover, #f3f6f9);
   }
 
   &.is-active {
     .task-icon {
       background: rgba(64, 81, 137, 0.12);
-      color: var(--vz-primary, #405189);
+      color: var(--legience-accent, #405189);
     }
   }
 
   &.is-waiting {
     .task-icon {
       background: rgba(247, 184, 75, 0.12);
-      color: var(--vz-warning, #f7b84b);
+      color: var(--legience-warning, #f7b84b);
     }
   }
 
   &.is-completed {
     .task-icon {
       background: rgba(10, 179, 156, 0.12);
-      color: var(--vz-success, #0ab39c);
+      color: var(--legience-success, #0ab39c);
     }
   }
 
   &.is-failed {
     .task-icon {
       background: rgba(240, 101, 72, 0.12);
-      color: var(--vz-danger, #f06548);
+      color: var(--legience-danger, #f06548);
     }
   }
 }
@@ -253,8 +253,8 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: var(--vz-light, #f3f6f9);
-  color: var(--vz-secondary-color, #878a99);
+  background: var(--legience-bg-card-hover, #f3f6f9);
+  color: var(--legience-text-muted, #878a99);
   flex-shrink: 0;
 
   i {
@@ -271,7 +271,7 @@
 .task-name {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--vz-heading-color, #212529);
+  color: var(--legience-text-primary, #212529);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,7 +283,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
-  color: var(--vz-secondary-color, #878a99);
+  color: var(--legience-text-muted, #878a99);
 }
 
 .task-type {
@@ -305,19 +305,19 @@
   }
 
   &.status-active {
-    color: var(--vz-primary, #405189);
+    color: var(--legience-accent, #405189);
   }
 
   &.status-waiting {
-    color: var(--vz-warning, #f7b84b);
+    color: var(--legience-warning, #f7b84b);
   }
 
   &.status-completed {
-    color: var(--vz-success, #0ab39c);
+    color: var(--legience-success, #0ab39c);
   }
 
   &.status-failed {
-    color: var(--vz-danger, #f06548);
+    color: var(--legience-danger, #f06548);
   }
 }
 
@@ -325,7 +325,7 @@
   padding: 4px 12px;
   border: none;
   border-radius: 4px;
-  background: var(--vz-primary, #405189);
+  background: var(--legience-accent, #405189);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 500;
@@ -341,14 +341,14 @@
 
 .panel-footer {
   padding: 10px 16px;
-  border-top: 1px solid var(--vz-border-color, #e9ebec);
-  background: var(--vz-light, #f3f6f9);
+  border-top: 1px solid var(--legience-border-hairline, #e9ebec);
+  background: var(--legience-bg-card-hover, #f3f6f9);
 
   .footer-text {
     display: flex;
     align-items: center;
     font-size: 0.75rem;
-    color: var(--vz-secondary-color, #878a99);
+    color: var(--legience-text-muted, #878a99);
 
     i {
       font-size: 14px;

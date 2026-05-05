@@ -1,0 +1,832 @@
+// Refero "Rox" design system — Linear/Vercel monochrome minimalism
+// Activates when <html data-design="rox">. Zero changes to Velzon base vars.
+//
+// PHASE 1: Foundation + Component System
+//   1. Tokens
+//   2. Layout shell (sidebar, topbar, footer, page chrome)
+//   3. Cards
+//   4. Buttons
+//   5. Forms
+//   6. Tables
+//   7. Modals + Offcanvas
+//   8. Dropdowns + Popovers
+//   9. Nav, Tabs, Pills
+//  10. Badges
+//  11. Alerts
+//  12. Pagination
+//  13. Lists, Progress, Tooltips, Misc
+//  14. Dark mode
+
+// =====================================================
+// 1. TOKENS
+// =====================================================
+:root[data-design="rox"] {
+  // Brand (single accent philosophy)
+  --vz-primary: #0b64e9;            --vz-primary-rgb: 11, 100, 233;
+  --bs-primary: #0b64e9;            --bs-primary-rgb: 11, 100, 233;
+  --vz-secondary: #57534d;          --vz-secondary-rgb: 87, 83, 77;
+  --bs-secondary: #57534d;          --bs-secondary-rgb: 87, 83, 77;
+
+  --vz-success: #16a34a;            --vz-success-rgb: 22, 163, 74;
+  --bs-success: #16a34a;            --bs-success-rgb: 22, 163, 74;
+  --vz-info: #6b4aff;               --vz-info-rgb: 107, 74, 255;
+  --bs-info: #6b4aff;               --bs-info-rgb: 107, 74, 255;
+  --vz-warning: #f9b703;            --vz-warning-rgb: 249, 183, 3;
+  --bs-warning: #f9b703;            --bs-warning-rgb: 249, 183, 3;
+  --vz-danger: #f24149;             --vz-danger-rgb: 242, 65, 73;
+  --bs-danger: #f24149;             --bs-danger-rgb: 242, 65, 73;
+
+  // Surfaces
+  --vz-body-bg: #f5f5f4;            --vz-body-bg-rgb: 245, 245, 244;
+  --vz-body-color: #0c0a09;         --vz-body-color-rgb: 12, 10, 9;
+  --bs-body-bg: #f5f5f4;            --bs-body-color: #0c0a09;
+  --vz-secondary-bg: #ffffff;       --vz-tertiary-bg: #ececea;
+  --bs-secondary-bg: #ffffff;       --bs-tertiary-bg: #ececea;
+
+  // Borders & radius
+  --vz-border-color: #e7e5e4;
+  --vz-border-color-translucent: rgba(12, 10, 9, 0.08);
+  --bs-border-color: #e7e5e4;
+  --bs-border-color-translucent: rgba(12, 10, 9, 0.08);
+
+  // Muted-text overrides — Velzon's defaults render too pale on Rox white
+  // surfaces (≈ #a6a09b). Pinning every "muted/secondary" token to a single
+  // readable mid-grey ensures `.text-muted`, `::placeholder`, secondary
+  // labels, and helper text all stay legible without per-component overrides.
+  --vz-secondary-color: #57534d;     --vz-secondary-color-rgb: 87, 83, 77;
+  --bs-secondary-color: #57534d;     --bs-secondary-color-rgb: 87, 83, 77;
+  --vz-text-muted: #57534d;          --bs-text-muted: #57534d;
+  --vz-border-radius: 0.375rem;     --vz-border-radius-sm: 0.25rem;     --vz-border-radius-lg: 0.5rem;
+  --bs-border-radius: 0.375rem;     --bs-border-radius-sm: 0.25rem;     --bs-border-radius-lg: 0.5rem;
+  --vz-border-radius-pill: 100px;   --bs-border-radius-pill: 100px;
+
+  // Typography
+  --vz-font-sans-serif: 'Geist', system-ui, -apple-system, sans-serif;
+  --bs-font-sans-serif: 'Geist', system-ui, -apple-system, sans-serif;
+  --vz-heading-color: #0c0a09;      --bs-heading-color: #0c0a09;
+
+  // Graduated text/border utilities
+  --rox-text-primary: #0c0a09;
+  --rox-text-secondary: #44403c;
+  --rox-text-subtle: #57534d;
+  // Bumped from #a6a09b — that value was barely visible. Aligned with
+  // --rox-text-subtle and --vz-secondary-color above so all "muted" labels
+  // render at one consistent, readable mid-grey on light surfaces.
+  --rox-text-muted: #57534d;
+  // Original Rox hairline — matches the PI case detail border treatment
+  // (which uses --vz-border-color = #e7e5e4). Both keep the same subtle
+  // hairline weight so the dashboard reads consistent with PI surfaces.
+  --rox-border-hairline: #e7e5e4;
+  --rox-bg-hover: #f5f5f4;
+
+  // Links
+  --vz-link-color: #0b64e9;         --vz-link-hover-color: #0950bd;
+  --bs-link-color: #0b64e9;         --bs-link-hover-color: #0950bd;
+
+  // Subtle / emphasis variants
+  --vz-primary-bg-subtle: #dbeafe;       --vz-primary-text-emphasis: #0950bd;       --vz-primary-border-subtle: #93c5fd;
+  --bs-primary-bg-subtle: #dbeafe;       --bs-primary-text-emphasis: #0950bd;       --bs-primary-border-subtle: #93c5fd;
+  --vz-success-bg-subtle: #d4f5e0;       --vz-success-text-emphasis: #14532d;       --vz-success-border-subtle: #86efac;
+  --bs-success-bg-subtle: #d4f5e0;       --bs-success-text-emphasis: #14532d;       --bs-success-border-subtle: #86efac;
+  --vz-warning-bg-subtle: #fef3c7;       --vz-warning-text-emphasis: #78350f;       --vz-warning-border-subtle: #fde68a;
+  --bs-warning-bg-subtle: #fef3c7;       --bs-warning-text-emphasis: #78350f;       --bs-warning-border-subtle: #fde68a;
+  --vz-danger-bg-subtle: #fde2e3;        --vz-danger-text-emphasis: #7f1d1d;        --vz-danger-border-subtle: #fca5a5;
+  --bs-danger-bg-subtle: #fde2e3;        --bs-danger-text-emphasis: #7f1d1d;        --bs-danger-border-subtle: #fca5a5;
+  --vz-info-bg-subtle: #ede9fe;          --vz-info-text-emphasis: #4c1d95;          --vz-info-border-subtle: #c4b5fd;
+  --bs-info-bg-subtle: #ede9fe;          --bs-info-text-emphasis: #4c1d95;          --bs-info-border-subtle: #c4b5fd;
+
+  // Layout chrome (Velzon-baked vars)
+  --vz-vertical-menu-bg: #ffffff;
+  --vz-vertical-menu-item-color: #44403c;
+  --vz-vertical-menu-sub-item-color: #57534d;
+  --vz-vertical-menu-item-bg: rgba(11, 100, 233, 0.06);
+  --vz-vertical-menu-item-active-bg: rgba(11, 100, 233, 0.06);
+  --vz-vertical-menu-item-active-color: #0b64e9;
+  --vz-vertical-menu-item-hover-color: #0c0a09;
+  --vz-vertical-menu-sub-item-active-color: #0b64e9;
+  --vz-vertical-menu-sub-item-hover-color: #0c0a09;
+  --vz-vertical-menu-title-color: #a6a09b;
+  --vz-topnav-item-active-color: #0b64e9;
+  --vz-header-bg: #ffffff;
+  --vz-header-item-color: #57534d;
+  --vz-header-item-bg: rgba(12, 10, 9, 0.04);
+
+  // Shadow tier
+  --vz-box-shadow-sm: rgba(0, 0, 0, 0.04) 0 1px 2px 0;
+  --vz-box-shadow: rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.04) 0 1px 2px -1px;
+  --vz-box-shadow-lg: rgba(0, 0, 0, 0.08) 0 8px 16px 0;
+  --bs-box-shadow-sm: rgba(0, 0, 0, 0.04) 0 1px 2px 0;
+  --bs-box-shadow: rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.04) 0 1px 2px -1px;
+  --bs-box-shadow-lg: rgba(0, 0, 0, 0.08) 0 8px 16px 0;
+
+  // Body — letter-spacing signature, antialiasing
+  body {
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  // Opt-in serif display utility
+  .h-display {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1;
+  }
+
+  // Tabular monospace for IDs / dates / dollars
+  .font-mono, .text-mono {
+    font-family: 'SF Mono', 'IBM Plex Mono', Menlo, monospace;
+    font-feature-settings: 'tnum';
+  }
+
+  // =====================================================
+  // 2. LAYOUT SHELL
+  // =====================================================
+
+  .navbar-menu {
+    box-shadow: none !important;
+    border-right: 1px solid var(--rox-border-hairline);
+  }
+
+  .navbar-brand-box {
+    background: #ffffff !important;
+    border-right: 1px solid var(--rox-border-hairline);
+    border-bottom: 1px solid var(--rox-border-hairline);
+  }
+
+  // Sidebar menu items
+  #navbar-nav .nav-link,
+  .navbar-nav .nav-link {
+    border-radius: 6px !important;
+    margin: 1px 8px;
+    padding: 7px 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--rox-text-secondary) !important;
+    transition: background 0.12s ease, color 0.12s ease;
+
+    i { font-size: 17px; }
+
+    &:hover {
+      background: var(--rox-bg-hover) !important;
+      color: var(--rox-text-primary) !important;
+    }
+
+    &.active {
+      background: rgba(11, 100, 233, 0.08) !important;
+      color: var(--vz-primary) !important;
+      font-weight: 500;
+      i { color: var(--vz-primary); }
+    }
+  }
+
+  .menu-title {
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--rox-text-muted) !important;
+    padding: 16px 20px 6px !important;
+  }
+
+  .nav-sm .nav-link {
+    padding: 5px 12px 5px 36px !important;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--rox-text-subtle) !important;
+
+    &:hover {
+      color: var(--rox-text-primary) !important;
+      background: transparent !important;
+    }
+    &.active {
+      color: var(--vz-primary) !important;
+      background: transparent !important;
+      font-weight: 500;
+    }
+  }
+
+  // Topbar
+  #page-topbar {
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid var(--rox-border-hairline);
+  }
+
+  .navbar-header {
+    padding: 0 20px;
+    // Keep Velzon's 70px default — page-content padding-top depends on it
+  }
+
+  // Icon-only buttons in topbar (notifications, theme toggle, etc.)
+  .btn-topbar {
+    background: transparent !important;
+    border: none !important;
+    color: var(--rox-text-subtle) !important;
+    height: 36px;
+    width: 36px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: var(--rox-bg-hover) !important;
+      color: var(--rox-text-primary) !important;
+    }
+
+    i { font-size: 18px; }
+  }
+
+  // User dropdown button (avatar + name + role) — must NOT be width-constrained
+  .topbar-user > .btn,
+  .topbar-user .header-item.bg-soft-light {
+    background: transparent !important;
+    border: none !important;
+    color: var(--rox-text-secondary) !important;
+    border-radius: 6px;
+    padding: 4px 10px;
+
+    &:hover { background: var(--rox-bg-hover) !important; }
+  }
+
+  .app-search .form-control {
+    background: var(--vz-tertiary-bg) !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px;
+    height: 34px;
+    font-size: 13px;
+    color: var(--rox-text-primary);
+
+    &:focus {
+      border-color: var(--rox-border-hairline) !important;
+      background: #ffffff !important;
+    }
+    &::placeholder { color: var(--rox-text-muted); }
+  }
+  .app-search .search-icon { color: var(--rox-text-muted) !important; }
+
+  // Hide tiny "online" indicator badges on user avatar (not the badges in headers)
+  .topbar-user > .btn > .badge,
+  .topbar-user .header-item > .badge { display: none; }
+
+  // Footer — keep Velzon height (~60px), only restyle visuals
+  // Don't override padding — page-content padding-bottom depends on footer height
+  .footer {
+    background: #ffffff !important;
+    border-top: 1px solid var(--rox-border-hairline);
+    font-size: 12px;
+    color: var(--rox-text-muted);
+  }
+
+  // Page wrapper + title — DO NOT override .page-content padding.
+  // Velzon computes it as calc(70px header + 1.5rem) for vertical layout,
+  // and adds another 55px for [data-layout="horizontal"] nav row.
+  // Overriding it here breaks page content positioning under the topbar.
+
+  .page-title-box {
+    box-shadow: none !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 0 16px !important;
+    margin-bottom: 16px !important;
+    border-bottom: 1px solid var(--rox-border-hairline);
+
+    h4 {
+      font-size: 20px !important;
+      font-weight: 500 !important;
+      color: var(--rox-text-primary) !important;
+      letter-spacing: -0.015em;
+      margin: 0;
+    }
+
+    .breadcrumb { margin-top: 4px; font-size: 12px; }
+    .breadcrumb-item,
+    .breadcrumb-item a {
+      color: var(--rox-text-muted) !important;
+      &.active { color: var(--rox-text-subtle) !important; }
+    }
+    .breadcrumb-item a:hover { color: var(--vz-primary) !important; }
+  }
+
+  // =====================================================
+  // 3. CARDS
+  // =====================================================
+  // Global card surface convention. Cards rely on hairline border + subtle
+  // shadow for visual definition, NOT a filled background.
+  //
+  // List both `.card` (Velzon's standard) AND custom card-like classes used
+  // elsewhere (PI case detail's `.section-card`, dashboard's
+  // `.activity-urgent-card`, AI insight cards, etc.) so the convention is
+  // applied centrally — components don't need per-component bg removal.
+  //
+  // If a specific card NEEDS a background (e.g., the dashboard hero
+  // `.dashboard-focus-card` with its gradient), that card opts in via its
+  // own component SCSS — this global rule won't override component rules
+  // that explicitly set background.
+  //
+  // Note on cascade: `background: transparent !important` would over-broad —
+  // dashboard hero, kpi tiles with explicit gradients, etc. need their bgs.
+  // We use NO `!important` and rely on this rule loading after Velzon's
+  // base rule. Component-level explicit backgrounds win automatically.
+  .card,
+  .section-card,
+  .activity-urgent-card,
+  .ai-insight-card,
+  .client-comm-health,
+  .cross-matter-intel,
+  .risk-alerts-band {
+    background: transparent;
+    border: 1px solid var(--rox-border-hairline);
+    border-radius: 8px;
+    box-shadow: var(--legience-shadow-sm);
+    transition: box-shadow 0.12s ease, border-color 0.12s ease;
+  }
+
+  .card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--rox-border-hairline);
+    padding: 14px 18px;
+
+    .card-title,
+    h4, h5, h6 {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--rox-text-primary);
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+  }
+
+  .card-body { padding: 18px; }
+
+  .card-footer {
+    background: transparent;
+    border-top: 1px solid var(--rox-border-hairline);
+    padding: 12px 18px;
+  }
+
+  // =====================================================
+  // 4. BUTTONS
+  // =====================================================
+  .btn {
+    --bs-btn-border-radius: 0.5rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    box-shadow: none !important;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    padding: 7px 14px;
+    font-size: 13px;
+    line-height: 1.4;
+
+    &:hover, &:focus, &:active {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    &.btn-sm { padding: 4px 10px; font-size: 12px; --bs-btn-border-radius: 0.375rem; }
+    &.btn-lg { padding: 10px 18px; font-size: 14px; --bs-btn-border-radius: 0.5rem; }
+
+    i { font-size: 14px; vertical-align: middle; }
+  }
+
+  .btn-primary {
+    background: var(--vz-primary);
+    border-color: var(--vz-primary);
+    color: #ffffff;
+
+    &:hover, &:focus { background: #0950bd; border-color: #0950bd; color: #ffffff; }
+    &:active, &.active { background: #08418a !important; border-color: #08418a !important; }
+    &:disabled, &.disabled { opacity: 0.5; }
+  }
+
+  .btn-secondary,
+  .btn-outline-secondary {
+    background: #ffffff;
+    border-color: var(--vz-border-color);
+    color: var(--rox-text-primary);
+
+    &:hover { background: var(--rox-bg-hover); border-color: var(--rox-text-muted); color: var(--rox-text-primary); }
+    &:active { background: var(--vz-tertiary-bg) !important; }
+  }
+
+  .btn-outline-primary {
+    background: transparent;
+    border-color: var(--vz-primary);
+    color: var(--vz-primary);
+
+    &:hover { background: var(--vz-primary); border-color: var(--vz-primary); color: #ffffff; }
+  }
+
+  // Soft variants
+  .btn-soft-primary { background: rgba(11, 100, 233, 0.08); border-color: transparent; color: var(--vz-primary); &:hover { background: rgba(11, 100, 233, 0.14); color: var(--vz-primary); } }
+  .btn-soft-success { background: rgba(22, 163, 74, 0.08); border-color: transparent; color: var(--vz-success); &:hover { background: rgba(22, 163, 74, 0.14); color: var(--vz-success); } }
+  .btn-soft-danger  { background: rgba(242, 65, 73, 0.08); border-color: transparent; color: var(--vz-danger); &:hover { background: rgba(242, 65, 73, 0.14); color: var(--vz-danger); } }
+  .btn-soft-warning { background: rgba(249, 183, 3, 0.10); border-color: transparent; color: #b45309; &:hover { background: rgba(249, 183, 3, 0.18); color: #b45309; } }
+  .btn-soft-info    { background: rgba(107, 74, 255, 0.08); border-color: transparent; color: var(--vz-info); &:hover { background: rgba(107, 74, 255, 0.14); color: var(--vz-info); } }
+  .btn-soft-secondary { background: var(--vz-tertiary-bg); border-color: transparent; color: var(--rox-text-secondary); &:hover { background: var(--vz-border-color); color: var(--rox-text-primary); } }
+
+  // Ghost
+  .btn-ghost-primary { background: transparent; border-color: transparent; color: var(--vz-primary); &:hover { background: rgba(11, 100, 233, 0.08); color: var(--vz-primary); } }
+  .btn-ghost-secondary { background: transparent; border-color: transparent; color: var(--rox-text-subtle); &:hover { background: var(--rox-bg-hover); color: var(--rox-text-primary); } }
+  .btn-ghost-danger  { background: transparent; border-color: transparent; color: var(--vz-danger); &:hover { background: rgba(242, 65, 73, 0.08); color: var(--vz-danger); } }
+  .btn-ghost-success { background: transparent; border-color: transparent; color: var(--vz-success); &:hover { background: rgba(22, 163, 74, 0.08); color: var(--vz-success); } }
+
+  .btn-light { background: var(--vz-tertiary-bg); border-color: transparent; color: var(--rox-text-primary); &:hover { background: var(--vz-border-color); color: var(--rox-text-primary); } }
+  .btn-dark  { background: var(--rox-text-primary); border-color: var(--rox-text-primary); color: #ffffff; &:hover { background: #1c1917; border-color: #1c1917; color: #ffffff; } }
+
+  // =====================================================
+  // 5. FORMS
+  // =====================================================
+  .form-control,
+  .form-select {
+    background: #ffffff;
+    border: 1px solid var(--vz-border-color);
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--rox-text-primary);
+    box-shadow: none;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+
+    &:focus {
+      border-color: var(--vz-primary);
+      box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.12);
+      background: #ffffff;
+    }
+
+    &::placeholder { color: var(--rox-text-muted); }
+    &:disabled,
+    &[readonly] { background: var(--vz-tertiary-bg); cursor: not-allowed; }
+  }
+
+  .form-control-sm, .form-select-sm { padding: 4px 10px; font-size: 12px; }
+  .form-control-lg, .form-select-lg { padding: 9px 14px; font-size: 14px; }
+
+  .form-label {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--rox-text-secondary);
+    margin-bottom: 5px;
+    letter-spacing: 0;
+  }
+
+  .form-text { font-size: 12px; color: var(--rox-text-muted); margin-top: 4px; }
+
+  .form-check-input {
+    border: 1.5px solid var(--vz-border-color);
+    background-color: #ffffff;
+
+    &:checked { background-color: var(--vz-primary); border-color: var(--vz-primary); }
+    &:focus { box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.12); }
+  }
+
+  .form-switch .form-check-input {
+    background-color: var(--vz-border-color);
+    border-color: transparent;
+    &:checked { background-color: var(--vz-primary); }
+  }
+
+  .input-group-text {
+    background: var(--vz-tertiary-bg);
+    border: 1px solid var(--vz-border-color);
+    color: var(--rox-text-subtle);
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  .form-control.is-invalid,
+  .was-validated .form-control:invalid {
+    border-color: var(--vz-danger);
+    background-image: none;
+    padding-right: 12px;
+    &:focus { box-shadow: 0 0 0 3px rgba(242, 65, 73, 0.12); }
+  }
+  .invalid-feedback { font-size: 12px; color: var(--vz-danger); margin-top: 4px; }
+
+  // =====================================================
+  // 6. TABLES
+  // =====================================================
+  .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--rox-text-primary);
+    --bs-table-border-color: var(--rox-border-hairline);
+    color: var(--rox-text-primary);
+    margin-bottom: 0;
+
+    > thead {
+      background: transparent;
+
+      th {
+        background: transparent !important;
+        border-top: none;
+        border-bottom: 1px solid var(--rox-border-hairline) !important;
+        font-size: 11.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--rox-text-muted) !important;
+        padding: 9px 14px;
+      }
+    }
+
+    > tbody {
+      td {
+        font-size: 13px;
+        padding: 11px 14px;
+        border-color: var(--rox-border-hairline) !important;
+        vertical-align: middle;
+        color: var(--rox-text-primary);
+      }
+
+      tr {
+        transition: background 0.1s ease;
+        &:hover { background: var(--rox-bg-hover) !important; }
+      }
+    }
+  }
+
+  .table-borderless {
+    > tbody td,
+    > thead th { border-color: transparent !important; }
+  }
+
+  .table-striped > tbody > tr:nth-of-type(odd) > * { background: transparent; }
+
+  // =====================================================
+  // 7. MODALS + OFFCANVAS
+  // =====================================================
+  .modal-content {
+    background: #ffffff;
+    border: 1px solid var(--rox-border-hairline);
+    border-radius: 10px;
+    box-shadow: rgba(0, 0, 0, 0.12) 0 12px 32px 0, rgba(0, 0, 0, 0.06) 0 0 0 1px;
+  }
+
+  .modal-header {
+    border-bottom: 1px solid var(--rox-border-hairline);
+    padding: 14px 20px;
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--rox-text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .btn-close { opacity: 0.5; &:hover { opacity: 1; } }
+  }
+
+  .modal-body { padding: 20px; }
+
+  .modal-footer {
+    border-top: 1px solid var(--rox-border-hairline);
+    padding: 14px 20px;
+    gap: 8px;
+  }
+
+  .modal-backdrop.show { opacity: 0.4; }
+
+  .offcanvas {
+    background: #ffffff;
+    border-color: var(--rox-border-hairline);
+  }
+  .offcanvas-header { border-bottom: 1px solid var(--rox-border-hairline); padding: 14px 20px; }
+  .offcanvas-body   { padding: 20px; }
+
+  // =====================================================
+  // 8. DROPDOWNS + POPOVERS
+  // =====================================================
+  .dropdown-menu {
+    background: #ffffff;
+    border: 1px solid var(--rox-border-hairline);
+    border-radius: 8px;
+    box-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px 0, rgba(0, 0, 0, 0.04) 0 0 0 1px;
+    padding: 4px;
+    font-size: 13px;
+    min-width: 180px;
+  }
+
+  .dropdown-item {
+    border-radius: 5px;
+    padding: 6px 10px;
+    color: var(--rox-text-primary);
+    font-weight: 400;
+
+    &:hover, &:focus { background: var(--rox-bg-hover); color: var(--rox-text-primary); }
+    &.active, &:active { background: rgba(11, 100, 233, 0.08); color: var(--vz-primary); }
+
+    i { font-size: 14px; color: var(--rox-text-subtle); margin-right: 8px; }
+  }
+
+  .dropdown-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--rox-text-muted);
+    padding: 6px 10px 4px;
+  }
+
+  .dropdown-divider {
+    border-color: var(--rox-border-hairline);
+    margin: 4px 0;
+  }
+
+  .popover {
+    border: 1px solid var(--rox-border-hairline);
+    border-radius: 8px;
+    box-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px 0;
+
+    .popover-header {
+      background: transparent;
+      border-bottom: 1px solid var(--rox-border-hairline);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .popover-body { padding: 10px 14px; font-size: 13px; }
+  }
+
+  // =====================================================
+  // 9. NAV — Tabs, pills
+  // =====================================================
+  .nav-tabs {
+    border-bottom: 1px solid var(--rox-border-hairline);
+
+    .nav-link {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      color: var(--rox-text-subtle);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 14px;
+      margin-bottom: -1px;
+
+      &:hover {
+        background: transparent;
+        border-color: transparent;
+        color: var(--rox-text-primary);
+      }
+      &.active {
+        background: transparent;
+        border-bottom-color: var(--vz-primary);
+        color: var(--vz-primary);
+      }
+    }
+  }
+
+  .nav-pills {
+    .nav-link {
+      background: transparent;
+      color: var(--rox-text-subtle);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 6px;
+
+      &:hover { background: var(--rox-bg-hover); color: var(--rox-text-primary); }
+      &.active { background: rgba(11, 100, 233, 0.08); color: var(--vz-primary); }
+    }
+  }
+
+  // =====================================================
+  // 10. BADGES
+  // =====================================================
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    padding: 2px 8px;
+    border-radius: 4px;
+
+    &.rounded-pill { padding: 2px 8px; }
+  }
+
+  .badge.bg-primary,
+  .badge.text-bg-primary  { background: rgba(11, 100, 233, 0.10) !important; color: var(--vz-primary) !important; }
+  .badge.bg-secondary,
+  .badge.text-bg-secondary { background: var(--vz-tertiary-bg) !important; color: var(--rox-text-secondary) !important; }
+  .badge.bg-success,
+  .badge.text-bg-success  { background: rgba(22, 163, 74, 0.10) !important; color: var(--vz-success) !important; }
+  .badge.bg-info,
+  .badge.text-bg-info     { background: rgba(107, 74, 255, 0.10) !important; color: var(--vz-info) !important; }
+  .badge.bg-warning,
+  .badge.text-bg-warning  { background: rgba(249, 183, 3, 0.14) !important; color: #b45309 !important; }
+  .badge.bg-danger,
+  .badge.text-bg-danger   { background: rgba(242, 65, 73, 0.10) !important; color: var(--vz-danger) !important; }
+
+  // =====================================================
+  // 11. ALERTS
+  // =====================================================
+  .alert {
+    border: 1px solid;
+    border-radius: 6px;
+    padding: 11px 14px;
+    font-size: 13px;
+  }
+
+  .alert-primary { background: rgba(11, 100, 233, 0.06); border-color: rgba(11, 100, 233, 0.2); color: var(--vz-primary); }
+  .alert-success { background: rgba(22, 163, 74, 0.06); border-color: rgba(22, 163, 74, 0.2); color: #14532d; }
+  .alert-warning { background: rgba(249, 183, 3, 0.08); border-color: rgba(249, 183, 3, 0.25); color: #78350f; }
+  .alert-danger  { background: rgba(242, 65, 73, 0.06); border-color: rgba(242, 65, 73, 0.2); color: #7f1d1d; }
+  .alert-info    { background: rgba(107, 74, 255, 0.06); border-color: rgba(107, 74, 255, 0.2); color: var(--vz-info); }
+
+  // =====================================================
+  // 12. PAGINATION
+  // =====================================================
+  .pagination {
+    .page-item .page-link {
+      background: transparent;
+      border-color: var(--rox-border-hairline);
+      color: var(--rox-text-secondary);
+      font-size: 13px;
+      padding: 5px 10px;
+
+      &:hover { background: var(--rox-bg-hover); color: var(--rox-text-primary); }
+    }
+
+    .page-item.active .page-link {
+      background: var(--vz-primary);
+      border-color: var(--vz-primary);
+      color: #ffffff;
+    }
+
+    .page-item.disabled .page-link {
+      background: transparent;
+      border-color: var(--rox-border-hairline);
+      color: var(--rox-text-muted);
+    }
+  }
+
+  // =====================================================
+  // 13. LISTS, PROGRESS, TOOLTIPS, MISC, TYPOGRAPHY
+  // =====================================================
+  .list-group {
+    border-radius: 8px;
+
+    .list-group-item {
+      background: #ffffff;
+      border-color: var(--rox-border-hairline);
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--rox-text-primary);
+
+      &.active {
+        background: rgba(11, 100, 233, 0.06);
+        color: var(--vz-primary);
+        border-color: rgba(11, 100, 233, 0.18);
+      }
+      &:hover:not(.active) { background: var(--rox-bg-hover); }
+    }
+  }
+
+  .progress {
+    background: var(--vz-tertiary-bg);
+    border-radius: 100px;
+    height: 6px;
+
+    .progress-bar { background: var(--vz-primary); }
+  }
+
+  .tooltip {
+    --bs-tooltip-bg: #1c1917;
+    --bs-tooltip-color: #f5f5f4;
+    font-size: 12px;
+    .tooltip-inner { padding: 5px 9px; border-radius: 5px; }
+  }
+
+  // Avatars
+  .avatar-xs { width: 24px; height: 24px; }
+  .avatar-sm { width: 32px; height: 32px; }
+  .avatar-md { width: 48px; height: 48px; }
+
+  // Code
+  code, kbd, pre {
+    font-family: 'SF Mono', 'IBM Plex Mono', Menlo, monospace;
+    font-size: 0.875em;
+  }
+  code:not(pre code) {
+    background: var(--vz-tertiary-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--vz-danger);
+  }
+
+  hr { border-color: var(--rox-border-hairline); opacity: 1; }
+  .text-muted { color: var(--rox-text-muted) !important; }
+
+  // Heading scale (compact Rox)
+  h1, .h1 { font-size: 24px; font-weight: 500; letter-spacing: -0.02em; }
+  h2, .h2 { font-size: 20px; font-weight: 500; letter-spacing: -0.015em; }
+  h3, .h3 { font-size: 17px; font-weight: 500; letter-spacing: -0.01em; }
+  h4, .h4 { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+  h5, .h5 { font-size: 13px; font-weight: 600; }
+  h6, .h6 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rox-text-muted); }
+}
+

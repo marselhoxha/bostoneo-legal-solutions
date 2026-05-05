@@ -2257,15 +2257,23 @@
                           <div class="row g-4">
                             <!-- Left Column - Diagnoses -->
                             <div class="col-lg-4">
-                              <!-- Diagnoses Card -->
+                              <!-- Diagnoses Card — Tier 5d: grouped by anatomical region -->
                               <div class="summary-card diagnoses-card" *ngIf="medicalSummary.diagnosisList && medicalSummary.diagnosisList.length > 0">
                                 <div class="card-icon"><i class="ri-stethoscope-line"></i></div>
-                                <h6 class="card-title">Diagnoses (ICD-10)</h6>
-                                <div class="diagnoses-list">
-                                  <div class="diagnosis-chip" *ngFor="let diag of medicalSummary.diagnosisList" [class.primary]="diag.primary">
-                                    <span class="icd-code">{{ diag.icd_code }}</span>
-                                    <span class="diagnosis-desc">{{ diag.description }}</span>
-                                    <span class="primary-badge" *ngIf="diag.primary">Primary</span>
+                                <h6 class="card-title">Diagnoses by Region</h6>
+                                <div class="vstack gap-3">
+                                  <div *ngFor="let group of getDiagnosesByRegion()">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                      <span class="fw-semibold fs-13" style="color: var(--vz-body-color);">{{ group.region }}</span>
+                                      <span class="badge bg-light text-body border fw-normal fs-11">{{ group.items.length }}</span>
+                                    </div>
+                                    <div class="diagnoses-list">
+                                      <div class="diagnosis-chip" *ngFor="let diag of group.items" [class.primary]="diag.primary">
+                                        <span class="icd-code">{{ diag.icd_code }}</span>
+                                        <span class="diagnosis-desc">{{ diag.description }}</span>
+                                        <span class="primary-badge" *ngIf="diag.primary">Primary</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -2348,6 +2356,71 @@
                               </div>
                             </div>
 
+                            <!-- Tier 5a — Causation block -->
+                            <div class="col-12" *ngIf="medicalSummary.causationSummary">
+                              <div class="card border-0 shadow-sm overflow-hidden">
+                                <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom"
+                                     style="background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.08), rgba(var(--vz-info-rgb), 0.05));">
+                                  <span class="d-inline-flex align-items-center justify-content-center rounded-3"
+                                        style="width: 28px; height: 28px; background: rgba(var(--vz-primary-rgb), 0.15);">
+                                    <i class="ri-shield-check-line text-primary fs-16"></i>
+                                  </span>
+                                  <h6 class="mb-0 fw-semibold flex-grow-1">Causation Statements</h6>
+                                  <small class="text-muted d-none d-md-inline">Verbatim quotes with attribution</small>
+                                </div>
+                                <div class="card-body p-3">
+                                  <pre class="mb-0 fs-13"
+                                       style="white-space: pre-wrap; font-family: inherit; line-height: 1.65; color: var(--vz-body-color); background: transparent; border: none; padding: 0;">{{ medicalSummary.causationSummary }}</pre>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Tier 5c — Open follow-up items -->
+                            <div class="col-12" *ngIf="medicalSummary.openItems?.length">
+                              <div class="card border-0 shadow-sm overflow-hidden">
+                                <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom"
+                                     style="background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.08), rgba(var(--vz-danger-rgb), 0.05));">
+                                  <span class="d-inline-flex align-items-center justify-content-center rounded-3"
+                                        style="width: 28px; height: 28px; background: rgba(var(--vz-warning-rgb), 0.15);">
+                                    <i class="ri-todo-line text-warning fs-16"></i>
+                                  </span>
+                                  <h6 class="mb-0 fw-semibold flex-grow-1">Open Items to Follow Up</h6>
+                                  <span class="badge bg-warning-subtle text-warning fs-11 fw-semibold rounded-pill px-2">
+                                    {{ medicalSummary.openItems.length }} {{ medicalSummary.openItems.length === 1 ? 'item' : 'items' }}
+                                  </span>
+                                  <small class="text-muted d-none d-md-inline ms-2">AI-detected</small>
+                                </div>
+                                <ul class="list-unstyled mb-0">
+                                  <li *ngFor="let item of medicalSummary.openItems; let last = last"
+                                      class="d-flex gap-3 px-3 py-3"
+                                      [class.border-bottom]="!last">
+                                    <div class="flex-shrink-0">
+                                      <span class="badge rounded-pill fs-11 fw-semibold"
+                                            [class.bg-danger-subtle]="item.priority === 'HIGH'"
+                                            [class.text-danger]="item.priority === 'HIGH'"
+                                            [class.bg-warning-subtle]="item.priority === 'MEDIUM'"
+                                            [class.text-warning]="item.priority === 'MEDIUM'"
+                                            [class.bg-secondary-subtle]="item.priority === 'LOW'"
+                                            [class.text-body]="item.priority === 'LOW'">
+                                        {{ item.priority }}
+                                      </span>
+                                    </div>
+                                    <div class="flex-grow-1 min-w-0">
+                                      <div class="d-flex flex-wrap align-items-baseline gap-2 mb-1">
+                                        <span class="badge bg-light text-body border fw-normal fs-11">
+                                          {{ formatOpenItemType(item.type) }}
+                                        </span>
+                                        <small class="text-muted" *ngIf="item.referencedIn">
+                                          <i class="ri-file-search-line me-1"></i>{{ item.referencedIn }}
+                                        </small>
+                                      </div>
+                                      <p class="mb-0 fs-13" style="line-height: 1.6; color: var(--vz-body-color);">{{ item.description }}</p>
+                                    </div>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div>
+
                             <!-- Full Width: Treatment Chronology Section -->
                             <div class="col-12" *ngIf="medicalRecords.length > 0">
                               <div class="chronology-section mt-4">
@@ -2418,6 +2491,11 @@
                                               [title]="hasCitation(record, 'providerName') ? 'Click to view source' : ''">
                                             <span class="provider-name">{{ record.providerName }}</span>
                                             <i class="ri-link citation-indicator" *ngIf="hasCitation(record, 'providerName')"></i>
+                                            <span class="badge bg-info-subtle text-info fs-10 fw-normal ms-2"
+                                                  *ngIf="record.visits && record.visits.length > 1"
+                                                  [title]="record.visits.length + ' itemized visits in this billing summary'">
+                                              +{{ record.visits.length }} visits
+                                            </span>
                                           </td>
                                           <td class="col-type"
                                               [class.has-citation]="hasCitation(record, 'recordType')"

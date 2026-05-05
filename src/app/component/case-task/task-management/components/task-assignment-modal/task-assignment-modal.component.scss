@@ -20,7 +20,7 @@
   
   .modal-title {
     font-weight: 600;
-   // color: #495057;
+   // color: var(--legience-text-secondary, #495057);
   }
 }
 
@@ -46,7 +46,7 @@
   }
   
   &.alert-light {
-    border-color: #dee2e6;
+    border-color: var(--legience-border-hairline, #dee2e6);
   }
 }
 

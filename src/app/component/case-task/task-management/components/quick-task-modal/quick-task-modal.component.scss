@@ -12,11 +12,11 @@
 }
 
 .modal-header {
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--legience-border-hairline, #e9ecef);
   
   .modal-title {
     font-weight: 600;
-    color: #495057;
+    color: var(--legience-text-secondary, #495057);
   }
 }
 
@@ -27,7 +27,7 @@
 }
 
 .modal-footer {
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--legience-border-hairline, #e9ecef);
   padding: 1rem 1.5rem;
 }
 
@@ -35,8 +35,8 @@
   border-radius: 6px;
   
   &.alert-info {
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
+    border-color: var(--legience-border-hairline, #dee2e6);
   }
   
   &.alert-warning {
@@ -45,8 +45,8 @@
   }
   
   &.alert-light {
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
+    border-color: var(--legience-border-hairline, #dee2e6);
   }
 }
 

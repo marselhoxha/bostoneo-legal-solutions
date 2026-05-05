@@ -11,16 +11,16 @@
 
 .card-header {
   &.bg-white {
-    background-color: #fff !important;
+    background-color: var(--legience-bg-card, #fff) !important;
   }
   
   h4 {
-    color: #495057;
+    color: var(--legience-text-secondary, #495057);
     font-weight: 600;
   }
   
   .text-primary {
-    color: #0d6efd !important;
+    color: var(--legience-accent, #0d6efd) !important;
   }
 }
 
@@ -31,7 +31,7 @@
   }
   
   thead.table-light th {
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--legience-border-hairline, #dee2e6);
     font-weight: 600;
     font-size: 0.875rem;
     text-transform: uppercase;
@@ -152,7 +152,7 @@
 
 // Progress bar enhancements
 .progress {
-  background-color: #e9ecef;
+  background-color: var(--legience-bg-subtle, #e9ecef);
   border-radius: 0.375rem;
   
   .progress-bar {
@@ -173,7 +173,7 @@
   }
   
   .modal-header {
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--legience-border-hairline, #dee2e6);
     border-radius: 0.5rem 0.5rem 0 0;
     
     &.bg-primary.bg-opacity-10 {
@@ -190,7 +190,7 @@
   }
   
   .modal-footer {
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--legience-border-hairline, #dee2e6);
     border-radius: 0 0 0.5rem 0.5rem;
     
     
@@ -209,11 +209,11 @@
   margin-bottom: 0.5rem;
   
   .text-danger {
-    color: #dc3545 !important;
+    color: var(--legience-danger, #dc3545) !important;
   }
   
   .text-muted {
-    color: #6c757d !important;
+    color: var(--legience-text-muted, #6c757d) !important;
     font-weight: 400;
   }
 }
@@ -229,8 +229,8 @@
 
 .form-check-input {
   &:checked {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
+    background-color: var(--legience-accent, #0d6efd);
+    border-color: var(--legience-accent, #0d6efd);
   }
   
   &:focus {
@@ -240,7 +240,7 @@
 }
 
 .form-text {
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   font-size: 0.875rem;
 }
 

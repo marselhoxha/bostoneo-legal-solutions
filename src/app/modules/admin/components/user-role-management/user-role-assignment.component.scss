@@ -33,13 +33,13 @@
   
   .form-control {
     padding-right: 40px;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
     transition: all 0.2s ease;
     
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
       outline: none;
     }
   }
@@ -57,12 +57,12 @@
   
   &:hover {
     background-color: var(--vz-gray-50);
-    border-color: var(--vz-primary) !important;
+    border-color: var(--legience-accent) !important;
   }
   
   &.active {
-    background-color: var(--vz-primary-bg-subtle);
-    border-color: var(--vz-primary) !important;
+    background-color: var(--legience-accent-bg-subtle);
+    border-color: var(--legience-accent) !important;
   }
 }
 
@@ -73,7 +73,7 @@
   
   &:hover {
     background-color: var(--vz-gray-50);
-    border-color: var(--vz-primary) !important;
+    border-color: var(--legience-accent) !important;
   }
 }
 
@@ -142,23 +142,23 @@
 
 // Soft background colors
 .bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
+  background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
 }
 
 .bg-soft-warning {
-  background-color: rgba(var(--vz-warning-rgb), 0.1) !important;
+  background-color: rgba(var(--legience-warning-rgb), 0.1) !important;
 }
 
 .bg-soft-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1) !important;
+  background-color: rgba(var(--legience-success-rgb), 0.1) !important;
 }
 
 .bg-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1) !important;
+  background-color: rgba(var(--legience-info-rgb), 0.1) !important;
 }
 
 .bg-soft-danger {
-  background-color: rgba(var(--vz-danger-rgb), 0.1) !important;
+  background-color: rgba(var(--legience-danger-rgb), 0.1) !important;
 }
 
 // Badge styling
@@ -175,7 +175,7 @@
   }
   
   &.bg-soft-primary {
-    background-color: var(--vz-primary-bg-subtle) !important;
+    background-color: var(--legience-accent-bg-subtle) !important;
     color: var(--vz-primary-text-emphasis) !important;
     border: 1px solid var(--vz-primary-border-subtle);
   }
@@ -196,14 +196,14 @@
 // Card styling
 .card {
   border-radius: 12px;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   
   &.shadow-sm {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
   
   .card-header {
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     border-radius: 12px 12px 0 0;
     padding: 1.5rem;
     
@@ -245,7 +245,7 @@
 
 // Dropdown styling
 .dropdown-menu {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   padding: 0.5rem 0;
@@ -256,8 +256,8 @@
     border-radius: 0;
     
     &:hover {
-      background-color: var(--vz-primary-bg-subtle);
-      color: var(--vz-primary);
+      background-color: var(--legience-accent-bg-subtle);
+      color: var(--legience-accent);
     }
     
     &.disabled {
@@ -286,14 +286,14 @@
     transition: all 0.2s ease;
     
     &:hover {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       background-color: var(--vz-gray-50);
     }
     
     &.active {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       background-color: white;
-      border-bottom: 2px solid var(--vz-primary);
+      border-bottom: 2px solid var(--legience-accent);
     }
   }
 }
@@ -307,13 +307,13 @@
 
 .form-select,
 .form-control {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 8px;
   transition: all 0.2s ease;
   
   &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.25);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
     outline: none;
   }
 }

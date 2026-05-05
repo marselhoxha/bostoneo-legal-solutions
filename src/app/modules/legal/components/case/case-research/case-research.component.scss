@@ -9,44 +9,44 @@
 // Velzon Theme Soft Background Classes
 .bg-soft-primary {
   background-color: rgba(64, 81, 137, 0.1) !important;
-  color: #405189 !important;
+  color: var(--legience-accent, #405189) !important;
 }
 
 .bg-soft-info {
   background-color: rgba(41, 156, 219, 0.1) !important;
-  color: #299cdb !important;
+  color: var(--legience-info, #299cdb) !important;
 }
 
 .bg-soft-success {
   background-color: rgba(10, 179, 156, 0.1) !important;
-  color: #0ab39c !important;
+  color: var(--legience-success, #0ab39c) !important;
 }
 
 .bg-soft-warning {
   background-color: rgba(247, 184, 75, 0.1) !important;
-  color: #f7b84b !important;
+  color: var(--legience-warning, #f7b84b) !important;
 }
 
 .bg-soft-danger {
   background-color: rgba(240, 101, 72, 0.1) !important;
-  color: #f06548 !important;
+  color: var(--legience-danger, #f06548) !important;
 }
 
 .bg-soft-secondary {
   background-color: rgba(108, 117, 125, 0.1) !important;
-  color: #6c757d !important;
+  color: var(--legience-text-muted, #6c757d) !important;
 }
 
 // Velzon Button Soft Classes
 .btn-soft-primary {
-  background-color: var(--vz-light);
-  color: var(--vz-primary);
-  border: 1px solid var(--vz-border-color);
+  background-color: var(--legience-bg-card-hover);
+  color: var(--legience-accent);
+  border: 1px solid var(--legience-border-hairline);
 
   &:hover:not(:disabled) {
-    background-color: var(--vz-light);
-    color: var(--vz-primary);
-    border-color: var(--vz-primary);
+    background-color: var(--legience-bg-card-hover);
+    color: var(--legience-accent);
+    border-color: var(--legience-accent);
   }
 
   &:disabled {
@@ -58,7 +58,7 @@
 .case-research-container {
   height: auto;
   display: block;
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
@@ -68,7 +68,7 @@
   .research-container {
     height: auto;
     display: block;
-    background: var(--vz-body-bg);
+    background: var(--legience-bg-page);
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -76,8 +76,8 @@
 
   // Conversation Switcher Header
   .conversation-header {
-    background: var(--vz-card-bg);
-    border-bottom: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card);
+    border-bottom: 1px solid var(--legience-border-hairline);
     padding: 0.75rem 1rem;
     position: sticky;
     top: 0;
@@ -116,7 +116,7 @@
       .conversation-item {
         padding: 0.75rem 1rem;
         cursor: pointer;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
 
         &:last-child {
           border-bottom: none;
@@ -124,17 +124,17 @@
 
         &.active {
           background: transparent;
-          border: 1px solid var(--vz-primary);
+          border: 1px solid var(--legience-accent);
           border-radius: 0.375rem;
         }
 
         &:hover {
-          background: var(--vz-light);
+          background: var(--legience-bg-card-hover);
         }
 
         .conv-title {
           font-weight: 500;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           margin-bottom: 0.25rem;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -143,7 +143,7 @@
 
         .conv-meta {
           font-size: 0.75rem;
-          color: var(--vz-text-muted);
+          color: var(--legience-text-muted);
         }
       }
     }
@@ -180,14 +180,14 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.5rem;
-      background: var(--vz-card-bg);
-      border: 1px solid var(--vz-border-color);
+      background: var(--legience-bg-card);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 0.375rem;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 
       &:focus-within {
-        border-color: var(--vz-primary);
-        box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.1);
+        border-color: var(--legience-accent);
+        box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.1);
       }
 
       .search-icon {
@@ -208,7 +208,7 @@
         }
 
         &::placeholder {
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           opacity: 0.5;
         }
       }
@@ -221,7 +221,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--vz-body-bg);
+    background: var(--legience-bg-page);
     transition: opacity 0.3s ease-in-out;
     opacity: 1;
 
@@ -231,12 +231,12 @@
         align-items: center;
         gap: 0.75rem;
         padding: 0.5rem;
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.375rem;
 
         &:focus-within {
-          border-color: var(--vz-primary);
+          border-color: var(--legience-accent);
         }
 
         .search-input {
@@ -277,11 +277,11 @@
     }
 
     .form-control {
-      border: 1px solid var(--vz-border-color);
+      border: 1px solid var(--legience-border-hairline);
 
       &:focus {
-        border-color: var(--vz-primary);
-        box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.1);
+        border-color: var(--legience-accent);
+        box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.1);
       }
     }
 
@@ -295,14 +295,14 @@
     }
 
     .btn-soft-danger {
-      background: rgba(var(--vz-danger-rgb), 0.1);
-      color: var(--vz-danger);
-      border: 1px solid rgba(var(--vz-danger-rgb), 0.2);
+      background: rgba(var(--legience-danger-rgb), 0.1);
+      color: var(--legience-danger);
+      border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
 
       &:hover:not(:disabled) {
-        background: var(--vz-danger);
+        background: var(--legience-danger);
         color: white;
-        border-color: var(--vz-danger);
+        border-color: var(--legience-danger);
       }
 
       &:disabled {
@@ -314,7 +314,7 @@
 
   // Hero Section - Velzon Theme
   .ai-hero-section {
-    background: var(--vz-body-bg) !important;
+    background: var(--legience-bg-page) !important;
     min-height: auto;
     padding: 2rem 1rem;
     display: block !important;
@@ -331,7 +331,7 @@
     .hero-header {
       i {
         font-size: 1.25rem;
-        color: var(--vz-primary);
+        color: var(--legience-accent);
       }
     }
 
@@ -340,7 +340,7 @@
       font-weight: 300;
       letter-spacing: -0.02em;
       line-height: 1.3;
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
 
       @media (max-width: 768px) {
         font-size: 1.5rem;
@@ -354,8 +354,8 @@
       gap: 1rem;
 
       .action-card {
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-radius: 0.5rem;
         padding: 1.5rem;
         display: flex;
@@ -366,18 +366,18 @@
         transition: all 0.3s ease;
 
         &:hover {
-          border-color: var(--vz-primary);
-          box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.15);
+          border-color: var(--legience-accent);
+          box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.15);
           transform: translateY(-2px);
         }
 
         i {
           font-size: 1.5rem;
-          color: var(--vz-primary);
+          color: var(--legience-accent);
         }
 
         span {
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           font-size: 0.9375rem;
           font-weight: 500;
         }
@@ -389,7 +389,7 @@
       h6 {
         font-size: 0.9375rem;
         font-weight: 600;
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
       }
 
       .example-questions {
@@ -403,7 +403,7 @@
             content: '•';
             position: absolute;
             left: 0;
-            color: var(--vz-primary);
+            color: var(--legience-accent);
           }
         }
       }
@@ -417,11 +417,11 @@
         font-size: 0.8125rem;
 
         .tag {
-          background: var(--vz-light);
-          border: 1px solid var(--vz-border-color);
+          background: var(--legience-bg-card-hover);
+          border: 1px solid var(--legience-border-hairline);
           padding: 0.25rem 0.75rem;
           border-radius: 1rem;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           font-size: 0.75rem;
         }
       }
@@ -432,10 +432,10 @@
       .search-wrapper {
         display: flex;
         gap: 0.75rem;
-        background: var(--vz-card-bg);
+        background: var(--legience-bg-card);
         padding: 0.5rem;
         border-radius: 0.5rem;
-        border: 1px solid var(--vz-border-color);
+        border: 1px solid var(--legience-border-hairline);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
         @media (max-width: 768px) {
@@ -448,7 +448,7 @@
           background: transparent;
           padding: 0.75rem 1rem;
           font-size: 0.9375rem;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
 
           &:focus {
             box-shadow: none;
@@ -456,7 +456,7 @@
           }
 
           &::placeholder {
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
             opacity: 0.5;
           }
         }
@@ -467,13 +467,13 @@
           background: transparent;
           padding: 0.75rem 1rem;
           font-size: 0.9375rem;
-          border-left: 1px solid var(--vz-border-color);
-          color: var(--vz-body-color);
+          border-left: 1px solid var(--legience-border-hairline);
+          color: var(--legience-text-secondary);
 
           @media (max-width: 768px) {
             width: 100%;
             border-left: none;
-            border-top: 1px solid var(--vz-border-color);
+            border-top: 1px solid var(--legience-border-hairline);
           }
 
           &:focus {
@@ -503,8 +503,8 @@
     margin: 0 auto;
 
     .thinking-bubble {
-      background: var(--vz-card-bg);
-      border: 1px solid var(--vz-border-color);
+      background: var(--legience-bg-card);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 0.75rem;
       padding: 1rem 1.25rem;
     }
@@ -516,7 +516,7 @@
   // both to the case-detail tab's container width fixes it without touching
   // the input bar.
   .chat-conversation {
-    background: var(--vz-body-bg);
+    background: var(--legience-bg-page);
     padding: 0.75rem;
     width: 100%;
     max-width: 100%;
@@ -612,8 +612,8 @@
       word-wrap: break-word;
 
       &.ai-message {
-        background: var(--vz-card-bg);
-        border: 1px solid var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border: 1px solid var(--legience-border-hairline);
         border-bottom-left-radius: 0.25rem;
 
         .ai-badge {
@@ -629,7 +629,7 @@
           h6 {
             font-size: 0.875rem;
             font-weight: 600;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
           }
         }
 
@@ -649,7 +649,7 @@
               left: 0;
               right: 0;
               height: 60px;
-              background: linear-gradient(to bottom, transparent, var(--vz-card-bg));
+              background: linear-gradient(to bottom, transparent, var(--legience-bg-card));
             }
           }
         }
@@ -657,7 +657,7 @@
         .ai-response-markdown {
           // Attorney-like professional styling
           font-family: 'Georgia', 'Times New Roman', 'Garamond', serif;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
           line-height: 1.8;
           font-size: 0.9375rem;
           letter-spacing: 0.01em;  // Subtle letter spacing for readability
@@ -675,12 +675,12 @@
           // Section Headings - Legal Document Style
           h1, h2, h3, h4, h5, h6 {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: var(--vz-heading-color);
+            color: var(--legience-text-primary);
             margin-top: 2.5rem;  // Increased from 1.5rem for proper visual separation
             margin-bottom: 1rem;  // Increased from 0.875rem for better breathing room
             font-weight: 600;
             letter-spacing: -0.02em;
-            border-bottom: 2px solid var(--vz-border-color);
+            border-bottom: 2px solid var(--legience-border-hairline);
             padding-bottom: 0.5rem;
 
             &:first-child {
@@ -691,8 +691,8 @@
           h1 {
             font-size: 1.375rem;
             border-bottom-width: 3px;
-            border-bottom-color: var(--vz-primary);
-            color: var(--vz-primary);
+            border-bottom-color: var(--legience-accent);
+            color: var(--legience-accent);
           }
 
           h2 {
@@ -714,11 +714,11 @@
             font-size: 1rem;
             font-style: normal;  // Remove italic for section labels
             font-weight: 700;    // Make bolder for emphasis
-            color: var(--vz-primary);
-            background: rgba(var(--vz-primary-rgb), 0.05);
+            color: var(--legience-accent);
+            background: rgba(var(--legience-accent-rgb), 0.05);
             padding: 0.75rem 1.25rem;  // Increased padding for better prominence
             border-radius: 0.375rem;  // Slightly larger radius
-            border-left: 4px solid var(--vz-primary);
+            border-left: 4px solid var(--legience-accent);
             border-bottom: none;  // Remove underline for this accent style
             margin-top: 2.5rem;  // Increased: More space before subsections
             margin-bottom: 1.25rem;  // Increased: Better spacing after
@@ -734,14 +734,14 @@
             margin-bottom: 1rem;
             text-align: left;
             text-indent: 0;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
             overflow-wrap: break-word;
             word-wrap: break-word;
             word-break: break-word;
 
             strong {
               font-weight: 700;
-              color: var(--vz-heading-color);
+              color: var(--legience-text-primary);
               text-decoration: underline;
               text-decoration-thickness: 1px;
               text-underline-offset: 2px;
@@ -749,7 +749,7 @@
 
             em {
               font-style: italic;
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
               opacity: 0.9;
             }
           }
@@ -760,13 +760,13 @@
             margin-top: 1rem;  // Added: Better separation from previous element
             padding-left: 2.5rem;
             font-family: 'Georgia', serif;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
 
             li {
               margin-bottom: 0.75rem;  // Increased: Better readability with more spacing
               line-height: 1.9;  // Slightly increased line height
               text-align: left;
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
 
               &:last-child {
                 margin-bottom: 0;  // Remove margin from last item for cleaner spacing
@@ -791,11 +791,11 @@
 
               strong {
                 font-weight: 700;
-                color: var(--vz-heading-color);
+                color: var(--legience-text-primary);
 
                 // Strong labels at start of list items (e.g., "Strength:", "Action:")
                 &:first-child {
-                  color: var(--vz-primary);
+                  color: var(--legience-accent);
                   font-variant: small-caps;
                   letter-spacing: 0.02em;
                 }
@@ -814,7 +814,7 @@
                 content: counter(item) ". ";
                 counter-increment: item;
                 font-weight: 700;
-                color: var(--vz-primary);
+                color: var(--legience-accent);
                 margin-right: 0.5rem;
               }
             }
@@ -827,7 +827,7 @@
           p:has(strong:contains("Citation")) {
             margin-top: 1.5rem;
             padding-top: 1.5rem;
-            border-top: 2px solid var(--vz-border-color);
+            border-top: 2px solid var(--legience-border-hairline);
           }
 
           // Citation icons — scoped to a dedicated citations wrapper only
@@ -855,11 +855,11 @@
               }
 
               &:nth-child(odd)::before {
-                background: var(--vz-success);
+                background: var(--legience-success);
               }
 
               &:nth-child(even)::before {
-                background: var(--vz-info);
+                background: var(--legience-info);
               }
             }
           }
@@ -867,12 +867,12 @@
           // Code - Legal Citations Style
           code {
             font-family: 'Courier New', Courier, monospace;
-            background: var(--vz-light);
+            background: var(--legience-bg-card-hover);
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
             font-size: 0.875rem;
-            color: var(--vz-body-color);
-            border: 1px solid var(--vz-border-color);
+            color: var(--legience-text-secondary);
+            border: 1px solid var(--legience-border-hairline);
             font-weight: 600;
             overflow-wrap: break-word;
             word-wrap: break-word;
@@ -880,11 +880,11 @@
           }
 
           pre {
-            background: var(--vz-light);
+            background: var(--legience-bg-card-hover);
             padding: 1rem;
             border-radius: 0.375rem;
             overflow-x: auto;
-            border: 2px solid var(--vz-border-color);
+            border: 2px solid var(--legience-border-hairline);
             margin: 1rem 0;
             font-family: 'Courier New', monospace;
             max-width: 100%;
@@ -893,19 +893,19 @@
               background: transparent;
               padding: 0;
               border: none;
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
               font-weight: normal;
             }
           }
 
           // Blockquotes - Simple Legal Citation Style (No complex :has() selectors)
           blockquote {
-            border-left: 4px solid var(--vz-secondary);
+            border-left: 4px solid var(--legience-secondary);
             padding: 1rem 1.5rem;
             margin: 1.5rem 0;
-            background: rgba(var(--vz-secondary-rgb), 0.05);
+            background: rgba(var(--legience-secondary-rgb), 0.05);
             font-style: italic;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
             border-radius: 0 0.375rem 0.375rem 0;
             font-size: 0.9rem;
             opacity: 0.9;
@@ -922,14 +922,14 @@
 
             strong {
               font-weight: 600;
-              color: var(--vz-secondary);
+              color: var(--legience-secondary);
             }
 
             cite {
               display: block;
               margin-top: 0.5rem;
               font-size: 0.875rem;
-              color: var(--vz-secondary);
+              color: var(--legience-secondary);
               font-weight: 600;
               font-style: normal;
             }
@@ -937,15 +937,15 @@
 
           // Links - Legal Reference Style
           a {
-            color: var(--vz-primary);
+            color: var(--legience-accent);
             text-decoration: none;
-            border-bottom: 1px dotted var(--vz-primary);
+            border-bottom: 1px dotted var(--legience-accent);
             font-weight: 600;
             transition: all 0.2s ease;
 
             &:hover {
               border-bottom-style: solid;
-              background: rgba(var(--vz-primary-rgb), 0.05);
+              background: rgba(var(--legience-accent-rgb), 0.05);
             }
           }
 
@@ -955,7 +955,7 @@
             margin: 1.5rem 0;
             border-collapse: separate;
             border-spacing: 0;
-            border: 2px solid var(--vz-border-color);
+            border: 2px solid var(--legience-border-hairline);
             border-radius: 0.375rem;
             font-size: 0.875rem;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -966,18 +966,18 @@
             thead {
               tr {
                 th {
-                  background: var(--vz-light);
+                  background: var(--legience-bg-card-hover);
                   padding: 0.875rem;
-                  border-bottom: 2px solid var(--vz-border-color);
+                  border-bottom: 2px solid var(--legience-border-hairline);
                   font-weight: 700;
                   text-align: left;
-                  color: var(--vz-heading-color);
+                  color: var(--legience-text-primary);
                   text-transform: uppercase;
                   letter-spacing: 0.05em;
                   font-size: 0.75rem;
 
                   &:not(:last-child) {
-                    border-right: 1px solid var(--vz-border-color);
+                    border-right: 1px solid var(--legience-border-hairline);
                   }
                 }
               }
@@ -986,25 +986,25 @@
             tbody {
               tr {
                 &:nth-child(even) {
-                  background: var(--vz-light);
+                  background: var(--legience-bg-card-hover);
                   opacity: 0.5;
                 }
 
                 &:hover {
-                  background: rgba(var(--vz-primary-rgb), 0.05);
+                  background: rgba(var(--legience-accent-rgb), 0.05);
                 }
 
                 td {
                   padding: 0.75rem 0.875rem;
-                  border-bottom: 1px solid var(--vz-border-color);
-                  color: var(--vz-body-color);
+                  border-bottom: 1px solid var(--legience-border-hairline);
+                  color: var(--legience-text-secondary);
 
                   &:not(:last-child) {
-                    border-right: 1px solid var(--vz-border-color);
+                    border-right: 1px solid var(--legience-border-hairline);
                   }
 
                   strong {
-                    color: var(--vz-heading-color);
+                    color: var(--legience-text-primary);
                   }
                 }
 
@@ -1019,7 +1019,7 @@
           hr {
             margin: 2rem 0;
             border: none;
-            border-top: 2px solid #dee2e6;
+            border-top: 2px solid var(--legience-border-hairline, #dee2e6);
             opacity: 1;
           }
 
@@ -1035,31 +1035,31 @@
           // Legal Citations - Using Velzon Primary Color
           ::ng-deep .legal-citation {
             font-family: 'Times New Roman', Times, serif;
-            color: var(--vz-primary) !important;
+            color: var(--legience-accent) !important;
             font-weight: 600;
             font-style: normal;
-            background: rgba(var(--vz-primary-rgb), 0.08);
+            background: rgba(var(--legience-accent-rgb), 0.08);
             padding: 0.125rem 0.5rem;
             border-radius: 2px;
             letter-spacing: 0.01em;
             position: relative;
-            border-left: 3px solid var(--vz-primary);
+            border-left: 3px solid var(--legience-accent);
           }
 
           // Judge Names - Using Velzon Secondary/Purple
           ::ng-deep .legal-judge {
-            color: var(--vz-heading-color) !important;
+            color: var(--legience-text-primary) !important;
             font-weight: 700;
             font-variant: small-caps;
             letter-spacing: 0.03em;
-            background: rgba(var(--vz-secondary-rgb), 0.1);
+            background: rgba(var(--legience-secondary-rgb), 0.1);
             padding: 0.125rem 0.375rem;
             border-radius: 2px;
           }
 
           // Legal Terms - Using Velzon Info Color
           ::ng-deep .legal-term {
-            color: var(--vz-info) !important;
+            color: var(--legience-info) !important;
             font-weight: 600;
             text-decoration: underline;
             text-decoration-style: dotted;
@@ -1069,45 +1069,45 @@
 
           // Dollar Amounts - Using Velzon Success Color
           ::ng-deep .legal-amount {
-            color: var(--vz-success) !important;
+            color: var(--legience-success) !important;
             font-weight: 700;
             font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace;
-            background: rgba(var(--vz-success-rgb), 0.1);
+            background: rgba(var(--legience-success-rgb), 0.1);
             padding: 0.125rem 0.5rem;
             border-radius: 3px;
-            border: 1px solid rgba(var(--vz-success-rgb), 0.25);
+            border: 1px solid rgba(var(--legience-success-rgb), 0.25);
             letter-spacing: 0.02em;
           }
 
           // Dates - Using Velzon Warning Color
           ::ng-deep .legal-date {
-            color: var(--vz-warning) !important;
+            color: var(--legience-warning) !important;
             font-weight: 600;
             font-style: italic;
             font-family: 'Georgia', 'Times New Roman', serif;
             letter-spacing: 0.01em;
             padding: 0.125rem 0.375rem;
-            background: rgba(var(--vz-warning-rgb), 0.1);
+            background: rgba(var(--legience-warning-rgb), 0.1);
             border-radius: 2px;
           }
 
           // Federal Treasury Regulations - Using Velzon Secondary/Purple
           ::ng-deep .legal-regulation {
             font-family: 'Courier New', 'Monaco', monospace;
-            color: var(--vz-secondary) !important;
+            color: var(--legience-secondary) !important;
             font-weight: 600;
-            background: rgba(var(--vz-secondary-rgb), 0.1);
+            background: rgba(var(--legience-secondary-rgb), 0.1);
             padding: 0.125rem 0.5rem;
             border-radius: 3px;
-            border-left: 3px solid var(--vz-secondary);
+            border-left: 3px solid var(--legience-secondary);
             letter-spacing: 0.01em;
           }
 
           // IRC & U.S.S.G. Statutes - Using Velzon Info Color
           ::ng-deep .legal-statute {
-            color: var(--vz-info) !important;
+            color: var(--legience-info) !important;
             font-weight: 700;
-            background: rgba(var(--vz-info-rgb), 0.12);
+            background: rgba(var(--legience-info-rgb), 0.12);
             padding: 0.125rem 0.5rem;
             border-radius: 3px;
             font-family: 'Courier New', monospace;
@@ -1116,9 +1116,9 @@
 
           // Court Rules (Tax Court, Fed. R. Civ. P., etc.) - Using Velzon Warning Color
           ::ng-deep .legal-court-rule {
-            color: var(--vz-warning) !important;
+            color: var(--legience-warning) !important;
             font-weight: 600;
-            background: rgba(var(--vz-warning-rgb), 0.12);
+            background: rgba(var(--legience-warning-rgb), 0.12);
             padding: 0.125rem 0.5rem;
             border-radius: 3px;
             font-family: 'Georgia', serif;
@@ -1128,12 +1128,12 @@
           // Verified Citations with Checkmark (✓ Treas. Reg. §...)
           ::ng-deep .citation-verified {
             display: inline-block;
-            color: var(--vz-primary) !important;
+            color: var(--legience-accent) !important;
             font-weight: 600;
-            background: rgba(var(--vz-primary-rgb), 0.08);
+            background: rgba(var(--legience-accent-rgb), 0.08);
             padding: 0.25rem 0.625rem;
             border-radius: 4px;
-            border-left: 3px solid var(--vz-primary);
+            border-left: 3px solid var(--legience-accent);
             margin: 0.125rem 0.25rem 0.125rem 0;
             white-space: nowrap;
           }
@@ -1141,41 +1141,41 @@
           // Assumption Warning Badges (⚠️ Assumption:)
           ::ng-deep .assumption-badge {
             display: inline-block;
-            background: rgba(var(--vz-danger-rgb), 0.12);
-            color: var(--vz-danger) !important;
+            background: rgba(var(--legience-danger-rgb), 0.12);
+            color: var(--legience-danger) !important;
             font-weight: 700;
             padding: 0.375rem 0.75rem;
             border-radius: 6px;
-            border-left: 4px solid var(--vz-danger);
+            border-left: 4px solid var(--legience-danger);
             margin: 0.5rem 0 0.25rem 0;
           }
 
           // Legal Links Created by Frontend (emergency fix)
           ::ng-deep a.legal-link {
             display: inline-block;
-            color: var(--vz-primary) !important;
+            color: var(--legience-accent) !important;
             font-weight: 600;
-            background: rgba(var(--vz-primary-rgb), 0.08);
+            background: rgba(var(--legience-accent-rgb), 0.08);
             padding: 0.125rem 0.5rem;
             border-radius: 4px;
-            border-left: 3px solid var(--vz-primary);
+            border-left: 3px solid var(--legience-accent);
             text-decoration: none;
             transition: background 0.2s ease;
             cursor: pointer;
 
             &:hover {
-              background: rgba(var(--vz-primary-rgb), 0.15);
+              background: rgba(var(--legience-accent-rgb), 0.15);
               text-decoration: underline;
             }
 
             // Document links (casedoc: protocol) — distinct style
             &.doc-link {
-              color: var(--vz-info) !important;
-              background: rgba(var(--vz-info-rgb), 0.08);
-              border-left-color: var(--vz-info);
+              color: var(--legience-info) !important;
+              background: rgba(var(--legience-info-rgb), 0.08);
+              border-left-color: var(--legience-info);
 
               &:hover {
-                background: rgba(var(--vz-info-rgb), 0.15);
+                background: rgba(var(--legience-info-rgb), 0.15);
               }
             }
           }
@@ -1184,7 +1184,7 @@
           ::ng-deep .sources-bar {
             margin-top: 1.5rem;
             padding: 0.75rem 0;
-            border-top: 1px solid var(--vz-border-color);
+            border-top: 1px solid var(--legience-border-hairline);
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -1192,7 +1192,7 @@
 
             .sources-label {
               font-size: 0.75rem;
-              color: var(--vz-text-muted);
+              color: var(--legience-text-muted);
               font-weight: 600;
               text-transform: uppercase;
               letter-spacing: 0.04em;
@@ -1204,12 +1204,12 @@
               align-items: center;
               gap: 0.375rem;
               padding: 0.3125rem 0.75rem;
-              background: rgba(var(--vz-primary-rgb), 0.08);
-              border: 1px solid rgba(var(--vz-primary-rgb), 0.2);
+              background: rgba(var(--legience-accent-rgb), 0.08);
+              border: 1px solid rgba(var(--legience-accent-rgb), 0.2);
               border-radius: 100px;
               font-size: 0.75rem;
               font-weight: 500;
-              color: var(--vz-primary);
+              color: var(--legience-accent);
               text-decoration: none;
               transition: all 0.2s ease;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1238,24 +1238,24 @@
               }
 
               &:hover {
-                background: rgba(var(--vz-primary-rgb), 0.15);
+                background: rgba(var(--legience-accent-rgb), 0.15);
               }
 
               &.no-link {
-                background: rgba(var(--vz-secondary-rgb), 0.08);
+                background: rgba(var(--legience-secondary-rgb), 0.08);
                 border-color: rgba(var(--bs-warning-rgb, 247, 184, 75), 0.2);
-                color: var(--vz-body-color);
+                color: var(--legience-text-secondary);
               }
 
               &.doc-chip {
-                background: rgba(var(--vz-info-rgb), 0.08);
-                border-color: rgba(var(--vz-info-rgb), 0.2);
-                color: var(--vz-info);
+                background: rgba(var(--legience-info-rgb), 0.08);
+                border-color: rgba(var(--legience-info-rgb), 0.2);
+                color: var(--legience-info);
                 cursor: pointer;
 
                 &:hover {
-                  background: rgba(var(--vz-info-rgb), 0.18);
-                  border-color: rgba(var(--vz-info-rgb), 0.35);
+                  background: rgba(var(--legience-info-rgb), 0.18);
+                  border-color: rgba(var(--legience-info-rgb), 0.35);
                 }
 
                 i {
@@ -1266,7 +1266,7 @@
 
             .sources-summary {
               font-size: 0.6875rem;
-              color: var(--vz-text-muted);
+              color: var(--legience-text-muted);
               margin-left: 0.375rem;
               font-style: italic;
             }
@@ -1290,7 +1290,7 @@
                 counter-increment: legal-counter;
                 content: "(" counter(legal-counter) ") ";
                 font-weight: 700;
-                color: var(--vz-primary);
+                color: var(--legience-accent);
                 margin-right: 0.5rem;
                 position: absolute;
                 left: -2.5rem;
@@ -1303,14 +1303,14 @@
         .message-meta {
           margin-top: 0.75rem;
           padding-top: 0.75rem;
-          border-top: 1px solid var(--vz-border-color);
+          border-top: 1px solid var(--legience-border-hairline);
           display: flex;
           justify-content: space-between;
           align-items: center;
 
           small {
             font-size: 0.7rem;
-            color: var(--vz-body-color);
+            color: var(--legience-text-secondary);
             opacity: 0.6;
           }
 
@@ -1321,7 +1321,7 @@
             .btn {
               padding: 0.25rem 0.5rem;
               font-size: 0.75rem;
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
               opacity: 0.7;
               transition: all 0.2s ease;
               background: transparent;
@@ -1329,7 +1329,7 @@
 
               &:hover {
                 opacity: 1;
-                background: var(--vz-light);
+                background: var(--legience-bg-card-hover);
               }
             }
           }
@@ -1347,7 +1347,7 @@
       span {
         width: 8px;
         height: 8px;
-        background: var(--vz-body-color);
+        background: var(--legience-text-secondary);
         opacity: 0.4;
         border-radius: 50%;
         animation: typingDots 1.4s infinite;
@@ -1369,14 +1369,14 @@
       gap: 0.5rem;
       align-items: center;
       padding: 0.75rem;
-      background: rgba(var(--vz-warning-rgb), 0.05);
-      border-left: 3px solid var(--vz-warning);
+      background: rgba(var(--legience-warning-rgb), 0.05);
+      border-left: 3px solid var(--legience-warning);
       border-radius: 0.375rem;
 
       .badge-label {
         font-size: 0.8125rem;
         font-weight: 600;
-        color: var(--vz-warning);
+        color: var(--legience-warning);
         margin-right: 0.25rem;
 
         i {
@@ -1428,61 +1428,61 @@
 
         // Primary (Draft Motion) - Lighter
         &.action-primary {
-          background: rgba(var(--vz-primary-rgb), 0.85);
+          background: rgba(var(--legience-accent-rgb), 0.85);
           color: white;
 
           &:hover {
-            background: var(--vz-primary);
+            background: var(--legience-accent);
           }
         }
 
         // Danger (Create Deadline) - Lighter
         &.action-danger {
-          background: rgba(var(--vz-danger-rgb), 0.85);
+          background: rgba(var(--legience-danger-rgb), 0.85);
           color: white;
 
           &:hover {
-            background: var(--vz-danger);
+            background: var(--legience-danger);
           }
         }
 
         // Warning (Create Task) - Lighter
         &.action-warning {
-          background: rgba(var(--vz-warning-rgb), 0.85);
-          color: #000;
+          background: rgba(var(--legience-warning-rgb), 0.85);
+          color: var(--legience-text-primary, #000);
 
           &:hover {
-            background: var(--vz-warning);
+            background: var(--legience-warning);
           }
         }
 
         // Info (Add Note) - Lighter
         &.action-info {
-          background: rgba(var(--vz-info-rgb), 0.85);
+          background: rgba(var(--legience-info-rgb), 0.85);
           color: white;
 
           &:hover {
-            background: var(--vz-info);
+            background: var(--legience-info);
           }
         }
 
         // Success (Attach Document) - Lighter
         &.action-success {
-          background: rgba(var(--vz-success-rgb), 0.85);
+          background: rgba(var(--legience-success-rgb), 0.85);
           color: white;
 
           &:hover {
-            background: var(--vz-success);
+            background: var(--legience-success);
           }
         }
 
         // Secondary (Schedule Event) - Lighter
         &.action-secondary {
-          background: rgba(var(--vz-secondary-rgb), 0.85);
+          background: rgba(var(--legience-secondary-rgb), 0.85);
           color: white;
 
           &:hover {
-            background: var(--vz-secondary);
+            background: var(--legience-secondary);
           }
         }
       }
@@ -1491,7 +1491,7 @@
       .action-badge-skeleton {
         width: 120px;
         height: 32px;
-        background: linear-gradient(90deg, rgba(var(--vz-primary-rgb), 0.1) 25%, rgba(var(--vz-primary-rgb), 0.2) 50%, rgba(var(--vz-primary-rgb), 0.1) 75%);
+        background: linear-gradient(90deg, rgba(var(--legience-accent-rgb), 0.1) 25%, rgba(var(--legience-accent-rgb), 0.2) 50%, rgba(var(--legience-accent-rgb), 0.1) 75%);
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 0.25rem;
@@ -1532,24 +1532,24 @@
           li {
             padding: 0.5rem 0.75rem;
             margin-bottom: 0.5rem;
-            border-left: 3px solid var(--vz-border-color);
-            background: rgba(var(--vz-primary-rgb), 0.02);
+            border-left: 3px solid var(--legience-border-hairline);
+            background: rgba(var(--legience-accent-rgb), 0.02);
             border-radius: 0.25rem;
 
             // Urgent items (⚠️)
             &:contains("URGENT") {
-              border-left-color: rgba(var(--vz-danger-rgb), 0.8);
-              background: rgba(var(--vz-danger-rgb), 0.05);
+              border-left-color: rgba(var(--legience-danger-rgb), 0.8);
+              background: rgba(var(--legience-danger-rgb), 0.05);
             }
 
             // Today items (🔔)
             &:contains("TODAY") {
-              border-left-color: rgba(var(--vz-warning-rgb), 0.8);
-              background: rgba(var(--vz-warning-rgb), 0.05);
+              border-left-color: rgba(var(--legience-warning-rgb), 0.8);
+              background: rgba(var(--legience-warning-rgb), 0.05);
             }
 
             strong {
-              color: var(--vz-body-color);
+              color: var(--legience-text-secondary);
               font-weight: 600;
             }
           }
@@ -1564,7 +1564,7 @@
 
       p {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        color: #495057;
+        color: var(--legience-text-secondary, #495057);
         font-weight: 600;
       }
 
@@ -1593,46 +1593,46 @@
 // ===== RESEARCH PROGRESS CARD (Perplexity-inspired) =====
 
 .research-progress {
-  border: 1px solid var(--vz-border-color, #e9ebec);
+  border: 1px solid var(--legience-border-hairline, #e9ebec);
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.3s ease;
 
-  &.active { border-color: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.25); }
+  &.active { border-color: rgba(var(--legience-accent-rgb, 64, 81, 137), 0.25); }
 
   .rp-header {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 12px 16px;
-    background: var(--vz-light, #f8f9fb);
-    border-bottom: 1px solid var(--vz-border-color, #eceef2);
+    background: var(--legience-bg-card-hover, #f8f9fb);
+    border-bottom: 1px solid var(--legience-border-hairline, #eceef2);
     cursor: pointer;
     user-select: none;
     transition: background 0.15s ease;
 
-    &:hover { background: var(--vz-light-rgb, #f3f4f8); }
+    &:hover { background: var(--legience-bg-card-hover-rgb, #f3f4f8); }
   }
 
   .rp-icon {
     width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     font-size: 14px;
 
     &.spinning i { animation: rp-spin 2s linear infinite; }
-    &.done { color: var(--vz-success); }
+    &.done { color: var(--legience-success); }
   }
 
   .rp-title {
     flex: 1;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--vz-heading-color, #212529);
+    color: var(--legience-text-primary, #212529);
 
     .rp-timer {
       font-weight: 400;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-muted, #878a99);
       font-size: 11.5px;
       margin-left: 6px;
       font-variant-numeric: tabular-nums;
@@ -1644,20 +1644,20 @@
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    color: var(--vz-secondary-color, #878a99);
+    color: var(--legience-text-muted, #878a99);
     font-weight: 500;
-    background: var(--vz-card-bg, #fff);
+    background: var(--legience-bg-card, #fff);
     padding: 3px 10px;
     border-radius: 20px;
-    border: 1px solid var(--vz-border-color, #eceef2);
+    border: 1px solid var(--legience-border-hairline, #eceef2);
 
     i { font-size: 12px; }
-    .count { color: var(--vz-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .count { color: var(--legience-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
   }
 
   .rp-chevron {
     font-size: 16px;
-    color: var(--vz-secondary-color, #adb5bd);
+    color: var(--legience-text-muted, #adb5bd);
     transition: transform 0.3s ease;
 
     &.open { transform: rotate(180deg); }
@@ -1666,13 +1666,13 @@
   // Progress bar
   .rp-progress-bar {
     height: 2px;
-    background: var(--vz-border-color, #eceef2);
+    background: var(--legience-border-hairline, #eceef2);
     position: relative;
     overflow: hidden;
 
     .fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--vz-primary) 0%, var(--vz-success) 100%);
+      background: linear-gradient(90deg, var(--legience-accent) 0%, var(--legience-success) 100%);
       border-radius: 0 2px 2px 0;
       transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
@@ -1715,10 +1715,10 @@
       top: 32px;
       bottom: -2px;
       width: 1.5px;
-      background: var(--vz-border-color, #eceef2);
+      background: var(--legience-border-hairline, #eceef2);
       transition: background 0.4s ease;
     }
-    &.completed:not(:last-child)::after { background: var(--vz-success); }
+    &.completed:not(:last-child)::after { background: var(--legience-success); }
 
     .step-node {
       width: 22px; height: 22px;
@@ -1744,13 +1744,13 @@
       font-size: 11px;
       line-height: 1.4;
       margin-top: 2px;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-muted, #878a99);
       transition: all 0.3s ease;
     }
 
     .step-elapsed {
       font-size: 10px;
-      color: var(--vz-secondary-color, #adb5bd);
+      color: var(--legience-text-muted, #adb5bd);
       flex-shrink: 0;
       padding-top: 3px;
       font-variant-numeric: tabular-nums;
@@ -1759,45 +1759,45 @@
     // Pending
     &.pending {
       .step-node {
-        background: var(--vz-light, #f5f6fa);
-        border: 1.5px solid var(--vz-border-color, #d5d9e2);
-        color: var(--vz-secondary-color, #c4c8ce);
+        background: var(--legience-bg-card-hover, #f5f6fa);
+        border: 1.5px solid var(--legience-border-hairline, #d5d9e2);
+        color: var(--legience-text-muted, #c4c8ce);
       }
-      .step-label { color: var(--vz-secondary-color, #adb5bd); }
+      .step-label { color: var(--legience-text-muted, #adb5bd); }
     }
 
     // Active
     &.active {
       .step-node {
-        background: var(--vz-primary);
-        border: 2px solid var(--vz-primary);
+        background: var(--legience-accent);
+        border: 2px solid var(--legience-accent);
         color: #fff;
-        box-shadow: 0 0 0 4px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.12);
+        box-shadow: 0 0 0 4px rgba(var(--legience-accent-rgb, 64, 81, 137), 0.12);
         animation: rp-node-pulse 2s ease-in-out infinite;
 
         i { animation: rp-spin 1s linear infinite; font-size: 11px; }
       }
-      .step-label { color: var(--vz-heading-color, #1a1d26); font-weight: 600; }
+      .step-label { color: var(--legience-text-primary, #1a1d26); font-weight: 600; }
     }
 
     // Completed
     &.completed {
       .step-node {
-        background: var(--vz-success);
-        border: 2px solid var(--vz-success);
+        background: var(--legience-success);
+        border: 2px solid var(--legience-success);
         color: #fff;
         animation: rp-check-pop 0.35s ease-out;
 
         i { font-size: 11px; }
       }
-      .step-label { color: var(--vz-body-color, #495057); }
-      .step-detail { font-size: 10.5px; color: var(--vz-secondary-color, #adb5bd); }
+      .step-label { color: var(--legience-text-secondary, #495057); }
+      .step-detail { font-size: 10.5px; color: var(--legience-text-muted, #adb5bd); }
     }
 
     // Error
     &.error {
-      .step-node { background: var(--vz-danger); border-color: var(--vz-danger); color: #fff; }
-      .step-label { color: var(--vz-danger); font-weight: 600; }
+      .step-node { background: var(--legience-danger); border-color: var(--legience-danger); color: #fff; }
+      .step-label { color: var(--legience-danger); font-weight: 600; }
     }
   }
 }
@@ -1810,8 +1810,8 @@
 }
 
 @keyframes rp-node-pulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.12); }
-  50% { box-shadow: 0 0 0 8px rgba(var(--vz-primary-rgb, 64, 81, 137), 0.05); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(var(--legience-accent-rgb, 64, 81, 137), 0.12); }
+  50% { box-shadow: 0 0 0 8px rgba(var(--legience-accent-rgb, 64, 81, 137), 0.05); }
 }
 
 @keyframes rp-check-pop {
@@ -1832,7 +1832,7 @@
       .action-cards-grid {
         .action-card {
           &:hover {
-            box-shadow: 0 4px 12px rgba(var(--vz-primary-rgb), 0.25);
+            box-shadow: 0 4px 12px rgba(var(--legience-accent-rgb), 0.25);
           }
         }
       }
@@ -1852,34 +1852,34 @@
 
         .ai-response-markdown {
           // Force readable text color in dark mode
-          color: var(--vz-body-color) !important;
+          color: var(--legience-text-secondary) !important;
 
           // Override ALL nested text to be readable
           *, *::before, *::after {
-            color: var(--vz-body-color) !important;
+            color: var(--legience-text-secondary) !important;
           }
 
           // Ensure text elements are visible
           p, span, div, li, td, th, label, a {
-            color: var(--vz-body-color) !important;
+            color: var(--legience-text-secondary) !important;
           }
 
           h1, h2, h3, h4, h5, h6 {
-            color: var(--vz-heading-color) !important;
+            color: var(--legience-text-primary) !important;
             border-bottom-color: rgba(255, 255, 255, 0.1);
           }
 
           h1 {
-            border-bottom-color: rgba(var(--vz-primary-rgb), 0.5);
+            border-bottom-color: rgba(var(--legience-accent-rgb), 0.5);
           }
 
           strong {
-            color: var(--vz-heading-color) !important;
+            color: var(--legience-text-primary) !important;
           }
 
           code {
             background: rgba(255, 255, 255, 0.05);
-            color: var(--vz-body-color) !important;
+            color: var(--legience-text-secondary) !important;
             border-color: rgba(255, 255, 255, 0.1);
           }
 
@@ -1888,40 +1888,40 @@
             border-color: rgba(255, 255, 255, 0.1);
 
             code {
-              color: var(--vz-body-color) !important;
+              color: var(--legience-text-secondary) !important;
             }
           }
 
           blockquote {
             background: rgba(255, 255, 255, 0.03);
-            color: var(--vz-body-color) !important;
-            border-left-color: rgba(var(--vz-secondary-rgb), 0.7);
+            color: var(--legience-text-secondary) !important;
+            border-left-color: rgba(var(--legience-secondary-rgb), 0.7);
 
             p {
-              color: var(--vz-body-color) !important;
+              color: var(--legience-text-secondary) !important;
             }
 
             strong {
-              color: rgba(var(--vz-secondary-rgb), 0.9);
+              color: rgba(var(--legience-secondary-rgb), 0.9);
             }
 
             cite {
-              color: rgba(var(--vz-secondary-rgb), 0.9);
+              color: rgba(var(--legience-secondary-rgb), 0.9);
             }
           }
 
           // H3 Section Labels - Dark Mode
           h3 {
-            background: rgba(var(--vz-primary-rgb), 0.1);
-            color: rgba(var(--vz-primary-rgb), 0.95);
+            background: rgba(var(--legience-accent-rgb), 0.1);
+            color: rgba(var(--legience-accent-rgb), 0.95);
           }
 
           a {
-            color: var(--vz-primary) !important;
-            border-bottom-color: rgba(var(--vz-primary-rgb), 0.7);
+            color: var(--legience-accent) !important;
+            border-bottom-color: rgba(var(--legience-accent-rgb), 0.7);
 
             &:hover {
-              background: rgba(var(--vz-primary-rgb), 0.1);
+              background: rgba(var(--legience-accent-rgb), 0.1);
             }
           }
 
@@ -1943,7 +1943,7 @@
                 }
 
                 &:hover {
-                  background: rgba(var(--vz-primary-rgb), 0.1);
+                  background: rgba(var(--legience-accent-rgb), 0.1);
                 }
 
                 td {
@@ -1970,7 +1970,7 @@
               color: #e4e6eb;
 
               &:before {
-                color: rgba(var(--vz-primary-rgb), 0.9);
+                color: rgba(var(--legience-accent-rgb), 0.9);
               }
             }
           }
@@ -1979,11 +1979,11 @@
     }
 
     .ai-action-badges {
-      background: rgba(var(--vz-warning-rgb), 0.1);
-      border-left-color: rgba(var(--vz-warning-rgb), 0.7);
+      background: rgba(var(--legience-warning-rgb), 0.1);
+      border-left-color: rgba(var(--legience-warning-rgb), 0.7);
 
       .badge-label {
-        color: rgba(var(--vz-warning-rgb), 0.9);
+        color: rgba(var(--legience-warning-rgb), 0.9);
       }
     }
 
@@ -2002,8 +2002,8 @@
 
         &:hover {
           background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(var(--vz-primary-rgb), 0.7);
-          color: rgba(var(--vz-primary-rgb), 0.9);
+          border-color: rgba(var(--legience-accent-rgb), 0.7);
+          color: rgba(var(--legience-accent-rgb), 0.9);
         }
       }
     }

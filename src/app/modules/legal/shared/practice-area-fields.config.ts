@@ -44,7 +44,22 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
             { value: 'other', label: 'Other' }
           ]
         },
-        { name: 'accidentLocation', label: 'Accident Location', type: 'text', colSize: 'col-md-4', placeholder: 'Enter accident location' }
+        { name: 'accidentLocation', label: 'Accident Location', type: 'text', colSize: 'col-md-4', placeholder: 'Enter accident location' },
+        { name: 'mechanismDescription', label: 'Mechanism of Injury', type: 'textarea', colSize: 'col-md-12', placeholder: 'How the incident occurred (e.g. "Restrained driver, stopped, struck from behind by truck at moderate speed")' },
+        { name: 'plaintiffRole', label: 'Plaintiff Role', type: 'select', colSize: 'col-md-4',
+          options: [
+            { value: 'DRIVER', label: 'Driver' },
+            { value: 'PASSENGER', label: 'Passenger' },
+            { value: 'PEDESTRIAN', label: 'Pedestrian' },
+            { value: 'CYCLIST', label: 'Cyclist' },
+            { value: 'BYSTANDER', label: 'Bystander' },
+            { value: 'OTHER', label: 'Other' }
+          ]
+        },
+        { name: 'erVisitDol', label: 'ER Visit on Date of Loss', type: 'checkbox', colSize: 'col-md-4' },
+        { name: 'daysMissedWork', label: 'Days Missed from Work', type: 'number', colSize: 'col-md-4', placeholder: '0' },
+        { name: 'policeReportObtained', label: 'Police Report Obtained', type: 'checkbox', colSize: 'col-md-4' },
+        { name: 'policeReportNumber', label: 'Police Report Number', type: 'text', colSize: 'col-md-8', placeholder: 'Enter police report number' }
       ]
     },
     {
@@ -68,6 +83,9 @@ export const PRACTICE_AREA_FIELDS: { [key: string]: PracticeAreaSection[] } = {
       fields: [
         { name: 'clientInsuranceCompany', label: 'Client Insurance Company', type: 'text', colSize: 'col-md-6', placeholder: "Enter client's insurer" },
         { name: 'clientInsurancePolicyNumber', label: 'Client Policy Number', type: 'text', colSize: 'col-md-6', placeholder: 'Enter policy number' },
+        { name: 'clientInsuranceUmLimit', label: 'UM Limit', type: 'currency', colSize: 'col-md-6', placeholder: '0.00' },
+        { name: 'clientInsuranceUimLimit', label: 'UIM Limit', type: 'currency', colSize: 'col-md-6', placeholder: '0.00' },
+        { name: 'clientInsuranceMedPayLimit', label: 'MedPay Limit', type: 'currency', colSize: 'col-md-6', placeholder: '0.00' },
         { name: 'clientInsuranceAdjusterName', label: 'Client Adjuster Name', type: 'text', colSize: 'col-md-6', placeholder: 'Enter adjuster name' },
         { name: 'clientInsuranceAdjusterEmail', label: 'Client Adjuster Email', type: 'text', colSize: 'col-md-6', placeholder: 'adjuster@example.com' },
         { name: 'clientInsuranceAdjusterPhone', label: 'Client Adjuster Phone', type: 'text', colSize: 'col-md-6', placeholder: '(555) 555-5555' }

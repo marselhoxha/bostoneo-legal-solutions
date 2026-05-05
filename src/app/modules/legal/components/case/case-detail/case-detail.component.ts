@@ -42,6 +42,8 @@ import { PushNotificationService } from '../../../../../core/services/push-notif
 import { NotificationManagerService, NotificationCategory, NotificationPriority } from '../../../../../core/services/notification-manager.service';
 import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_PRACTICE_AREA, groupPracticeAreaSections } from '../../../shared/practice-area-fields.config';
 import { ImageUrlPipe } from '../../../../../pipes/image-url.pipe';
+import { PiCaseDetailComponent } from '../pi-case-detail/pi-case-detail.component';
+import { FeatureFlagService } from '../../../../../core/services/feature-flag.service';
 
 @Component({
   selector: 'app-case-detail',
@@ -59,7 +61,8 @@ import { ImageUrlPipe } from '../../../../../pipes/image-url.pipe';
     CaseTimeEntriesComponent,
     CaseResearchComponent,
     CaseProgressManagerComponent,
-    ImageUrlPipe
+    ImageUrlPipe,
+    PiCaseDetailComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -193,8 +196,23 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     private notificationService: NotificationService,
     private auditLogService: AuditLogService,
     private pushNotificationService: PushNotificationService,
-    private notificationManager: NotificationManagerService
+    private notificationManager: NotificationManagerService,
+    private featureFlags: FeatureFlagService
   ) {}
+
+  /**
+   * V61–V63 PI workflow migration — true when this case should render the new
+   * pi-case-detail shell instead of the legacy 9-tab UI. Resolved per call so a
+   * mid-session flag flip (or a "Switch to legacy view" sessionStorage write) takes
+   * effect on the next change-detection tick.
+   */
+  get useNewPiView(): boolean {
+    if (!this.case) return false;
+    if (this.case.practiceArea !== 'Personal Injury') return false;
+    // sessionStorage escape hatch — set by pi-case-detail's "Switch to legacy view"
+    if (sessionStorage.getItem(`legacyCaseView:${this.case.id}`) === '1') return false;
+    return this.featureFlags.isAttorneyFacingPiViewEnabled();
+  }
 
   ngOnInit(): void {
     // Set up role-based permissions
@@ -259,8 +277,12 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     if (currentCase && currentCase.id === caseId) {
       this.case = currentCase as any;
       this.contextLoaded = true;
-      this.loadCaseEvents(currentCase.id);
-      this.loadPracticeAreaFields();
+      // Same useNewPiView short-circuit as the loadCase path — skip legacy satellites
+      // when the new pi-case-detail shell will own the view.
+      if (!this.useNewPiView) {
+        this.loadCaseEvents(currentCase.id);
+        this.loadPracticeAreaFields();
+      }
       this.cdr.detectChanges();
       return;
     }
@@ -637,8 +659,11 @@ export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isLoading = false;
         this.cdr.detectChanges();
         
-        // Load associated events after case is loaded
-        if (this.case && this.case.id) {
+        // Load associated events after case is loaded.
+        // V61–V63: skip the legacy satellites entirely when the new pi-case-detail
+        // shell will render — those data feeds drive Events / Team / Tasks tabs that
+        // don't exist in the new view (P5/P6 will fetch their own data when needed).
+        if (this.case && this.case.id && !this.useNewPiView) {
           this.loadCaseEvents(this.case.id);
           this.loadCaseTeam(this.case.id);
           this.loadAllCaseTasks(this.case.id);

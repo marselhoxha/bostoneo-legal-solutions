@@ -13,7 +13,7 @@
     top: 1.25rem;
     bottom: 1.5rem;
     width: 3px;
-    background: linear-gradient(180deg, var(--vz-primary) 0%, rgba(var(--vz-primary-rgb), 0.2) 100%);
+    background: linear-gradient(180deg, var(--legience-accent) 0%, rgba(var(--legience-accent-rgb), 0.2) 100%);
     border-radius: 2px;
   }
 
@@ -22,35 +22,35 @@
   h4 {
     font-size: 1.5rem;
     font-weight: 500;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin: 0;
   }
 }
 
 // Plan Header Card
 .plan-header {
-  background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.05) 100%);
-  border-left: 4px solid var(--vz-primary);
+  background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.05) 0%, rgba(var(--legience-info-rgb), 0.05) 100%);
+  border-left: 4px solid var(--legience-accent);
   border-radius: 12px;
 
   &.border-secondary {
-    border-left-color: var(--vz-secondary);
-    background: linear-gradient(135deg, rgba(var(--vz-secondary-rgb), 0.05) 0%, rgba(var(--vz-secondary-rgb), 0.02) 100%);
+    border-left-color: var(--legience-secondary);
+    background: linear-gradient(135deg, rgba(var(--legience-secondary-rgb), 0.05) 0%, rgba(var(--legience-secondary-rgb), 0.02) 100%);
   }
 
   &.border-info {
-    border-left-color: var(--vz-info);
-    background: linear-gradient(135deg, rgba(var(--vz-info-rgb), 0.05) 0%, rgba(var(--vz-info-rgb), 0.02) 100%);
+    border-left-color: var(--legience-info);
+    background: linear-gradient(135deg, rgba(var(--legience-info-rgb), 0.05) 0%, rgba(var(--legience-info-rgb), 0.02) 100%);
   }
 
   &.border-primary {
-    border-left-color: var(--vz-primary);
-    background: linear-gradient(135deg, rgba(var(--vz-primary-rgb), 0.05) 0%, rgba(var(--vz-primary-rgb), 0.02) 100%);
+    border-left-color: var(--legience-accent);
+    background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.05) 0%, rgba(var(--legience-accent-rgb), 0.02) 100%);
   }
 
   &.border-warning {
-    border-left-color: var(--vz-warning);
-    background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.08) 0%, rgba(var(--vz-warning-rgb), 0.03) 100%);
+    border-left-color: var(--legience-warning);
+    background: linear-gradient(135deg, rgba(var(--legience-warning-rgb), 0.08) 0%, rgba(var(--legience-warning-rgb), 0.03) 100%);
   }
 }
 
@@ -88,7 +88,7 @@
 
   .feature-col {
     width: 30%;
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
   }
 
   .plan-col {
@@ -102,15 +102,15 @@
   }
 
   .current-plan {
-    background-color: rgba(var(--vz-primary-rgb), 0.05);
+    background-color: rgba(var(--legience-accent-rgb), 0.05);
 
     .plan-header {
-      border-bottom: 3px solid var(--vz-primary);
+      border-bottom: 3px solid var(--legience-accent);
     }
   }
 
   tfoot td {
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
     padding-top: 1.5rem;
     padding-bottom: 1.5rem;
   }
@@ -156,34 +156,34 @@
 
 // Button Styles
 .btn-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   border: none;
 
   &:hover {
-    background-color: var(--vz-primary);
+    background-color: var(--legience-accent);
     color: #fff;
   }
 }
 
 .btn-soft-info {
-  background-color: rgba(var(--vz-info-rgb), 0.1);
-  color: var(--vz-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
+  color: var(--legience-info);
   border: none;
 
   &:hover {
-    background-color: var(--vz-info);
+    background-color: var(--legience-info);
     color: #fff;
   }
 }
 
 .btn-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
   border: none;
 
   &:hover {
-    background-color: var(--vz-secondary);
+    background-color: var(--legience-secondary);
     color: #fff;
   }
 }

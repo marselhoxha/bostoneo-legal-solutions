@@ -66,6 +66,12 @@ import {
   RedFlagItem,
   TreatmentGap
 } from '../../shared/models/pi-medical-summary.model';
+import {
+  formatOpenItemType as sharedFormatOpenItemType,
+  getDiagnosesByRegion as sharedGetDiagnosesByRegion,
+  getAdjusterSeverityClass as sharedAdjusterSeverity,
+  getAdjusterTypeIcon as sharedAdjusterIcon,
+} from '../../shared/utils/pi-medical-helpers';
 
 // AI Workspace Document Editor and Services
 import { DocumentEditorComponent } from '../../ai-workspace/document-editor/document-editor.component';
@@ -3919,6 +3925,23 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
     };
   }
 
+  /**
+   * Tier 5d — Group the existing diagnosisList by anatomical region for the
+   * Diagnostic Findings card. Delegates to the shared util so this view and
+   * the new pi-case-detail shell stay in sync on region detection rules.
+   */
+  getDiagnosesByRegion(): Array<{ region: string; items: any[] }> {
+    return sharedGetDiagnosesByRegion(this.medicalSummary?.diagnosisList);
+  }
+
+  /**
+   * Tier 5c — Human-readable label for an OpenItem type. Delegates to shared
+   * util so the new pi-case-detail Critical Path card uses identical phrasing.
+   */
+  formatOpenItemType(type: string | undefined | null): string {
+    return sharedFormatOpenItemType(type);
+  }
+
   scanCaseDocuments(): void {
     if (!this.linkedCase?.id) return;
 
@@ -4519,24 +4542,11 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
   }
 
   getAdjusterSeverityClass(severity: string): string {
-    switch (severity?.toUpperCase()) {
-      case 'HIGH': return 'bg-danger-subtle text-danger';
-      case 'MEDIUM': return 'bg-warning-subtle text-warning';
-      case 'LOW': return 'bg-info-subtle text-info';
-      default: return 'bg-secondary-subtle text-secondary';
-    }
+    return sharedAdjusterSeverity(severity);
   }
 
   getAdjusterTypeIcon(type: string): string {
-    switch (type) {
-      case 'TREATMENT_GAP': return 'ri-timer-flash-line';
-      case 'PRE_EXISTING': return 'ri-heart-pulse-line';
-      case 'EXCESSIVE_TREATMENT': return 'ri-scales-3-line';
-      case 'CAUSATION': return 'ri-link-unlink-m';
-      case 'MISSING_DOCUMENTATION': return 'ri-file-unknow-line';
-      case 'BILLING_CONCERNS': return 'ri-money-dollar-circle-line';
-      default: return 'ri-error-warning-line';
-    }
+    return sharedAdjusterIcon(type);
   }
 
   // --- Document Checklist ---

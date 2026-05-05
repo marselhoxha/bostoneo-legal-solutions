@@ -153,6 +153,23 @@ export interface LegalCase {
   // Practice Area Identifier
   practiceArea?: string;
 
+  // Attorney Workflow (V61) — primarily PI cases.
+  // stage is auto-derived; manual overrides sticky.
+  stage?: 'INTAKE' | 'INVESTIGATION' | 'TREATMENT' | 'PRE_DEMAND' | 'DEMAND_SENT' | 'NEGOTIATION' | 'SETTLED';
+  // V62 — true when an attorney has manually set `stage`. When true, the backend
+  // skips auto-derivation. Cleared via a "Reset to auto" action (UI in P4+).
+  stageManuallySet?: boolean;
+  mechanismDescription?: string;
+  plaintiffRole?: 'DRIVER' | 'PASSENGER' | 'PEDESTRIAN' | 'CYCLIST' | 'BYSTANDER' | 'OTHER';
+  erVisitDol?: boolean;
+  policeReportObtained?: boolean;
+  policeReportNumber?: string;
+  clientInsuranceUmLimit?: number;
+  clientInsuranceUimLimit?: number;
+  clientInsuranceMedPayLimit?: number;
+  daysMissedWork?: number;
+  statuteOfLimitations?: Date;
+
   // Criminal Defense Fields
   primaryCharge?: string;
   chargeLevel?: string;

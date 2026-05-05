@@ -57,7 +57,7 @@
   border: 2px solid #fff;
 
   &.active {
-    background: #0ab39c;
+    background: var(--legience-success, #0ab39c);
   }
 }
 
@@ -71,12 +71,12 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 0.25rem;
-  color: var(--vz-heading-color, #495057);
+  color: var(--legience-text-primary, #495057);
 }
 
 .profile-email {
   font-size: 0.875rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   margin-bottom: 0.5rem;
 }
 
@@ -159,13 +159,13 @@
 
 .summary-label {
   font-size: 0.85rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 .summary-value {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--vz-heading-color, #495057);
+  color: var(--legience-text-primary, #495057);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -178,7 +178,7 @@
   background: #6c757d;
 
   &.active {
-    background: #0ab39c;
+    background: var(--legience-success, #0ab39c);
   }
 }
 
@@ -206,7 +206,7 @@
   height: 40px;
   border-radius: 10px;
   background: rgba(64, 81, 137, 0.08);
-  color: #405189;
+  color: var(--legience-accent, #405189);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,7 +221,7 @@
   label {
     display: block;
     font-size: 0.8rem;
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     margin-bottom: 0.25rem;
     font-weight: 500;
   }
@@ -229,7 +229,7 @@
   p {
     font-size: 0.95rem;
     font-weight: 500;
-    color: var(--vz-heading-color, #495057);
+    color: var(--legience-text-primary, #495057);
     margin: 0;
     word-break: break-word;
   }
@@ -241,15 +241,15 @@
 .profile-edit-form {
   .form-floating {
     label {
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
     }
 
     .form-control {
       border-radius: 8px;
-      border-color: #e9ebec;
+      border-color: var(--legience-border-hairline, #e9ebec);
 
       &:focus {
-        border-color: #405189;
+        border-color: var(--legience-accent, #405189);
         box-shadow: 0 0 0 0.2rem rgba(64, 81, 137, 0.1);
       }
     }
@@ -263,14 +263,14 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.1);
+  background: rgba(var(--legience-accent-rgb, 64, 81, 137), 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
 
   i {
     font-size: 1.5rem;
-    color: var(--vz-primary, #405189);
+    color: var(--legience-accent, #405189);
   }
 }
 
@@ -301,7 +301,7 @@
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: var(--vz-secondary-color, #6c757d);
+    color: var(--legience-text-muted, #6c757d);
   }
 }
 
@@ -313,24 +313,24 @@
 // Soft Buttons
 // ========================================
 .btn-soft-primary {
-  color: var(--vz-primary, #405189);
-  background-color: rgba(var(--vz-primary-rgb, 64, 81, 137), 0.1);
+  color: var(--legience-accent, #405189);
+  background-color: rgba(var(--legience-accent-rgb, 64, 81, 137), 0.1);
   border: none;
 
   &:hover {
     color: #fff;
-    background-color: var(--vz-primary, #405189);
+    background-color: var(--legience-accent, #405189);
   }
 }
 
 .btn-soft-info {
-  color: var(--vz-info, #299cdb);
-  background-color: rgba(var(--vz-info-rgb, 41, 156, 219), 0.1);
+  color: var(--legience-info, #299cdb);
+  background-color: rgba(var(--legience-info-rgb, 41, 156, 219), 0.1);
   border: none;
 
   &:hover {
     color: #fff;
-    background-color: var(--vz-info, #299cdb);
+    background-color: var(--legience-info, #299cdb);
   }
 }
 
@@ -345,7 +345,7 @@
     letter-spacing: 0.3px;
   }
   p {
-    color: #333;
+    color: var(--legience-text-primary, #333);
   }
 }
 
@@ -373,12 +373,12 @@
 
   &.granted {
     background: rgba(10, 179, 156, 0.1);
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
   }
 
   &.pending {
     background: rgba(64, 81, 137, 0.1);
-    color: #405189;
+    color: var(--legience-accent, #405189);
   }
 }
 

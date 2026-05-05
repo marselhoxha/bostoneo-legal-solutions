@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
 }
 
 .conversation-list-header {
@@ -10,11 +10,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 
   h5 {
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 
   .btn {
@@ -34,7 +34,7 @@
 
 .conversation-search {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 }
 
 .search-input-wrapper {
@@ -45,7 +45,7 @@
     left: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     font-size: 1rem;
     pointer-events: none;
   }
@@ -57,8 +57,8 @@
     font-size: 0.875rem;
 
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.2rem rgba(var(--vz-primary-rgb), 0.15);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.15);
     }
   }
 
@@ -67,13 +67,13 @@
     right: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     font-size: 1rem;
     cursor: pointer;
     transition: color 0.2s ease;
 
     &:hover {
-      color: var(--vz-danger);
+      color: var(--legience-danger);
     }
   }
 }
@@ -88,11 +88,11 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(var(--vz-secondary-rgb), 0.3);
+    background: rgba(var(--legience-secondary-rgb), 0.3);
     border-radius: 3px;
 
     &:hover {
-      background: rgba(var(--vz-secondary-rgb), 0.5);
+      background: rgba(var(--legience-secondary-rgb), 0.5);
     }
   }
 }
@@ -107,13 +107,13 @@
 
   .empty-icon {
     font-size: 3rem;
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     opacity: 0.3;
     margin-bottom: 1rem;
   }
 
   .empty-text {
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     margin-bottom: 1rem;
     font-size: 0.9375rem;
   }
@@ -129,7 +129,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--vz-secondary);
+  color: var(--legience-secondary);
 }
 
 .conversation-item {
@@ -143,7 +143,7 @@
   min-height: 60px;
 
   &:hover {
-    background: rgba(var(--vz-primary-rgb), 0.08);
+    background: rgba(var(--legience-accent-rgb), 0.08);
 
     .btn-delete {
       opacity: 1;
@@ -153,13 +153,13 @@
   }
 
   &.active {
-    background: rgba(var(--vz-primary-rgb), 0.1);
-    border-left: 3px solid var(--vz-primary);
+    background: rgba(var(--legience-accent-rgb), 0.1);
+    border-left: 3px solid var(--legience-accent);
     padding-left: calc(1.5rem - 3px);
 
     .conversation-title {
       font-weight: 600;
-      color: var(--vz-primary);
+      color: var(--legience-accent);
     }
 
     .btn-delete {
@@ -174,7 +174,7 @@
   width: 36px;
   height: 36px;
   border-radius: 0.5rem;
-  background: rgba(var(--vz-primary-rgb), 0.1);
+  background: rgba(var(--legience-accent-rgb), 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -182,7 +182,7 @@
 
   i {
     font-size: 1.125rem;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
   }
 }
 
@@ -194,7 +194,7 @@
 .conversation-title {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   margin-bottom: 0.25rem;
   white-space: nowrap;
   overflow: hidden;
@@ -206,7 +206,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: var(--vz-secondary);
+  color: var(--legience-secondary);
 }
 
 .conversation-date {
@@ -221,7 +221,7 @@
   height: 18px;
   background: rgba(64, 81, 137, 0.15);
   border-radius: 4px;
-  color: #405189;
+  color: var(--legience-accent, #405189);
   cursor: help;
 
   i {
@@ -242,7 +242,7 @@
   pointer-events: none;
   background: transparent;
   border: none;
-  color: var(--vz-secondary);
+  color: var(--legience-secondary);
   width: 32px;
   height: 32px;
   padding: 0;
@@ -259,11 +259,11 @@
   }
 
   &:hover {
-    background: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
+    background: rgba(var(--legience-danger-rgb), 0.1);
+    color: var(--legience-danger);
   }
 
   &:active {
-    background: rgba(var(--vz-danger-rgb), 0.2);
+    background: rgba(var(--legience-danger-rgb), 0.2);
   }
 }

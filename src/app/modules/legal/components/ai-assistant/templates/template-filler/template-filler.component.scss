@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100%;
-  background: var(--vz-body-bg);
+  background: var(--legience-bg-page);
 }
 
 .filler-page {
@@ -21,8 +21,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
 }
 
@@ -36,15 +36,15 @@
 }
 
 .crumb-link {
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  &:hover { color: var(--vz-primary); }
+  &:hover { color: var(--legience-accent); }
 }
 
 .crumb-current {
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -52,14 +52,14 @@
 }
 
 .crumb-sep {
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
   opacity: 0.6;
   font-size: 12px;
 }
 
 .crumb-step {
-  color: var(--vz-secondary-color, #74788d);
-  &.done { color: var(--vz-success); font-weight: 600; }
+  color: var(--legience-text-muted, #74788d);
+  &.done { color: var(--legience-success); font-weight: 600; }
 }
 
 .filler-actions {
@@ -71,12 +71,12 @@
 // ============ Loading / error ============
 
 .filler-state-card {
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   padding: 56px 24px;
   text-align: center;
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
 
   p { margin: 12px 0 0; }
 }
@@ -85,11 +85,11 @@
   i {
     display: block;
     font-size: 32px;
-    color: var(--vz-danger);
+    color: var(--legience-danger);
     margin-bottom: 8px;
   }
   h6 {
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     margin: 0 0 16px;
     font-weight: 500;
   }
@@ -111,8 +111,8 @@
 // ============ Preview pane ============
 
 .preview-pane {
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   padding: 14px;
   min-height: 600px;
@@ -120,7 +120,7 @@
 
 .preview-doc {
   background: white;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 6px;
   // Fill the entire available pane — earlier max-width-centered iteration was
   // a mistake. The user's actual concern is "text should fill the area," and
@@ -174,17 +174,17 @@
   ::ng-deep .tpl-chip.empty {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.86em;
-    background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.10);
-    border: 1px solid rgba(var(--vz-info-rgb, 41, 156, 219), 0.25);
-    color: var(--vz-info, #299cdb);
+    background: rgba(var(--legience-info-rgb, 41, 156, 219), 0.10);
+    border: 1px solid rgba(var(--legience-info-rgb, 41, 156, 219), 0.25);
+    color: var(--legience-info, #299cdb);
   }
 
   ::ng-deep .tpl-chip.filled {
-    background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.08);
+    background: rgba(var(--legience-success-rgb, 10, 179, 156), 0.08);
     color: inherit;
     cursor: pointer;
     border: 1px solid transparent;
-    &:hover { background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.16); }
+    &:hover { background: rgba(var(--legience-success-rgb, 10, 179, 156), 0.16); }
   }
 }
 
@@ -220,8 +220,8 @@
 }
 
 .panel-section {
-  background: var(--vz-secondary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   padding: 14px 16px;
 }
@@ -239,7 +239,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
 }
 
 // Renamed from `.progress` because Bootstrap defines that class as a styled
@@ -255,8 +255,8 @@
   line-height: 1.5;
   white-space: normal;
 
-  &.complete { color: var(--vz-success); }
-  &.incomplete { color: var(--vz-danger); }
+  &.complete { color: var(--legience-success); }
+  &.incomplete { color: var(--legience-danger); }
 }
 
 .pills {
@@ -270,8 +270,8 @@
   padding: 2px 9px;
   font-size: 11px;
   border-radius: 12px;
-  background: rgba(var(--vz-primary-rgb, 85, 110, 230), 0.08);
-  color: var(--vz-primary);
+  background: rgba(var(--legience-accent-rgb, 85, 110, 230), 0.08);
+  color: var(--legience-accent);
   font-weight: 500;
 }
 
@@ -281,7 +281,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--vz-secondary-color, #74788d);
+  color: var(--legience-text-muted, #74788d);
   opacity: 0.85;
 
   &:first-child { margin-top: 4px; }
@@ -297,13 +297,13 @@
     font-size: 12px;
     font-weight: 500;
     margin-bottom: 4px;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
   }
 
-  .required { color: var(--vz-danger); }
+  .required { color: var(--legience-danger); }
 
   .opt {
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     font-weight: 400;
     margin-left: 4px;
   }
@@ -313,8 +313,8 @@
     font-size: 9px;
     letter-spacing: 0.05em;
     padding: 1px 6px;
-    background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.10);
-    color: var(--vz-success);
+    background: rgba(var(--legience-success-rgb, 10, 179, 156), 0.10);
+    color: var(--legience-success);
     border-radius: 3px;
     text-transform: uppercase;
     font-weight: 700;
@@ -326,10 +326,10 @@
     width: 100%;
     padding: 7px 10px;
     font-size: 13px;
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 6px;
-    background: var(--vz-secondary-bg);
-    color: var(--vz-body-color);
+    background: var(--legience-bg-card);
+    color: var(--legience-text-secondary);
     font-family: inherit;
     box-sizing: border-box;
   }
@@ -338,30 +338,30 @@
   textarea:focus,
   select:focus {
     outline: none;
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb, 85, 110, 230), 0.15);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb, 85, 110, 230), 0.15);
   }
 
   &.has-value input,
   &.has-value textarea {
-    background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.04);
+    background: rgba(var(--legience-success-rgb, 10, 179, 156), 0.04);
   }
 
   .hint {
     margin-top: 4px;
     font-size: 11px;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
     line-height: 1.5;
   }
 }
 
 .empty-group-hint {
   padding: 10px 12px;
-  background: rgba(var(--vz-info-rgb, 41, 156, 219), 0.05);
-  border: 1px dashed rgba(var(--vz-info-rgb, 41, 156, 219), 0.25);
+  background: rgba(var(--legience-info-rgb, 41, 156, 219), 0.05);
+  border: 1px dashed rgba(var(--legience-info-rgb, 41, 156, 219), 0.25);
   border-radius: 6px;
   font-size: 11.5px;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   line-height: 1.5;
 }
 
@@ -377,8 +377,8 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: rgba(var(--vz-success-rgb, 10, 179, 156), 0.12);
-  color: var(--vz-success);
+  background: rgba(var(--legience-success-rgb, 10, 179, 156), 0.12);
+  color: var(--legience-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -392,16 +392,16 @@
 .done-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   margin-bottom: 8px;
 }
 
 .done-summary {
   font-size: 12.5px;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   line-height: 1.7;
 
-  strong { color: var(--vz-body-color); font-weight: 600; }
+  strong { color: var(--legience-text-secondary); font-weight: 600; }
 }
 
 .done-actions {
@@ -423,11 +423,11 @@
   padding: 8px;
   font-size: 12px;
   background: transparent;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   border: none;
   cursor: pointer;
 
-  &:hover { color: var(--vz-body-color); }
+  &:hover { color: var(--legience-text-secondary); }
 }
 
 // "What's next" card — visual list of follow-up actions available in the
@@ -445,11 +445,11 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
 
     i {
       font-size: 14px;
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       line-height: 1;
     }
   }
@@ -466,7 +466,7 @@
       padding: 10px 0;
 
       & + li {
-        border-top: 1px solid var(--vz-border-color);
+        border-top: 1px solid var(--legience-border-hairline);
       }
     }
   }
@@ -479,8 +479,8 @@
     width: 28px;
     height: 28px;
     border-radius: 7px;
-    background: rgba(var(--vz-primary-rgb, 85, 110, 230), 0.10);
-    color: var(--vz-primary);
+    background: rgba(var(--legience-accent-rgb, 85, 110, 230), 0.10);
+    color: var(--legience-accent);
     font-size: 14px;
     line-height: 1;
   }
@@ -497,11 +497,11 @@
   .next-title {
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
   }
 
   .next-sub {
     font-size: 11px;
-    color: var(--vz-secondary-color, #74788d);
+    color: var(--legience-text-muted, #74788d);
   }
 }

@@ -1,0 +1,667 @@
+// =====================================================
+// 15. LEGAL MODULE — Phase 2 component-specific overrides
+//   Heavy-hardcoded surfaces that Phase 1 tokens couldn't reach:
+//   case-list, case-detail, pi-case-detail, document-list, ai-workspace
+// =====================================================
+:root[data-design="rox"] {
+
+  // Scope: every major legal-module component
+  app-case-list,
+  app-case-detail,
+  app-pi-case-detail,
+  app-document-list,
+  app-ai-workspace,
+  app-personal-injury,
+  app-case-research,
+  app-document-analysis-viewer,
+  app-collection-viewer,
+  app-template-library,
+  app-draft-wizard,
+  app-draft-dashboard,
+  app-legal-research,
+  app-event-form {
+
+    // ---- Page header (case-list pattern with gradient accent bar) ----
+    .page-header-wrapper {
+      padding: 8px 0 16px !important;
+      margin-bottom: 16px !important;
+      border-bottom: 1px solid var(--rox-border-hairline);
+      padding-left: 0 !important;
+
+      &::before { display: none !important; }   // kill the gradient accent bar
+
+      h4 {
+        font-size: 20px !important;
+        font-weight: 500 !important;
+        letter-spacing: -0.015em;
+        color: var(--rox-text-primary) !important;
+      }
+    }
+
+    // ---- Search inputs ----
+    .search-box .search-input {
+      width: 280px;
+      border-radius: 6px !important;
+      border: 1px solid var(--vz-border-color) !important;
+      background: #ffffff !important;
+      font-size: 13px !important;
+      padding: 7px 12px 7px 36px !important;
+
+      &:hover { background: #ffffff !important; border-color: var(--rox-text-muted) !important; }
+      &:focus {
+        width: 280px !important;
+        border-color: var(--vz-primary) !important;
+        box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.12) !important;
+      }
+    }
+    .search-box .search-icon { color: var(--rox-text-muted) !important; }
+
+    // ---- Stats rows ----
+    .stats-row {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+    }
+
+    .stat-item {
+      background: transparent !important;
+      border-right: 1px solid var(--rox-border-hairline) !important;
+
+      &:hover { filter: none !important; background: var(--rox-bg-hover) !important; }
+      &.active { filter: none !important; background: rgba(11, 100, 233, 0.04) !important; }
+
+      // Reset Velzon's nth-child colored backgrounds (subtle, monochrome Rox-style)
+      &:nth-child(1), &:nth-child(2), &:nth-child(3), &:nth-child(4), &:nth-child(5) {
+        background: transparent !important;
+      }
+
+      .stat-label, .stat-name, .label, .l { color: var(--rox-text-muted) !important; font-size: 11.5px !important; text-transform: uppercase !important; letter-spacing: 0.05em; }
+      .stat-value, .stat-number, .value, .v { color: var(--rox-text-primary) !important; font-size: 22px !important; font-weight: 500 !important; letter-spacing: -0.015em; }
+    }
+
+    // ---- Generic card variants used across legal pages ----
+    .sw-card, .arg-card, .ps-method-card, .def-block,
+    .case-card, .timeline-card, .summary-card, .insight-card,
+    .premium-card, .info-card, .data-card, .meta-card {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      transition: border-color 0.12s ease;
+
+      &:hover {
+        border-color: var(--vz-border-color) !important;
+        box-shadow: rgba(0, 0, 0, 0.04) 0 1px 2px 0 !important;
+      }
+    }
+
+    // ---- "Case header premium" — case-detail hero ----
+    .case-header-premium {
+      background: #ffffff !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      border-radius: 10px !important;
+      box-shadow: none !important;
+      color: var(--rox-text-primary) !important;
+    }
+
+    // ---- pi-case-detail HERO (intentional dark — preserve, but Rox palette) ----
+    .pi-hero {
+      background: linear-gradient(135deg, #0c0a09 0%, #1c1917 50%, #292524 100%) !important;
+      box-shadow: none !important;
+      border: 1px solid #292524 !important;
+      border-radius: 10px !important;
+
+      &::before {
+        background-image:
+          radial-gradient(circle at 25% 20%, rgba(11, 100, 233, 0.14) 0%, transparent 60%),
+          radial-gradient(circle at 80% 80%, rgba(11, 100, 233, 0.06) 0%, transparent 50%) !important;
+      }
+
+      .pi-title { font-weight: 500 !important; letter-spacing: -0.02em !important; }
+      .pi-meta { color: rgba(255, 255, 255, 0.65) !important; }
+
+      .stage-pill, .manual-pill {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        font-weight: 500 !important;
+        letter-spacing: 0.02em !important;
+      }
+    }
+
+    // ---- Custom buttons (legal-module-specific) ----
+    .btn-pri {
+      background: var(--vz-primary) !important;
+      border-color: var(--vz-primary) !important;
+      color: #ffffff !important;
+      border-radius: 8px !important;
+      font-weight: 500 !important;
+      box-shadow: none !important;
+      &:hover { background: #0950bd !important; border-color: #0950bd !important; box-shadow: none !important; }
+    }
+
+    .btn-out {
+      background: #ffffff !important;
+      border: 1px solid var(--vz-border-color) !important;
+      color: var(--rox-text-primary) !important;
+      border-radius: 8px !important;
+      font-weight: 500 !important;
+      box-shadow: none !important;
+      &:hover { background: var(--rox-bg-hover) !important; border-color: var(--rox-text-muted) !important; }
+    }
+
+    .iconbtn, .info-icon {
+      background: transparent !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+      color: var(--rox-text-subtle) !important;
+      border-radius: 6px !important;
+      box-shadow: none !important;
+      &:hover { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
+    }
+
+    .focus-cta {
+      background: rgba(11, 100, 233, 0.08) !important;
+      color: var(--vz-primary) !important;
+      border: 1px solid rgba(11, 100, 233, 0.18) !important;
+      border-radius: 6px !important;
+    }
+
+    // ---- Status indicators (.phase / .dot / .pill-dot / dots) ----
+    .phase, .pill-dot {
+      background: rgba(11, 100, 233, 0.10) !important;
+      color: var(--vz-primary) !important;
+      border-radius: 100px !important;
+      font-weight: 500 !important;
+      font-size: 11px !important;
+      letter-spacing: 0.01em !important;
+      text-transform: none !important;
+      padding: 2px 9px !important;
+
+      &.phase-success, &.success { background: rgba(22, 163, 74, 0.10) !important; color: var(--vz-success) !important; }
+      &.phase-warning, &.warning { background: rgba(249, 183, 3, 0.14) !important; color: #b45309 !important; }
+      &.phase-danger, &.danger   { background: rgba(242, 65, 73, 0.10) !important; color: var(--vz-danger) !important; }
+      &.phase-info, &.info       { background: rgba(107, 74, 255, 0.10) !important; color: var(--vz-info) !important; }
+      &.phase-secondary, &.secondary, &.muted { background: var(--vz-tertiary-bg) !important; color: var(--rox-text-secondary) !important; }
+    }
+
+    // ---- Tabular cells (.cell-strong / .cell-sub) ----
+    .cell-strong { color: var(--rox-text-primary) !important; font-weight: 500 !important; }
+    .cell-sub    { color: var(--rox-text-muted) !important; font-size: 12px !important; }
+
+    // ---- Comparison/event row patterns ----
+    .comp-row, .ev-row {
+      border-bottom: 1px solid var(--rox-border-hairline) !important;
+      padding: 10px 0 !important;
+      &:last-child { border-bottom: none !important; }
+    }
+
+    // ---- "v" / "l" / "lbl" — labels and value lines ----
+    .lbl, .l { color: var(--rox-text-muted) !important; font-size: 11.5px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
+    .v, .val { color: var(--rox-text-primary) !important; font-weight: 500 !important; }
+
+    // ---- Color swap: Velzon-blue text → Rox-blue ----
+    [style*="color: #405189"], [style*="color:#405189"],
+    [style*="color: rgb(64, 81, 137)"], [style*="color:rgb(64, 81, 137)"] {
+      color: var(--vz-primary) !important;
+    }
+  }
+
+  // ---- Aggressive blanket: any heavy-shadow card in legal module flattens ----
+  app-pi-case-detail .card,
+  app-case-detail .card,
+  app-ai-workspace .card,
+  app-document-list .card,
+  app-case-list .card {
+    box-shadow: none !important;
+    border: 1px solid var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+  }
+}
+
+// =====================================================
+// 16. UNIVERSAL APP-WIDE PATTERNS
+//   Common class names used across all modules (dashboards, time-tracking,
+//   CRM, file-manager, client-portal, messages, signatures, etc.)
+//   These were too narrow when scoped to legal components alone.
+// =====================================================
+:root[data-design="rox"] {
+
+  // ---- .stat-item / stats-row (used in 8+ dashboards) ----
+  .stats-row, .stats-container {
+    background: #ffffff;
+    border: 1px solid var(--rox-border-hairline);
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .stat-item, .dashboard-stat, .metric-card {
+    background: transparent;
+    transition: background 0.12s ease;
+
+    &:hover { background: var(--rox-bg-hover); filter: none; }
+    &.active { background: rgba(11, 100, 233, 0.04); filter: none; }
+
+    .stat-label, .stat-name, .label, .stat-title { color: var(--rox-text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+    .stat-value, .stat-number, .stat-count, .value { color: var(--rox-text-primary); font-weight: 500; letter-spacing: -0.015em; }
+    .stat-icon { color: var(--rox-text-subtle); }
+  }
+
+  // ---- Search box pattern (used everywhere) ----
+  .search-box {
+    .search-input, input[type="search"], input[type="text"].search {
+      border-radius: 6px !important;
+      border: 1px solid var(--vz-border-color) !important;
+      background: #ffffff !important;
+      font-size: 13px !important;
+      box-shadow: none !important;
+
+      &:focus {
+        border-color: var(--vz-primary) !important;
+        box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.12) !important;
+      }
+    }
+    .search-icon { color: var(--rox-text-muted) !important; }
+  }
+
+  // ---- Avatars (consistent across app) ----
+  .avatar-title {
+    border-radius: 6px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+
+    &.bg-soft-primary, &.bg-primary-subtle { background: rgba(11, 100, 233, 0.10); color: var(--vz-primary); }
+    &.bg-soft-success, &.bg-success-subtle { background: rgba(22, 163, 74, 0.10); color: var(--vz-success); }
+    &.bg-soft-info, &.bg-info-subtle       { background: rgba(107, 74, 255, 0.10); color: var(--vz-info); }
+    &.bg-soft-warning, &.bg-warning-subtle { background: rgba(249, 183, 3, 0.14); color: #b45309; }
+    &.bg-soft-danger, &.bg-danger-subtle   { background: rgba(242, 65, 73, 0.10); color: var(--vz-danger); }
+    &.bg-soft-secondary, &.bg-secondary-subtle { background: var(--vz-tertiary-bg); color: var(--rox-text-secondary); }
+  }
+
+  .avatar-xs { width: 24px; height: 24px; font-size: 10px; }
+  .avatar-sm { width: 32px; height: 32px; font-size: 11px; }
+  .avatar-md { width: 40px; height: 40px; font-size: 13px; }
+  .avatar-lg { width: 56px; height: 56px; font-size: 16px; }
+  .avatar-xl { width: 72px; height: 72px; font-size: 20px; }
+
+  // ---- Velzon font-size utilities — make consistent ----
+  .fs-10 { font-size: 10px !important; }
+  .fs-11 { font-size: 11px !important; }
+  .fs-12 { font-size: 12px !important; }
+  .fs-13 { font-size: 13px !important; }
+  .fs-14 { font-size: 14px !important; }
+  .fs-15 { font-size: 15px !important; }
+  .fs-16 { font-size: 16px !important; }
+
+  // ---- Live badge / status indicators (Velzon "live-badge" pattern) ----
+  .live-badge, .status-pill, .priority-badge {
+    border-radius: 100px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    padding: 2px 9px !important;
+    text-transform: none !important;
+    letter-spacing: 0.01em !important;
+  }
+
+  // ---- Common card hero patterns across modules ----
+  .dashboard-hero, .module-hero, .page-hero, .welcome-banner {
+    background: #ffffff !important;
+    border: 1px solid var(--rox-border-hairline) !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+
+    h1, h2, h3, h4 { letter-spacing: -0.015em; font-weight: 500; }
+  }
+
+  // ---- Timer widget (time-tracking) ----
+  app-timer-widget {
+    .timer-display, .timer-value {
+      font-family: 'SF Mono', 'IBM Plex Mono', Menlo, monospace !important;
+      font-feature-settings: 'tnum';
+      letter-spacing: 0;
+    }
+  }
+
+  // ---- Charts: Velzon line gradients lose Rox feel — neutralize ----
+  // ApexCharts containers — let chart libs render but keep card surface flat
+  .apex-charts, .apexcharts-canvas {
+    background: transparent !important;
+  }
+
+  // ---- Cursor pointer (utility, no-op visually but ensures consistency) ----
+  .cursor-pointer { cursor: pointer; }
+
+  // ---- Aggressive: any heavy-shadow card across app flattens in Rox ----
+  app-attorney-dashboard .card,
+  app-time-dashboard .card,
+  app-time-approval .card,
+  app-client-dashboard .card,
+  app-leads-dashboard .card,
+  app-crm-dashboard .card,
+  app-system-health .card,
+  app-file-manager .card,
+  app-signatures .card,
+  app-messages .card,
+  app-clients .card,
+  app-organization-list .card,
+  app-timesheet-view .card,
+  app-case-timeline .card,
+  app-client-appointments .card,
+  app-client-profile .card,
+  app-intake-form .card,
+  app-invoice-generation .card,
+  app-timer-widget .card {
+    box-shadow: none !important;
+    border: 1px solid var(--rox-border-hairline) !important;
+    border-radius: 8px !important;
+  }
+}
+
+// =====================================================
+// 17. GLOBAL HARDCODED RULE OVERRIDES
+//   These are rules in src/styles.scss with hardcoded hex + !important
+//   that Phase 1 token cascade can't reach. Match specificity + !important.
+// =====================================================
+:root[data-design="rox"] {
+
+  // ---- Pagination (styles.scss has hardcoded #6c757d / #495057 / #dee2e6) ----
+  .pagination {
+    .page-item {
+      .page-link {
+        color: var(--rox-text-secondary) !important;
+        background-color: transparent !important;
+        border: 1px solid var(--rox-border-hairline) !important;
+        border-radius: 6px !important;
+
+        &:hover {
+          color: var(--rox-text-primary) !important;
+          background-color: var(--rox-bg-hover) !important;
+          border-color: var(--rox-border-hairline) !important;
+        }
+        &:focus { box-shadow: 0 0 0 3px rgba(11, 100, 233, 0.12) !important; }
+      }
+
+      &.active .page-link {
+        background-color: var(--vz-primary) !important;
+        border-color: var(--vz-primary) !important;
+        color: #ffffff !important;
+
+        &:hover {
+          background-color: #0950bd !important;
+          border-color: #0950bd !important;
+        }
+      }
+
+      &.disabled .page-link {
+        color: var(--rox-text-muted) !important;
+        background-color: transparent !important;
+        border-color: var(--rox-border-hairline) !important;
+      }
+    }
+  }
+
+  // ---- Toast notifications (styles.scss has hardcoded with !important) ----
+  .toast-container .ngx-toastr {
+    border-radius: 6px !important;
+    box-shadow: rgba(0, 0, 0, 0.08) 0 4px 12px 0, rgba(0, 0, 0, 0.04) 0 0 0 1px !important;
+    font-family: 'Geist', system-ui, sans-serif !important;
+  }
+
+  .toast-container .toast-success {
+    background-color: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+    color: #065f46 !important;
+    .toast-title, .toast-message { color: #065f46 !important; }
+  }
+  .toast-container .toast-error {
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #7f1d1d !important;
+    .toast-title, .toast-message { color: #7f1d1d !important; }
+  }
+  .toast-container .toast-warning {
+    background-color: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #78350f !important;
+    .toast-title, .toast-message { color: #78350f !important; }
+  }
+  .toast-container .toast-info {
+    background-color: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #1e3a8a !important;
+    .toast-title, .toast-message { color: #1e3a8a !important; }
+  }
+
+  // ---- Severity meter (styles.scss hardcoded #dc3545, #e85d04, #ffc107, #198754, #405189) ----
+  .severity-meter {
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.02em !important;
+    text-transform: uppercase !important;
+    font-size: 11px !important;
+
+    &.meter-critical {
+      background-color: rgba(242, 65, 73, 0.10) !important;
+      color: var(--vz-danger) !important;
+      border-color: rgba(242, 65, 73, 0.20) !important;
+      .bar { background-color: var(--vz-danger) !important; }
+    }
+    &.meter-high {
+      background-color: rgba(249, 115, 22, 0.10) !important;
+      color: #c2410c !important;
+      border-color: rgba(249, 115, 22, 0.20) !important;
+      .bar:not(:nth-child(6)) { background-color: #c2410c !important; }
+    }
+    &.meter-medium {
+      background-color: rgba(249, 183, 3, 0.14) !important;
+      color: #b45309 !important;
+      border-color: rgba(249, 183, 3, 0.25) !important;
+      .bar:nth-child(-n+4) { background-color: var(--vz-warning) !important; }
+    }
+    &.meter-low {
+      background-color: rgba(22, 163, 74, 0.10) !important;
+      color: var(--vz-success) !important;
+      border-color: rgba(22, 163, 74, 0.20) !important;
+      .bar:nth-child(-n+2) { background-color: var(--vz-success) !important; }
+    }
+    &.meter-standard {
+      background-color: rgba(11, 100, 233, 0.08) !important;
+      color: var(--vz-primary) !important;
+      border-color: rgba(11, 100, 233, 0.18) !important;
+      .bar:nth-child(-n+3) { background-color: var(--vz-primary) !important; }
+    }
+  }
+
+  // ---- Outcome badges ----
+  .outcome-positive {
+    background-color: rgba(22, 163, 74, 0.10) !important;
+    color: var(--vz-success) !important;
+    border-color: rgba(22, 163, 74, 0.20) !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+  }
+
+  .outcome-negative {
+    background-color: rgba(242, 65, 73, 0.10) !important;
+    color: var(--vz-danger) !important;
+    border-color: rgba(242, 65, 73, 0.20) !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+  }
+
+  .assumption-badge {
+    background-color: rgba(249, 183, 3, 0.14) !important;
+    color: #b45309 !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+  }
+
+  // ---- Prompt tips modal (styles.scss hardcoded #405189, #f3f6f9, #e9ecef) ----
+  .modal.prompt-tips-modal {
+    .modal-content {
+      border-radius: 10px !important;
+      border: 1px solid var(--rox-border-hairline) !important;
+    }
+    .modal-header {
+      background: transparent !important;
+      border-bottom: 1px solid var(--rox-border-hairline) !important;
+      h5.modal-title {
+        color: var(--rox-text-primary) !important;
+        font-weight: 500 !important;
+        i { color: var(--vz-primary) !important; }
+      }
+    }
+    .modal-body p.text-muted { color: var(--rox-text-muted) !important; }
+    .tips-category {
+      .category-header {
+        border-bottom-color: var(--rox-border-hairline) !important;
+        h6 { color: var(--rox-text-primary) !important; font-weight: 500 !important; }
+      }
+      .tip-item {
+        background: #ffffff !important;
+        border: 1px solid var(--rox-border-hairline) !important;
+        border-radius: 6px !important;
+        &:hover {
+          border-color: var(--vz-primary) !important;
+          box-shadow: rgba(11, 100, 233, 0.08) 0 1px 3px 0 !important;
+        }
+        .tip-text { color: var(--rox-text-secondary) !important; font-style: normal !important; }
+        .use-tip-btn {
+          background: var(--vz-primary) !important;
+          border-radius: 6px !important;
+          font-weight: 500 !important;
+          box-shadow: none !important;
+          &:hover {
+            background: #0950bd !important;
+            transform: none !important;
+            box-shadow: none !important;
+          }
+        }
+      }
+    }
+    .modal-footer {
+      background: transparent !important;
+      border-top: 1px solid var(--rox-border-hairline) !important;
+    }
+  }
+
+  // ---- AI note card (styles.scss has border-left: 3px solid #405189) ----
+  .ai-note-card {
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    border-left: 3px solid var(--vz-primary) !important;
+  }
+
+  .ai-note-modal.swal2-popup {
+    border-radius: 10px !important;
+    background: #ffffff !important;
+  }
+
+  .ai-note-title { color: var(--rox-text-primary) !important; font-weight: 500 !important; }
+  .ai-note-badge {
+    background: rgba(249, 183, 3, 0.14) !important;
+    color: #b45309 !important;
+    border-radius: 4px !important;
+    font-weight: 500 !important;
+  }
+  .ai-note-body { color: var(--rox-text-secondary) !important; }
+  .ai-note-confirm-btn.swal2-styled.swal2-confirm {
+    border-radius: 6px !important;
+    border: 1px solid var(--vz-border-color) !important;
+    color: var(--rox-text-primary) !important;
+    &:hover {
+      background: var(--rox-bg-hover) !important;
+      border-color: var(--rox-text-muted) !important;
+    }
+  }
+}
+
+// Section 17 dark mode adjustments
+:root[data-design="rox"][data-bs-theme="dark"] {
+  .toast-container .toast-success { background-color: #052e16 !important; border-color: #166534 !important; color: #6ee7b7 !important; .toast-title, .toast-message { color: #6ee7b7 !important; } }
+  .toast-container .toast-error   { background-color: #2c0b0e !important; border-color: #7f1d1d !important; color: #fca5a5 !important; .toast-title, .toast-message { color: #fca5a5 !important; } }
+  .toast-container .toast-warning { background-color: #2a1f00 !important; border-color: #78350f !important; color: #fde68a !important; .toast-title, .toast-message { color: #fde68a !important; } }
+  .toast-container .toast-info    { background-color: #0c1d3d !important; border-color: #1e3a8a !important; color: #bfdbfe !important; .toast-title, .toast-message { color: #bfdbfe !important; } }
+
+  .modal.prompt-tips-modal {
+    .tips-category .tip-item {
+      background: #141414 !important;
+      border-color: var(--rox-border-hairline) !important;
+      .tip-text { color: var(--rox-text-secondary) !important; }
+    }
+  }
+
+  .ai-note-card { background: #141414 !important; }
+
+  // Universal dashboard cards in dark
+  app-attorney-dashboard .card,
+  app-time-dashboard .card,
+  app-client-dashboard .card,
+  app-leads-dashboard .card,
+  app-crm-dashboard .card,
+  app-system-health .card,
+  app-file-manager .card,
+  app-messages .card,
+  app-clients .card,
+  app-organization-list .card,
+  app-timesheet-view .card,
+  app-case-timeline .card {
+    background: #141414 !important;
+    border-color: var(--rox-border-hairline) !important;
+  }
+
+  .stats-row, .stats-container {
+    background: #141414 !important;
+    border-color: var(--rox-border-hairline) !important;
+  }
+}
+
+// Legal module — DARK MODE adjustments
+:root[data-design="rox"][data-bs-theme="dark"] {
+  app-case-list,
+  app-case-detail,
+  app-pi-case-detail,
+  app-document-list,
+  app-ai-workspace,
+  app-personal-injury {
+
+    .stats-row,
+    .case-header-premium,
+    .sw-card, .arg-card, .ps-method-card, .def-block,
+    .case-card, .timeline-card, .summary-card, .insight-card,
+    .premium-card, .info-card, .data-card, .meta-card {
+      background: #141414 !important;
+      border-color: var(--rox-border-hairline) !important;
+    }
+
+    .pi-hero {
+      background: linear-gradient(135deg, #050505 0%, #141414 50%, #1c1917 100%) !important;
+      border-color: var(--rox-border-hairline) !important;
+    }
+
+    .stat-item {
+      &:hover { background: var(--rox-bg-hover) !important; }
+      .stat-label, .stat-name, .label, .l { color: var(--rox-text-muted) !important; }
+      .stat-value, .stat-number, .value, .v { color: var(--rox-text-primary) !important; }
+    }
+
+    .search-box .search-input {
+      background: #0a0a0a !important;
+      border-color: var(--rox-border-hairline) !important;
+      color: var(--rox-text-primary) !important;
+    }
+
+    .btn-out {
+      background: #141414 !important;
+      border-color: var(--rox-border-hairline) !important;
+      color: var(--rox-text-primary) !important;
+      &:hover { background: var(--rox-bg-hover) !important; }
+    }
+
+    .iconbtn, .info-icon {
+      border-color: var(--rox-border-hairline) !important;
+      color: var(--rox-text-subtle) !important;
+    }
+  }
+}
+

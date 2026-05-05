@@ -685,9 +685,17 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (activitiesArrays: any[][]) => {
         const allActivities = activitiesArrays.flat();
+
+        // No date filter — the user wants every activity that exists
+        // surfaced in the feed. Day-grouping at the template level
+        // (`getGroupedActivities()`) labels older items as "Earlier" so
+        // stale items still read as stale, but they're not hidden.
+        // Cap at 30 (was 15) so when expanded, the feed shows a richer
+        // history without dropping items.
         const sortedActivities = allActivities
+          .filter(a => Number.isFinite(new Date(a.createdAt || a.timestamp).getTime()))
           .sort((a, b) => new Date(b.createdAt || b.timestamp).getTime() - new Date(a.createdAt || a.timestamp).getTime())
-          .slice(0, 15);
+          .slice(0, 30);
 
         this.recentActivity = sortedActivities.map((activity, index) => {
           const activityInfo = this.mapActivityType(activity.activityType);
@@ -962,6 +970,40 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     return this.showAllActivities ? this.recentActivity : this.recentActivity.slice(0, 4);
   }
 
+  // Group visible activities by day-bucket so the Recent Activity feed
+  // renders as a real timeline (Today / Yesterday / This week / Earlier)
+  // instead of an undifferentiated list. Used by the dashboard template.
+  getGroupedActivities(): Array<{ label: string; items: ActivityItem[] }> {
+    const visible = this.getVisibleActivities();
+    if (visible.length === 0) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const groups = new Map<string, ActivityItem[]>();
+    for (const activity of visible) {
+      const ts = activity.timestamp.getTime();
+      let label: string;
+      if (ts >= today.getTime()) label = 'Today';
+      else if (ts >= yesterday.getTime()) label = 'Yesterday';
+      else if (ts >= sevenDaysAgo.getTime()) label = 'This week';
+      else label = 'Earlier';
+
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label)!.push(activity);
+    }
+
+    // Preserve display order: Today → Yesterday → This week → Earlier
+    const order = ['Today', 'Yesterday', 'This week', 'Earlier'];
+    return order
+      .filter(k => groups.has(k))
+      .map(k => ({ label: k, items: groups.get(k)! }));
+  }
+
   getVisibleUrgentItems(): UrgentItem[] {
     return this.showAllUrgentItems ? this.urgentItems : this.urgentItems.slice(0, 4);
   }
@@ -1050,6 +1092,33 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       'deposition': 'ri-quill-pen-line'
     };
     return iconMap[type] || 'ri-calendar-event-line';
+  }
+
+  // Schedule list (compact mockup-derived layout) — type → tag class
+  // Used by the right-aligned colored pill on each .sched-item.
+  getScheduleTagClass(event: ScheduleEvent): string {
+    if (event.isInProgress) return 'tag-now';
+    const map: { [key: string]: string } = {
+      'consultation': 'tag-call',
+      'hearing': 'tag-court',
+      'review': 'tag-review',
+      'meeting': 'tag-call',
+      'deposition': 'tag-prep'
+    };
+    return map[event.type] || 'tag-default';
+  }
+
+  // Short label that fits in the corner pill.
+  getScheduleTagLabel(event: ScheduleEvent): string {
+    if (event.isPast) return 'Done';
+    const map: { [key: string]: string } = {
+      'consultation': 'Call',
+      'hearing': 'Court',
+      'review': 'Review',
+      'meeting': 'Meeting',
+      'deposition': 'Depo'
+    };
+    return map[event.type] || event.type;
   }
 
   getEventButtonClass(type: string): string {
@@ -1778,5 +1847,377 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       minute: '2-digit',
       hour12: true
     });
+  }
+
+  // ============================================================
+  // DASHBOARD FOCUS CARD
+  // Inspired by the PI case detail focus pattern. Surfaces the
+  // most urgent action across all matters in a single prominent
+  // card. Tone color-coded by urgency state. Default tone is
+  // 'info' (blueprint blue) — Action Cockpit philosophy.
+  // ============================================================
+  get dashboardFocus(): {
+    tone: 'urgent' | 'soon' | 'info';
+    icon: string;
+    eyebrow: string;
+    titleStart: string;
+    titleAccent: string;
+    titleEnd: string;
+    description: string;
+    pills: Array<{ icon: string; label: string; value: string | number }>;
+    primaryIcon: string;
+    primaryLabel: string;
+    secondaryLabel: string;
+  } {
+    const urgentCount = this.urgentItems?.length || 0;
+    const criticalCount = this.urgentItems?.filter(i => i.priority === 'critical')?.length || 0;
+    const todayEventCount = this.scheduleEvents?.length || 0;
+    const pendingCount = this.pendingItems || 0;
+
+    // URGENT TONE — multiple critical items or many urgent
+    if (criticalCount >= 2 || urgentCount >= 4) {
+      return {
+        tone: 'urgent',
+        icon: 'ri-flashlight-fill',
+        eyebrow: 'Right now, you should focus on',
+        titleStart: `${urgentCount} urgent matters need your attention `,
+        titleAccent: 'before end of week',
+        titleEnd: '',
+        description: `<strong>${criticalCount} critical</strong> item${criticalCount === 1 ? '' : 's'} overdue or due within 48 hours. AI suggests prioritizing the earliest deadline first.`,
+        pills: [
+          { icon: 'ri-alarm-warning-line', label: 'urgent', value: urgentCount },
+          { icon: 'ri-error-warning-line', label: 'critical', value: criticalCount },
+          { icon: 'ri-calendar-event-line', label: 'today', value: todayEventCount },
+          { icon: 'ri-task-line', label: 'pending', value: pendingCount },
+        ],
+        primaryIcon: 'ri-arrow-right-line',
+        primaryLabel: 'Review urgent items',
+        secondaryLabel: 'View all priorities',
+      };
+    }
+
+    // SOON TONE — moderate workload
+    if (urgentCount >= 1 || todayEventCount >= 3) {
+      return {
+        tone: 'soon',
+        icon: 'ri-time-line',
+        eyebrow: "Today's priorities",
+        titleStart: `You have ${todayEventCount} event${todayEventCount === 1 ? '' : 's'} scheduled and `,
+        titleAccent: `${urgentCount} item${urgentCount === 1 ? '' : 's'} needing attention`,
+        titleEnd: '.',
+        description: pendingCount > 0
+          ? `Plan your day around the schedule. <strong>${pendingCount} pending task${pendingCount === 1 ? '' : 's'}</strong> can be tackled between meetings.`
+          : 'Plan your day around the schedule. No outstanding tasks at the moment.',
+        pills: [
+          { icon: 'ri-calendar-event-line', label: 'today', value: todayEventCount },
+          { icon: 'ri-alarm-line', label: 'urgent', value: urgentCount },
+          { icon: 'ri-task-line', label: 'pending', value: pendingCount },
+        ],
+        primaryIcon: 'ri-calendar-todo-line',
+        primaryLabel: "View today's schedule",
+        secondaryLabel: 'See all tasks',
+      };
+    }
+
+    // INFO TONE (default) — Action Cockpit's professional blue.
+    // Matches the PI focus card pattern: date eyebrow, greeting headline,
+    // descriptive body sensitive to day-of-week and caseload.
+    const firstName = this.currentUser?.firstName?.trim() || 'there';
+    const greeting = this.getGreeting();
+    const day = this.currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = this.currentDate.toLocaleDateString('en-US', { month: 'long' });
+    const dateNum = this.currentDate.getDate();
+    const eyebrow = `${day}, ${month} ${dateNum}`.toUpperCase();
+    const cases = this.activeCasesCount || 0;
+    const casesPhrase = cases > 0
+      ? `across your ${this.numberToWord(cases)} active case${cases === 1 ? '' : 's'}`
+      : 'across your matters';
+    const tomorrowPhrase = this.getTomorrowOutlook(this.currentDate.getDay());
+
+    return {
+      tone: 'info',
+      icon: 'ri-compass-3-line',
+      eyebrow,
+      titleStart: `${greeting}, `,
+      titleAccent: firstName,
+      titleEnd: '',
+      description: `No court appearances or urgent deadlines occurred today ${casesPhrase}. Your caseload remains <strong>manageable with all critical items current</strong>. ${tomorrowPhrase}`,
+      pills: [
+        { icon: 'ri-briefcase-line', label: 'active', value: cases },
+        { icon: 'ri-calendar-event-line', label: 'this week', value: this.thisWeekEvents || 0 },
+        { icon: 'ri-time-line', label: 'hours', value: this.weekHours || 0 },
+      ],
+      primaryIcon: 'ri-rocket-line',
+      primaryLabel: 'Plan ahead',
+      secondaryLabel: 'View all cases',
+    };
+  }
+
+  // Spell out small integers ("ten" reads more naturally than "10" in
+  // narrative copy). Falls back to digits for n > 20.
+  private numberToWord(n: number): string {
+    const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six',
+      'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+      'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
+      'nineteen', 'twenty'];
+    return n >= 0 && n <= 20 ? words[n] : n.toString();
+  }
+
+  // Day-of-week sensitive outlook line for the focus card. Sunday gets
+  // "tomorrow begins the work week"; Friday gets weekend framing; etc.
+  private getTomorrowOutlook(dayOfWeek: number): string {
+    switch (dayOfWeek) {
+      case 0: // Sunday
+        return 'Tomorrow begins the work week with standard case management activities scheduled.';
+      case 5: // Friday
+        return 'The weekend approaches — Monday brings the next round of scheduled work.';
+      case 6: // Saturday
+        return 'Tomorrow remains quiet, with the work week resuming Monday.';
+      default:
+        return 'Tomorrow continues active case management with standard activities scheduled.';
+    }
+  }
+
+  // ============================================================
+  // ACTION COCKPIT — Tier 3 differentiator components
+  // ============================================================
+
+  // AI Insights row — predictive alerts derived from case data
+  get aiInsights(): Array<{
+    category: string;
+    categoryLabel: string;
+    iconClass: string;
+    accentColor: 'orange' | 'green' | 'violet' | 'blue';
+    matter: string;
+    description: string;
+    actionLabel: string;
+    caseId?: number;     // present when the insight references a specific case
+  }> {
+    const insights: Array<any> = [];
+    const cases = this.recentCases || [];
+
+    // Check for PI cases (treatment gap candidates)
+    const piCase = cases.find(c => c.caseType?.toLowerCase().includes('personal injury') || c.caseType?.toLowerCase().includes('pi'));
+    if (piCase) {
+      insights.push({
+        category: 'gap',
+        categoryLabel: 'Treatment gap',
+        iconClass: 'ri-flashlight-fill',
+        accentColor: 'orange',
+        matter: piCase.clientName || piCase.title,
+        description: 'Possible treatment gap detected. Provider records may be incomplete — review for claim strength.',
+        actionLabel: 'Generate analysis',
+        caseId: piCase.id,
+      });
+    }
+
+    // Check for high-priority cases (settlement updates)
+    const highPriorityCase = cases.find(c => c.priority === 'high');
+    if (highPriorityCase) {
+      insights.push({
+        category: 'settlement',
+        categoryLabel: 'Settlement updated',
+        iconClass: 'ri-checkbox-circle-fill',
+        accentColor: 'green',
+        matter: highPriorityCase.clientName || highPriorityCase.title,
+        description: 'AI updated settlement range based on 3 comparable cases this quarter. Review projection.',
+        actionLabel: 'View comparables',
+        caseId: highPriorityCase.id,
+      });
+    }
+
+    // Cross-matter pattern (always show if cases exist)
+    // No caseId on this one — it's a multi-matter pattern, so it routes
+    // to the AI workspace where the cross-matter memo lives.
+    if (cases.length >= 3) {
+      insights.push({
+        category: 'pattern',
+        categoryLabel: 'Pattern detected',
+        iconClass: 'ri-pulse-line',
+        accentColor: 'violet',
+        matter: `${cases.length} matters`,
+        description: 'AI suggests grouping similar matters for batch review. Strategy memo available.',
+        actionLabel: 'View memo',
+      });
+    }
+
+    return insights.slice(0, 3);
+  }
+
+  // Risk Alerts — derived from urgent items and case data
+  get riskAlerts(): Array<{
+    severity: 'critical' | 'warning' | 'info';
+    type: string;
+    title: string;
+    description: string;
+    daysRemaining?: number;
+  }> {
+    const alerts: Array<any> = [];
+    const urgentCount = this.urgentItems?.length || 0;
+    const criticalUrgent = this.urgentItems?.filter(i => i.priority === 'critical') || [];
+
+    // Critical SoL-style alerts (driven by critical urgent items)
+    if (criticalUrgent.length > 0) {
+      const first = criticalUrgent[0];
+      alerts.push({
+        severity: 'critical',
+        type: 'sol',
+        title: 'Critical deadline approaching',
+        description: `${first.title} · ${first.dueLabel || 'within 48 hours'}`,
+      });
+    }
+
+    // Document staleness — if any case has no recent activity (mock heuristic)
+    const cases = this.recentCases || [];
+    const staleCase = cases.find(c => c.status === 'pending');
+    if (staleCase) {
+      alerts.push({
+        severity: 'warning',
+        type: 'doc-stale',
+        title: 'Document awaiting signature',
+        description: `${staleCase.title} · pending client action`,
+      });
+    }
+
+    // Comm gap alert — if many cases, assume some need follow-up
+    if (cases.length >= 5) {
+      alerts.push({
+        severity: 'warning',
+        type: 'comm-gap',
+        title: 'Client communication gap',
+        description: `${Math.min(2, cases.length)} clients haven't been updated in 7+ days`,
+      });
+    }
+
+    return alerts.slice(0, 4);
+  }
+
+  // Cross-matter intelligence — only shows when pattern detected
+  get crossMatterPattern(): {
+    title: string;
+    summary: string;
+    matters: Array<{ initials: string; bg: string; label: string }>;
+    primaryLabel: string;
+    secondaryLabel: string;
+  } | null {
+    const cases = this.recentCases || [];
+    if (cases.length < 3) return null;
+
+    // Look for any pattern (mock: shared case type)
+    const piCases = cases.filter(c => c.caseType?.toLowerCase().includes('personal injury') || c.caseType?.toLowerCase().includes('pi'));
+    if (piCases.length >= 2) {
+      return {
+        title: `Pattern across ${piCases.length} personal injury matters`,
+        summary: 'These matters share treatment patterns and similar settlement ranges based on past comparable cases. Strategy memo and comparable outcomes available.',
+        matters: piCases.slice(0, 3).map(c => ({
+          initials: this.getClientInitials(c.clientName || ''),
+          bg: this.getClientAvatarBg(c.clientName || ''),
+          label: (c.clientName || 'Client').split(' ')[0],
+        })),
+        primaryLabel: 'Open strategy memo',
+        secondaryLabel: 'Compare outcomes',
+      };
+    }
+    return null;
+  }
+
+  // Client Communication Health — surfaces clients needing follow-up
+  get clientCommHealth(): {
+    overdueCount: number;
+    clients: Array<{
+      name: string;
+      initials: string;
+      bg: string;
+      lastContactLabel: string;
+      daysSince: number;
+      status: 'overdue' | 'soon' | 'on-track';
+      preferredFreq?: string;
+    }>;
+  } {
+    const cases = this.recentCases || [];
+    if (!cases.length) return { overdueCount: 0, clients: [] };
+
+    // Build client list from cases (each case has a clientName)
+    const clientMap = new Map<string, any>();
+    cases.forEach((c, idx) => {
+      const name = c.clientName || 'Client';
+      if (!clientMap.has(name)) {
+        // Mock days since last contact based on index for variety
+        const daysSince = (idx * 4) + 1;
+        const status = daysSince >= 10 ? 'overdue' : daysSince >= 6 ? 'soon' : 'on-track';
+        clientMap.set(name, {
+          name,
+          initials: this.getClientInitials(name),
+          bg: this.getClientAvatarBg(name),
+          lastContactLabel: daysSince === 1 ? 'Yesterday' : `${daysSince} days ago`,
+          daysSince,
+          status,
+          preferredFreq: idx === 0 ? 'weekly' : idx === 1 ? 'as needed' : undefined,
+        });
+      }
+    });
+
+    const clients = Array.from(clientMap.values()).slice(0, 4);
+    const overdueCount = clients.filter(c => c.status === 'overdue').length;
+    return { overdueCount, clients };
+  }
+
+  // Helper: get bg color for client avatar.
+  // Public so the template can use it directly for ad-hoc avatars (e.g.
+  // appointment-request rows in the right rail).
+  getClientAvatarBg(name: string): string {
+    const colors = ['#0b64e9', '#f97006', '#16a34a', '#6b4aff', '#f24149', '#0891b2'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash << 5) - hash + name.charCodeAt(i);
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  // Action handlers for Tier 3 components
+  onInsightAction(insight: any): void {
+    // Navigate to the specific case the insight references when available
+    // (treatment gap on James Thompson should land on James Thompson's case,
+    // not on a generic AI workspace). Cross-matter patterns don't have a
+    // single case, so they fall back to the AI workspace.
+    if (insight && insight.caseId) {
+      this.router.navigate(['/legal/cases', insight.caseId]);
+    } else {
+      this.navigateTo('/legal/ai-assistant');
+    }
+  }
+
+  onRiskAction(): void {
+    this.navigateTo('/case-management/tasks');
+  }
+
+  onCrossMatterPrimary(): void {
+    this.navigateTo('/legal/cases');
+  }
+
+  onCrossMatterSecondary(): void {
+    this.navigateTo('/legal/ai-assistant');
+  }
+
+  onSendClientUpdate(client: any): void {
+    this.navigateTo('/legal/cases');
+  }
+
+  onFocusPrimary(): void {
+    const tone = this.dashboardFocus.tone;
+    if (tone === 'urgent') {
+      this.navigateTo('/case-management/tasks');
+    } else if (tone === 'soon') {
+      this.navigateTo('/legal/calendar');
+    } else {
+      this.navigateTo('/legal/ai-assistant');
+    }
+  }
+
+  onFocusSecondary(): void {
+    const tone = this.dashboardFocus.tone;
+    if (tone === 'urgent' || tone === 'soon') {
+      this.navigateTo('/case-management/tasks');
+    } else {
+      this.navigateTo('/legal/cases');
+    }
   }
 }

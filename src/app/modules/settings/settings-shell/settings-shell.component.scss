@@ -12,22 +12,22 @@ app-settings-shell {
       align-items: center;
       gap: 0.75rem;
       padding: 0.875rem 1.25rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: all 0.2s ease;
       text-decoration: none;
 
       &:hover {
-        background: rgba(var(--vz-primary-rgb), 0.05);
-        color: var(--vz-primary);
+        background: rgba(var(--legience-accent-rgb), 0.05);
+        color: var(--legience-accent);
       }
 
       &.active {
-        background: rgba(var(--vz-primary-rgb), 0.08);
-        color: var(--vz-primary);
-        border-left-color: var(--vz-primary);
-        i { color: var(--vz-primary); }
+        background: rgba(var(--legience-accent-rgb), 0.08);
+        color: var(--legience-accent);
+        border-left-color: var(--legience-accent);
+        i { color: var(--legience-accent); }
       }
 
       i { font-size: 1.125rem; }
@@ -40,7 +40,7 @@ app-settings-shell {
     padding: 0.75rem 1.25rem 0.25rem;
 
     &:not(:first-child) {
-      border-top: 1px solid var(--vz-border-color);
+      border-top: 1px solid var(--legience-border-hairline);
       margin-top: 0.25rem;
       padding-top: 0.875rem;
     }
@@ -48,7 +48,7 @@ app-settings-shell {
     small {
       font-size: 0.6875rem;
       letter-spacing: 0.1em;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-muted);
       font-weight: 600;
     }
   }
@@ -85,7 +85,7 @@ app-settings-shell {
 
         &.active {
           border-left: none;
-          border-bottom-color: var(--vz-primary);
+          border-bottom-color: var(--legience-accent);
         }
       }
     }

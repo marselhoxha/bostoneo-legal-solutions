@@ -19,15 +19,15 @@
     padding: 16px;
     margin-bottom: 16px;
     transition: all 0.2s ease;
-    background-color: var(--vz-secondary-bg);
-    border: 1px solid var(--vz-border-color);
+    background-color: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
     position: relative;
     overflow: visible; // Allow dropdown to overflow
 
     // Hover effect on items
     &:hover {
-      border-color: rgba(var(--vz-primary-rgb), 0.3);
+      border-color: rgba(var(--legience-accent-rgb), 0.3);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
       .avatar-title {
@@ -44,24 +44,24 @@
     // Past events - subtle styling
     &.event-past {
       opacity: 0.7;
-      background-color: var(--vz-light);
-      border-color: var(--vz-border-color);
+      background-color: var(--legience-bg-card-hover);
+      border-color: var(--legience-border-hairline);
 
       .avatar-title {
-        background-color: var(--vz-light) !important;
-        color: var(--vz-secondary) !important;
+        background-color: var(--legience-bg-card-hover) !important;
+        color: var(--legience-secondary) !important;
       }
 
       h6 {
         text-decoration: line-through;
-        text-decoration-color: rgba(var(--vz-secondary-rgb), 0.5);
+        text-decoration-color: rgba(var(--legience-secondary-rgb), 0.5);
       }
     }
 
     // Today's events - highlight with pulse animation and accent border
     &.event-today {
-      border-left: 3px solid var(--vz-primary);
-      background-color: rgba(var(--vz-primary-rgb), 0.03);
+      border-left: 3px solid var(--legience-accent);
+      background-color: rgba(var(--legience-accent-rgb), 0.03);
 
       .avatar-title {
         animation: pulse-ring 2s infinite;
@@ -70,11 +70,11 @@
 
     // Critical/High priority events
     &.event-critical {
-      border-left: 3px solid var(--vz-danger);
+      border-left: 3px solid var(--legience-danger);
     }
 
     &.event-high {
-      border-left: 3px solid var(--vz-warning);
+      border-left: 3px solid var(--legience-warning);
     }
 
     // Avatar styling
@@ -91,7 +91,7 @@
       h6 {
         font-size: 14px;
         line-height: 1.5;
-        color: var(--vz-heading-color);
+        color: var(--legience-text-primary);
       }
 
       p {
@@ -104,126 +104,126 @@
 // Pulse animation for today's events
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0.4);
+    box-shadow: 0 0 0 0 rgba(var(--legience-accent-rgb), 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(var(--vz-primary-rgb), 0);
+    box-shadow: 0 0 0 10px rgba(var(--legience-accent-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--vz-primary-rgb), 0);
+    box-shadow: 0 0 0 0 rgba(var(--legience-accent-rgb), 0);
   }
 }
 
 // Avatar background classes based on priority/status
 .avatar-title {
   &.bg-danger-subtle {
-    background-color: rgba(var(--vz-danger-rgb), 0.18) !important;
-    color: var(--vz-danger) !important;
+    background-color: rgba(var(--legience-danger-rgb), 0.18) !important;
+    color: var(--legience-danger) !important;
   }
   &.bg-warning-subtle {
-    background-color: rgba(var(--vz-warning-rgb), 0.18) !important;
-    color: var(--vz-warning) !important;
+    background-color: rgba(var(--legience-warning-rgb), 0.18) !important;
+    color: var(--legience-warning) !important;
   }
   &.bg-info-subtle {
-    background-color: rgba(var(--vz-info-rgb), 0.18) !important;
-    color: var(--vz-info) !important;
+    background-color: rgba(var(--legience-info-rgb), 0.18) !important;
+    color: var(--legience-info) !important;
   }
   &.bg-success-subtle {
-    background-color: rgba(var(--vz-success-rgb), 0.18) !important;
-    color: var(--vz-success) !important;
+    background-color: rgba(var(--legience-success-rgb), 0.18) !important;
+    color: var(--legience-success) !important;
   }
   &.bg-primary-subtle {
-    background-color: rgba(var(--vz-primary-rgb), 0.18) !important;
-    color: var(--vz-primary) !important;
+    background-color: rgba(var(--legience-accent-rgb), 0.18) !important;
+    color: var(--legience-accent) !important;
   }
   &.bg-secondary-subtle {
-    background-color: rgba(var(--vz-secondary-rgb), 0.18) !important;
-    color: var(--vz-secondary) !important;
+    background-color: rgba(var(--legience-secondary-rgb), 0.18) !important;
+    color: var(--legience-secondary) !important;
   }
 }
 
 // Priority badge classes
 .badge {
   &.priority-critical {
-    background-color: rgba(var(--vz-danger-rgb), 0.12) !important;
-    color: var(--vz-danger) !important;
+    background-color: rgba(var(--legience-danger-rgb), 0.12) !important;
+    color: var(--legience-danger) !important;
   }
   &.priority-high {
-    background-color: rgba(var(--vz-warning-rgb), 0.12) !important;
-    color: var(--vz-warning) !important;
+    background-color: rgba(var(--legience-warning-rgb), 0.12) !important;
+    color: var(--legience-warning) !important;
   }
   &.priority-medium {
-    background-color: rgba(var(--vz-info-rgb), 0.12) !important;
-    color: var(--vz-info) !important;
+    background-color: rgba(var(--legience-info-rgb), 0.12) !important;
+    color: var(--legience-info) !important;
   }
   &.priority-low {
-    background-color: rgba(var(--vz-success-rgb), 0.12) !important;
-    color: var(--vz-success) !important;
+    background-color: rgba(var(--legience-success-rgb), 0.12) !important;
+    color: var(--legience-success) !important;
   }
 }
 
 // Days-until badge classes
 .badge {
   &.days-overdue {
-    background-color: rgba(var(--vz-danger-rgb), 0.15) !important;
-    color: var(--vz-danger) !important;
+    background-color: rgba(var(--legience-danger-rgb), 0.15) !important;
+    color: var(--legience-danger) !important;
   }
   &.days-today {
-    background-color: rgba(var(--vz-primary-rgb), 0.15) !important;
-    color: var(--vz-primary) !important;
+    background-color: rgba(var(--legience-accent-rgb), 0.15) !important;
+    color: var(--legience-accent) !important;
     font-weight: 600;
   }
   &.days-soon {
-    background-color: rgba(var(--vz-warning-rgb), 0.15) !important;
-    color: var(--vz-warning) !important;
+    background-color: rgba(var(--legience-warning-rgb), 0.15) !important;
+    color: var(--legience-warning) !important;
   }
   &.days-upcoming {
-    background-color: rgba(var(--vz-info-rgb), 0.15) !important;
-    color: var(--vz-info) !important;
+    background-color: rgba(var(--legience-info-rgb), 0.15) !important;
+    color: var(--legience-info) !important;
   }
   &.days-future {
-    background-color: rgba(var(--vz-success-rgb), 0.15) !important;
-    color: var(--vz-success) !important;
+    background-color: rgba(var(--legience-success-rgb), 0.15) !important;
+    color: var(--legience-success) !important;
   }
 }
 
 // Event type badges
 .badge {
   &.event-deadline {
-    background-color: rgba(var(--vz-danger-rgb), 0.12) !important;
-    color: var(--vz-danger) !important;
+    background-color: rgba(var(--legience-danger-rgb), 0.12) !important;
+    color: var(--legience-danger) !important;
   }
   &.event-filing {
-    background-color: rgba(var(--vz-primary-rgb), 0.12) !important;
-    color: var(--vz-primary) !important;
+    background-color: rgba(var(--legience-accent-rgb), 0.12) !important;
+    color: var(--legience-accent) !important;
   }
   &.event-hearing {
-    background-color: rgba(var(--vz-warning-rgb), 0.12) !important;
-    color: var(--vz-warning) !important;
+    background-color: rgba(var(--legience-warning-rgb), 0.12) !important;
+    color: var(--legience-warning) !important;
   }
   &.event-milestone {
-    background-color: rgba(var(--vz-success-rgb), 0.12) !important;
-    color: var(--vz-success) !important;
+    background-color: rgba(var(--legience-success-rgb), 0.12) !important;
+    color: var(--legience-success) !important;
   }
   &.event-default {
-    background-color: rgba(var(--vz-secondary-rgb), 0.12) !important;
-    color: var(--vz-secondary) !important;
+    background-color: rgba(var(--legience-secondary-rgb), 0.12) !important;
+    color: var(--legience-secondary) !important;
   }
 }
 
 // Ghost button style
 .btn-ghost-primary {
-  color: var(--vz-primary);
+  color: var(--legience-accent);
   background-color: transparent;
   border-color: transparent;
 
   &:hover {
-    color: var(--vz-primary);
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
+    color: var(--legience-accent);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
   }
 
   &:disabled {
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     opacity: 0.5;
   }
 }
@@ -257,12 +257,12 @@
     transition: all 0.15s ease;
 
     &:hover {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
     }
 
     &:active {
-      background-color: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
+      background-color: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
     }
 
     small {
@@ -274,14 +274,14 @@
 
   .dropdown-divider {
     margin: 6px 0;
-    border-top-color: var(--vz-border-color);
+    border-top-color: var(--legience-border-hairline);
   }
 }
 
 // Progress bar enhancements
 .progress {
   border-radius: 4px;
-  background-color: var(--vz-light);
+  background-color: var(--legience-bg-card-hover);
   overflow: hidden;
 
   .progress-bar {
@@ -292,7 +292,7 @@
 // Card footer styling
 .card-footer {
   &.bg-light-subtle {
-    background-color: rgba(var(--vz-light-rgb), 0.5) !important;
+    background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5) !important;
   }
 }
 

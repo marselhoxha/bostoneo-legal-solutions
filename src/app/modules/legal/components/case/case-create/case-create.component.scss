@@ -27,12 +27,12 @@
     left: calc(50% + 24px);
     width: calc(100% - 48px);
     height: 2px;
-    background-color: var(--vz-border-color);
+    background-color: var(--legience-border-hairline);
     transition: background-color 0.4s ease;
   }
 
   &.completed:not(:last-child)::after {
-    background-color: #0ab39c;
+    background-color: var(--legience-success, #0ab39c);
   }
 }
 
@@ -49,20 +49,20 @@
   transition: all 0.3s ease;
 
   &.active {
-    background-color: #405189;
+    background-color: var(--legience-accent, #405189);
     color: #fff;
     box-shadow: 0 0 0 4px rgba(64, 81, 137, 0.15);
   }
 
   &.completed {
-    background-color: #0ab39c;
+    background-color: var(--legience-success, #0ab39c);
     color: #fff;
   }
 
   &.pending {
-    background-color: var(--vz-tertiary-bg);
-    color: var(--vz-secondary-color);
-    border: 2px solid var(--vz-border-color);
+    background-color: var(--legience-bg-subtle);
+    color: var(--legience-text-muted);
+    border: 2px solid var(--legience-border-hairline);
   }
 }
 
@@ -70,27 +70,27 @@
   margin-top: 0.5rem;
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   text-align: center;
   white-space: nowrap;
 
   &.active {
-    color: #405189;
+    color: var(--legience-accent, #405189);
     font-weight: 600;
   }
 
   &.completed {
-    color: #0ab39c;
+    color: var(--legience-success, #0ab39c);
   }
 }
 
 // ========== Card ==========
 .wizard-card {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 12px;
   box-shadow: var(--vz-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.06));
   overflow: hidden;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
 
   .card-body {
     padding: 2rem 2.5rem;
@@ -98,7 +98,7 @@
 
   .card-footer {
     background: var(--vz-card-cap-bg);
-    border-top: 1px solid var(--vz-border-color);
+    border-top: 1px solid var(--legience-border-hairline);
     padding: 1rem 2.5rem;
   }
 }
@@ -109,12 +109,12 @@
 
   h5 {
     font-weight: 600;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
     margin-bottom: 0.25rem;
   }
 
   p {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 0.9rem;
     margin-bottom: 0;
   }
@@ -124,36 +124,36 @@
 .form-label {
   font-weight: 500;
   font-size: 0.85rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   margin-bottom: 0.4rem;
 }
 
 .form-control, .form-select {
-  border: 1.5px solid var(--vz-border-color);
+  border: 1.5px solid var(--legience-border-hairline);
   border-radius: 8px;
   padding: 0.55rem 0.85rem;
   font-size: 0.9rem;
-  background-color: var(--vz-input-bg);
-  color: var(--vz-body-color);
+  background-color: var(--legience-bg-input);
+  color: var(--legience-text-secondary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   &:focus {
-    border-color: #405189;
+    border-color: var(--legience-accent, #405189);
     box-shadow: 0 0 0 3px rgba(64, 81, 137, 0.1);
-    background-color: var(--vz-input-bg);
+    background-color: var(--legience-bg-input);
   }
 
   &.bg-light, &[readonly] {
-    background-color: var(--vz-tertiary-bg) !important;
-    color: var(--vz-secondary-color);
+    background-color: var(--legience-bg-subtle) !important;
+    color: var(--legience-text-muted);
   }
 }
 
 .input-group-text {
-  border: 1.5px solid var(--vz-border-color);
+  border: 1.5px solid var(--legience-border-hairline);
   border-radius: 8px 0 0 8px;
-  background: var(--vz-tertiary-bg);
-  color: var(--vz-secondary-color);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-muted);
 }
 
 .input-group .form-control {
@@ -170,7 +170,7 @@ textarea.form-control {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
@@ -183,22 +183,22 @@ textarea.form-control {
 
 // ========== Practice Area Cards ==========
 .pa-section {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 1rem;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
 
   .pa-section-header {
     background: rgba(64, 81, 137, 0.08);
     padding: 0.65rem 1rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
 
     h6 {
       margin: 0;
       font-size: 0.85rem;
       font-weight: 600;
-      color: #405189;
+      color: var(--legience-accent, #405189);
     }
   }
 
@@ -209,16 +209,16 @@ textarea.form-control {
 
 // ========== Client Search ==========
 .client-search-results {
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 8px;
   margin-top: 4px;
   max-height: 240px;
   overflow-y: auto;
-  background: var(--vz-card-bg);
+  background: var(--legience-bg-card);
 
   .search-result-item {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     cursor: pointer;
     transition: background 0.15s;
 
@@ -233,11 +233,11 @@ textarea.form-control {
 }
 
 .new-client-btn {
-  border: 2px dashed var(--vz-border-color);
+  border: 2px dashed var(--legience-border-hairline);
   border-radius: 10px;
   padding: 1rem;
   text-align: center;
-  color: #405189;
+  color: var(--legience-accent, #405189);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -245,15 +245,15 @@ textarea.form-control {
   width: 100%;
 
   &:hover {
-    border-color: #405189;
+    border-color: var(--legience-accent, #405189);
     background: rgba(64, 81, 137, 0.06);
   }
 }
 
 // ========== Review Step ==========
 .review-section {
-  background: var(--vz-tertiary-bg);
-  border: 1px solid var(--vz-border-color);
+  background: var(--legience-bg-subtle);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1rem;
@@ -273,13 +273,13 @@ textarea.form-control {
     padding: 0.4rem 0;
     border: none;
     font-size: 0.9rem;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
   }
 }
 
 // ========== Buttons ==========
 .btn-wizard-next {
-  background: #405189;
+  background: var(--legience-accent, #405189);
   border: none;
   color: #fff;
   padding: 0.6rem 1.5rem;
@@ -301,33 +301,33 @@ textarea.form-control {
 
 .btn-wizard-prev {
   background: transparent;
-  border: 1.5px solid var(--vz-border-color);
-  color: var(--vz-body-color);
+  border: 1.5px solid var(--legience-border-hairline);
+  color: var(--legience-text-secondary);
   padding: 0.6rem 1.5rem;
   border-radius: 8px;
   font-weight: 500;
   transition: all 0.2s;
 
   &:hover {
-    border-color: #405189;
-    color: #405189;
+    border-color: var(--legience-accent, #405189);
+    color: var(--legience-accent, #405189);
     background: rgba(64, 81, 137, 0.06);
   }
 }
 
 .btn-wizard-cancel {
-  color: var(--vz-secondary-color);
+  color: var(--legience-text-muted);
   text-decoration: none;
   font-size: 0.9rem;
 
   &:hover {
-    color: #dc3545;
+    color: var(--legience-danger, #dc3545);
   }
 }
 
 // ========== Validation ==========
 .is-invalid {
-  border-color: #dc3545 !important;
+  border-color: var(--legience-danger, #dc3545) !important;
 
   ~ .invalid-feedback {
     display: block;
@@ -337,7 +337,7 @@ textarea.form-control {
 .invalid-feedback {
   display: none;
   font-size: 0.8rem;
-  color: #dc3545;
+  color: var(--legience-danger, #dc3545);
   margin-top: 0.25rem;
 }
 
@@ -346,14 +346,14 @@ textarea.form-control {
   background: rgba(10, 179, 156, 0.1);
   border: 1px solid rgba(10, 179, 156, 0.2);
   border-radius: 8px;
-  color: #0ab39c;
+  color: var(--legience-success, #0ab39c);
 }
 
 .alert-soft-info {
   background: rgba(41, 156, 219, 0.1);
   border: 1px solid rgba(41, 156, 219, 0.2);
   border-radius: 8px;
-  color: #299cdb;
+  color: var(--legience-info, #299cdb);
 }
 
 // ========== Responsive ==========

@@ -1,7 +1,7 @@
 @import '../../shared/form-validation.scss';
 
 .document-preview {
-  background-color: #f8f9fa;
+  background-color: var(--legience-bg-card-hover, #f8f9fa);
   padding: 20px;
   border-radius: 5px;
   font-family: 'Courier New', monospace;
@@ -25,19 +25,19 @@
 
 .nav-tabs-custom {
   .nav-link {
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     background-color: transparent;
     border: none;
     padding: 12px 20px;
     font-weight: 500;
     
     &:hover {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background-color: rgba(64, 81, 137, 0.05);
     }
     
     &.active {
-      color: #405189;
+      color: var(--legience-accent, #405189);
       background-color: transparent;
       border-bottom: 3px solid #405189;
     }
@@ -47,7 +47,7 @@
 .claims-list {
   .claim-item {
     padding: 10px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--legience-border-hairline, #dee2e6);
     border-radius: 5px;
     margin-bottom: 10px;
     
@@ -103,8 +103,8 @@
 .table {
   th {
     font-weight: 600;
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
+    border-bottom: 2px solid var(--legience-border-hairline, #dee2e6);
   }
   
   td {
@@ -114,12 +114,12 @@
 
 .progress {
   height: 20px;
-  background-color: #e9ecef;
+  background-color: var(--legience-bg-subtle, #e9ecef);
 }
 
 .form-check-input:checked {
-  background-color: #405189;
-  border-color: #405189;
+  background-color: var(--legience-accent, #405189);
+  border-color: var(--legience-accent, #405189);
 }
 
 .alert {
@@ -141,30 +141,30 @@
 }
 
 .text-primary {
-  color: #405189 !important;
+  color: var(--legience-accent, #405189) !important;
 }
 
 .text-danger {
-  color: #f06548 !important;
+  color: var(--legience-danger, #f06548) !important;
   
   &.circle {
-    stroke: #f06548 !important;
+    stroke: var(--legience-danger, #f06548) !important;
   }
 }
 
 .text-warning {
-  color: #f7b84b !important;
+  color: var(--legience-warning, #f7b84b) !important;
   
   &.circle {
-    stroke: #f7b84b !important;
+    stroke: var(--legience-warning, #f7b84b) !important;
   }
 }
 
 .text-success {
-  color: #0ab39c !important;
+  color: var(--legience-success, #0ab39c) !important;
   
   &.circle {
-    stroke: #0ab39c !important;
+    stroke: var(--legience-success, #0ab39c) !important;
   }
 }
 

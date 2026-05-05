@@ -84,6 +84,7 @@
     "leaflet": "^1.9.4",
     "lord-icon-element": "^4.1.2",
     "lottie-web": "^5.12.2",
+    "lucide-angular": "^0.453.0",
     "marked": "^16.3.0",
     "masonry-layout": "^4.2.2",
     "metismenujs": "^1.4.0",
@@ -142,6 +143,7 @@
     "@types/quill": "^2.0.14",
     "karma-jasmine": "^5.1.0",
     "karma-jasmine-html-reporter": "^2.1.0",
+    "playwright": "^1.59.1",
     "typescript": "~5.4.5"
   }
 }

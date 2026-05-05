@@ -1,7 +1,7 @@
 .timer-display {
   font-size: 2.5rem;
   font-weight: 600;
-  color: #0d6efd;
+  color: var(--legience-accent, #0d6efd);
   font-family: 'Courier New', monospace;
   letter-spacing: 2px;
   margin-bottom: 0.5rem;
@@ -48,7 +48,7 @@
 
 .list-group-item-action {
   &:hover {
-    background-color: #f8f9fa;
+    background-color: var(--legience-bg-card-hover, #f8f9fa);
     transform: translateX(5px);
     transition: all 0.2s ease;
   }
@@ -67,7 +67,7 @@
 }
 
 .card {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--legience-border-hairline, #e9ecef);
   border-radius: 0.375rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   transition: all 0.3s ease;
@@ -80,7 +80,7 @@
 
 .form-text {
   font-size: 0.875em;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
 }
 
 .btn {
@@ -101,9 +101,9 @@
   border: none;
   
   &:hover {
-    background-color: var(--vz-light);
+    background-color: var(--legience-bg-card-hover);
     transform: translateX(5px);
-    border-left: 3px solid var(--vz-primary);
+    border-left: 3px solid var(--legience-accent);
   }
 }
 
@@ -111,13 +111,13 @@
   border-radius: 12px;
   
   &.alert-warning {
-    background: linear-gradient(135deg, rgba(var(--vz-warning-rgb), 0.1), rgba(var(--vz-warning-rgb), 0.05));
-    border: 1px solid rgba(var(--vz-warning-rgb), 0.2);
+    background: linear-gradient(135deg, rgba(var(--legience-warning-rgb), 0.1), rgba(var(--legience-warning-rgb), 0.05));
+    border: 1px solid rgba(var(--legience-warning-rgb), 0.2);
   }
   
   &.alert-danger {
-    background: linear-gradient(135deg, rgba(var(--vz-danger-rgb), 0.1), rgba(var(--vz-danger-rgb), 0.05));
-    border: 1px solid rgba(var(--vz-danger-rgb), 0.2);
+    background: linear-gradient(135deg, rgba(var(--legience-danger-rgb), 0.1), rgba(var(--legience-danger-rgb), 0.05));
+    border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
   }
 }
 
@@ -144,15 +144,15 @@
 }
 
 .form-check-input:checked {
-  background-color: var(--vz-success);
-  border-color: var(--vz-success);
+  background-color: var(--legience-success);
+  border-color: var(--legience-success);
 }
 
 .input-group {
   .input-group-text {
-    background-color: var(--vz-light);
-    border-color: var(--vz-border-color);
-    color: var(--vz-secondary);
+    background-color: var(--legience-bg-card-hover);
+    border-color: var(--legience-border-hairline);
+    color: var(--legience-secondary);
     font-weight: 500;
   }
 }
@@ -199,20 +199,20 @@
 
 [data-bs-theme="dark"] {
   .card {
-    background-color: var(--vz-dark);
+    background-color: var(--legience-dark);
     border-color: var(--vz-border-color-dark);
   }
   
   .form-control, .form-select {
-    background-color: var(--vz-dark);
+    background-color: var(--legience-dark);
     border-color: var(--vz-border-color-dark);
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
   }
   
   .input-group-text {
     background-color: var(--vz-gray-800);
     border-color: var(--vz-border-color-dark);
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
   }
 }
 
@@ -231,16 +231,16 @@ textarea.form-control {
   }
   
   &::-webkit-scrollbar-track {
-    background: var(--vz-light);
+    background: var(--legience-bg-card-hover);
     border-radius: 4px;
   }
   
   &::-webkit-scrollbar-thumb {
-    background: var(--vz-secondary);
+    background: var(--legience-secondary);
     border-radius: 4px;
     
     &:hover {
-      background: var(--vz-primary);
+      background: var(--legience-accent);
     }
   }
 } 

@@ -10,7 +10,7 @@
 }
 
 .legal-page-content {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 48px;
@@ -24,7 +24,7 @@
   text-align: center;
   margin-bottom: 40px;
   padding-bottom: 24px;
-  border-bottom: 2px solid #e9ecef;
+  border-bottom: 2px solid var(--legience-border-hairline, #e9ecef);
 
   h1 {
     font-size: 2.5rem;
@@ -38,7 +38,7 @@
   }
 
   .last-updated {
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     font-size: 0.9rem;
   }
 }
@@ -52,7 +52,7 @@
     color: #1a1a2e;
     margin-bottom: 16px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--legience-border-hairline, #e9ecef);
 
     @media (max-width: 768px) {
       font-size: 1.25rem;
@@ -67,14 +67,14 @@
   }
 
   p {
-    color: #495057;
+    color: var(--legience-text-secondary, #495057);
     line-height: 1.7;
     margin-bottom: 12px;
   }
 
   ul {
     margin: 12px 0 16px 20px;
-    color: #495057;
+    color: var(--legience-text-secondary, #495057);
 
     li {
       margin-bottom: 8px;
@@ -107,7 +107,7 @@
 }
 
 .highlight-box {
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   border-left: 4px solid #4361ee;
   padding: 20px 24px;
   margin: 20px 0;
@@ -133,20 +133,20 @@
 
   &.important {
     background: #fff5f5;
-    border-left-color: #dc3545;
+    border-left-color: var(--legience-danger, #dc3545);
 
     h3 {
-      color: #dc3545;
+      color: var(--legience-danger, #dc3545);
     }
 
     strong {
-      color: #dc3545;
+      color: var(--legience-danger, #dc3545);
     }
   }
 }
 
 .contact-info {
-  background: #f8f9fa;
+  background: var(--legience-bg-card-hover, #f8f9fa);
   padding: 20px 24px;
   border-radius: 8px;
   margin: 16px 0;
@@ -163,11 +163,11 @@
 .legal-footer {
   margin-top: 48px;
   padding-top: 24px;
-  border-top: 2px solid #e9ecef;
+  border-top: 2px solid var(--legience-border-hairline, #e9ecef);
   text-align: center;
 
   p {
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     font-size: 0.9rem;
     margin-bottom: 12px;
   }
@@ -188,7 +188,7 @@
 // Print styles
 @media print {
   .legal-page-wrapper {
-    background: #fff;
+    background: var(--legience-bg-card, #fff);
     padding: 0;
   }
 

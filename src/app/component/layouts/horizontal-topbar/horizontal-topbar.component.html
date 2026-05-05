@@ -1,115 +1,110 @@
-<div class="app-menu navbar-menu">
-    <!-- LOGO -->
-    <div class="navbar-brand-box">
-        <!-- Dark Logo-->
-        <a routerLink="/" class="logo logo-dark">
-            <span class="logo-sm">
-                <img src="assets/images/legience-logo-blue.svg" alt="" height="80">
-            </span>
-            <span class="logo-lg">
-                <img src="assets/images/legience-logo-blue.svg" alt="" height="90">
-            </span>
-        </a>
-        <!-- Light Logo-->
-        <a routerLink="/" class="logo logo-light">
-            <span class="logo-sm">
-                <img src="assets/images/legience-logo-white.svg" alt="" height="80">
-            </span>
-            <span class="logo-lg">
-                <img src="assets/images/legience-logo-white.svg" alt="" height="90">
-            </span>
-        </a>
-        <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover">
-            <i class="ri-record-circle-line"></i>
-        </button>
-    </div>
+<!-- =====================================================================
+     LEGIENCE BAR 2 — horizontal nav row (clean replacement)
+     Top-level nav items use .lt-nav-* classes. Submenu dropdown internals
+     keep Velzon's classes since they're used by Bootstrap's collapse JS.
+     ===================================================================== -->
+<div class="app-menu lt-nav-menu">
 
-    <div id="scrollbar">
-        <div class="container-fluid">
+  <!-- (Removed: .navbar-brand-box sidebar logo. It was a vertical-layout
+       fallback that Velzon hid via .logo-dark/.logo-light theme rules.
+       In horizontal layout, app-topbar already renders the brand. The
+       leftover block was rendering a huge logo between bar 1 and bar 2.) -->
 
-            <div id="two-column-menu">
-            </div>
-            <ul class="navbar-nav" id="navbar-nav">
-                @for(item of menuItems; track $index){
-                @if(item.isTitle){
-                <li class="menu-title"><span data-key="t-menu">{{ item.label }}</span></li>
-                }@else {
-                <li class="nav-item">
-                    @if(hasItems(item)){
-                    <a href="javascript:void(0);" class="is-parent nav-link menu-link" [ngClass]="{'has-arrow': !item.badge, 'has-dropdown': item.badge}" [attr.data-title]="item.label" data-bs-toggle="collapse" aria-expanded="false" (click)="toggleItem($event)">
-                        @if(item.icon){<i class="bx {{ item.icon }} icon nav-icon"></i>}
-                        <span class="menu-text">{{ item.label }}</span>
-                        @if(item.badge){<span class="badge badge-pill {{item.badge.variant}}">{{item.badge.text}}</span>}
-                    </a>
+  <div id="scrollbar">
+    <div class="container-fluid">
+      <div id="two-column-menu"></div>
 
-                    <div class="collapse menu-dropdown" [ngClass]="{'mega-dropdown-menu':item.label === 'MENUITEMS.BASEUI.TEXT'}" id="sidebarDashboards">
-                        <div [ngClass]="{'row':item.label == 'MENUITEMS.BASEUI.TEXT'}">
-                            @for(subitem of item.subItems; track $index){
-                            <div [ngClass]="{'col-lg-4': item.label == 'MENUITEMS.BASEUI.TEXT'}">
+      <ul class="lt-nav-list" id="navbar-nav">
+        @for(item of menuItems; track $index){
+          @if(item.isTitle){
+            <li class="lt-nav-title"><span data-key="t-menu">{{ item.label }}</span></li>
+          }@else {
+            <li class="lt-nav-item" [class.is-open]="item['_ltOpen']">
+
+              @if(hasItems(item)){
+                <!-- Parent link: hover-to-show on desktop (CSS), click-toggle
+                     for touch (.is-open via onParentClick). If parent has its
+                     own link, click navigates AND closes any other open menus. -->
+                <a [routerLink]="item.link || null"
+                   class="lt-nav-link is-parent"
+                   [attr.data-title]="item.label"
+                   (click)="onParentClick(item, $event)"
+                   [routerLinkActive]="'active'"
+                   [routerLinkActiveOptions]="{ exact: false }">
+                  <i-lucide [name]="item.lucideIcon || 'square'" [size]="16" class="lt-nav-icon"></i-lucide>
+                  <span class="lt-nav-label">{{ item.label }}</span>
+                  <i-lucide name="chevron-down" [size]="12" class="lt-nav-chev"></i-lucide>
+                  @if(item.badge){<span class="badge badge-pill {{item.badge.variant}} ms-1">{{item.badge.text}}</span>}
+                </a>
+
+                <div class="lt-nav-dropdown" [ngClass]="{'mega-dropdown-menu':item.label === 'MENUITEMS.BASEUI.TEXT'}">
+                  <div [ngClass]="{'row':item.label == 'MENUITEMS.BASEUI.TEXT'}">
+                    @for(subitem of item.subItems; track $index){
+                      <div [ngClass]="{'col-lg-4': item.label == 'MENUITEMS.BASEUI.TEXT'}">
+                        <ul class="nav nav-sm flex-column" aria-expanded="false">
+                          <li class="nav-item">
+                            @if(hasItems(subitem)){
+                              <a class="nav-link" href="javascript:void(0);" [attr.data-parent]="subitem.parentId" [attr.data-title]="subitem.label" data-bs-toggle="collapse" aria-expanded="false" (click)="toggleSubItem($event)">
+                                @if(subitem.icon){<i class="bx {{ subitem.icon }} icon nav-icon"></i>}
+                                <span class="menu-text">{{ subitem.label }}</span>
+                              </a>
+                              <div class="collapse menu-dropdown">
                                 <ul class="nav nav-sm flex-column" aria-expanded="false">
+                                  @for(subSubitem of subitem.subItems; track $index){
                                     <li class="nav-item">
-                                        @if(hasItems(subitem)){
-                                        <a class="nav-link" href="javascript:void(0);" [attr.data-parent]="subitem.parentId" [attr.data-title]="subitem.label" data-bs-toggle="collapse" aria-expanded="false" (click)="toggleSubItem($event)">
-                                            @if(subitem.icon){<i class="bx {{ subitem.icon }} icon nav-icon"></i>}
-                                            <span class="menu-text">{{ subitem.label }}</span>
+                                      @if(subSubitem.childItem){
+                                        <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subSubitem.label" [routerLink]="subSubitem.link" data-bs-toggle="collapse" aria-expanded="false" class="nav-link" (click)="updateActive($event)">
+                                          <span class="menu-text">{{ subSubitem.label }}</span>
                                         </a>
-
                                         <div class="collapse menu-dropdown">
-                                            <ul class="nav nav-sm flex-column" aria-expanded="false">
-                                                @for(subSubitem of subitem.subItems; track $index){
-                                                <li class="nav-item">
-                                                    @if(subSubitem.childItem){
-                                                    <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subSubitem.label" [routerLink]="subSubitem.link" data-bs-toggle="collapse" aria-expanded="false" class="nav-link" (click)="updateActive($event)">
-                                                        <span class="menu-text">{{ subSubitem.label }}</span>
-                                                    </a>
-                                                    <div class="collapse menu-dropdown">
-                                                        <ul class="nav nav-sm flex-column" aria-expanded="false">
-                                                            @for(subChilditem of subChilditem.childItem; track $index){
-                                                            <li class="nav-item">
-                                                                <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subChilditem.label" [routerLink]="subChilditem.link" class="nav-link" (click)="updateActive($event)">
-                                                                    <span class="menu-text">{{ subChilditem.label }}</span>
-                                                                </a>
-                                                            </li>
-                                                            }
-                                                        </ul>
-                                                    </div>
-                                                    }@else{
-                                                    <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subSubitem.label" [routerLink]="subSubitem.link" class="nav-link" (click)="updateActive($event)">
-                                                        <span class="menu-text">{{ subSubitem.label }}</span>
-                                                    </a>
-                                                    }
-
-                                                </li>
-                                                }
-                                            </ul>
+                                          <ul class="nav nav-sm flex-column" aria-expanded="false">
+                                            @for(subChilditem of subChilditem.childItem; track $index){
+                                              <li class="nav-item">
+                                                <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subChilditem.label" [routerLink]="subChilditem.link" class="nav-link" (click)="updateActive($event)">
+                                                  <span class="menu-text">{{ subChilditem.label }}</span>
+                                                </a>
+                                              </li>
+                                            }
+                                          </ul>
                                         </div>
-                                        }@else {
-                                        <a [routerLink]="subitem.link" class="nav-link" [attr.data-parent]="subitem.parentId" [attr.data-title]="subitem.label" (click)="updateActive($event)">
-                                            @if(subitem.icon){<i class="bx {{ subitem.icon }} icon nav-icon"></i>}
-                                            <span class="menu-text">{{ subitem.label }}</span>
+                                      }@else{
+                                        <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subSubitem.label" [routerLink]="subSubitem.link" class="nav-link" (click)="updateActive($event)">
+                                          <span class="menu-text">{{ subSubitem.label }}</span>
                                         </a>
-                                        }
+                                      }
                                     </li>
+                                  }
                                 </ul>
-
-
-                            </div>
+                              </div>
+                            }@else {
+                              <a [routerLink]="subitem.link" class="nav-link" [attr.data-parent]="subitem.parentId" [attr.data-title]="subitem.label" (click)="updateActive($event)">
+                                @if(subitem.icon){<i class="bx {{ subitem.icon }} icon nav-icon"></i>}
+                                <span class="menu-text">{{ subitem.label }}</span>
+                              </a>
                             }
-                        </div>
-
-                    </div>
-                    }@else{
-                    <a [routerLink]="item.link" class="side-nav-link-ref nav-link menu-link" [attr.data-title]="item.label">
-                        @if(item.icon){<i class="bx {{ item.icon }} icon nav-icon"></i>}
-                        <span class="menu-text">{{ item.label }}</span>
-                        @if(item.badge){<span class="badge {{item.badge.variant}} float-end">{{item.badge.text | translate}}</span>}
-                    </a>
+                          </li>
+                        </ul>
+                      </div>
                     }
-                </li>
-                }
-                }
-            </ul>
-        </div>
-        <!-- Sidebar -->
+                  </div>
+                </div>
+              }@else{
+                <a [routerLink]="item.link"
+                   class="lt-nav-link"
+                   [attr.data-title]="item.label"
+                   [routerLinkActive]="'active'"
+                   [routerLinkActiveOptions]="{ exact: false }">
+                  <i-lucide [name]="item.lucideIcon || 'square'" [size]="16" class="lt-nav-icon"></i-lucide>
+                  <span class="lt-nav-label">{{ item.label }}</span>
+                  @if(item.badge){<span class="badge {{item.badge.variant}} ms-1">{{item.badge.text | translate}}</span>}
+                </a>
+              }
+
+            </li>
+          }
+        }
+      </ul>
+
     </div>
+  </div>
 </div>

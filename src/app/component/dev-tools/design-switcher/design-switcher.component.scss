@@ -1,0 +1,109 @@
+// Floating bottom-right pill for live design preview switching.
+// Independent of Velzon — uses literal hex values so it never restyles itself.
+
+.design-switcher-pill {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 1040;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(20, 22, 26, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 100px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  &:hover { opacity: 1; }
+
+  &.collapsed {
+    padding: 4px;
+    .ds-toggle { margin: 0; }
+  }
+}
+
+.ds-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
+  &:hover { background: rgba(255, 255, 255, 0.08); }
+}
+
+.ds-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: block;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+
+  &[data-design="velzon"] { background: #6691e7; }   // Velzon blue
+  &[data-design="column"] { background: #ec652b; }   // Column orange
+  &[data-design="rox"]    { background: #0b64e9; }   // Rox blue
+}
+
+.ds-options {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+
+    &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &.active {
+      background: var(--legience-bg-card, #fff);
+      color: #14161a;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+.ds-hint {
+  display: inline-block;
+  padding: 0 8px 0 6px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: default;
+  user-select: none;
+}
+
+@media (max-width: 575.98px) {
+  .design-switcher-pill {
+    bottom: 12px;
+    right: 12px;
+    transform: scale(0.9);
+    transform-origin: bottom right;
+  }
+}

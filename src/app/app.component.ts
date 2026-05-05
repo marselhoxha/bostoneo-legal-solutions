@@ -24,6 +24,7 @@ import { WebSocketService } from './core/services/websocket.service';
 import { DeadlineAlertService } from './core/services/deadline-alert.service';
 import { OrganizationService } from './core/services/organization.service';
 import { decodeJwtPayload } from './core/utils/jwt.util';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -33,6 +34,9 @@ import { decodeJwtPayload } from './core/utils/jwt.util';
 export class AppComponent implements OnInit, OnDestroy {
   showPreloader = false;
   showTosModal = false;
+  // Exposed to the template so we can gate the dev-only design switcher
+  // behind *ngIf="!production".
+  isProduction = environment.production;
   private tosAcceptedThisSession = false;
   private destroy$ = new Subject<void>();
 
@@ -54,6 +58,15 @@ export class AppComponent implements OnInit, OnDestroy {
     // the user back to. Inject-and-forget; no calls needed from this component.
     private _navigationHistoryService: NavigationHistoryService
   ) {
+    // Set the Rox design attribute on <html> as early as possible — before
+    // the design-switcher component mounts. This eliminates the one-paint
+    // Velzon flicker on first load (when localStorage is empty) and ensures
+    // production users always land on Rox. The dev-only design-switcher can
+    // still override this in dev, but production hides the switcher entirely.
+    if (typeof document !== 'undefined' && !document.documentElement.hasAttribute('data-design')) {
+      document.documentElement.setAttribute('data-design', 'rox');
+    }
+
     this.preloaderService.showPreloader$.subscribe((show) => {
       this.showPreloader = show;
     });

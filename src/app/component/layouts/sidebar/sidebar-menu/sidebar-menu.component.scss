@@ -140,7 +140,7 @@
   margin-left: 8px;
   
   &.admin-only {
-    background-color: #dc3545;
+    background-color: var(--legience-danger, #dc3545);
     color: white;
   }
   
@@ -150,12 +150,12 @@
   }
   
   &.attorney-level {
-    background-color: #0d6efd;
+    background-color: var(--legience-accent, #0d6efd);
     color: white;
   }
   
   &.financial {
-    background-color: #198754;
+    background-color: var(--legience-success, #198754);
     color: white;
   }
 }

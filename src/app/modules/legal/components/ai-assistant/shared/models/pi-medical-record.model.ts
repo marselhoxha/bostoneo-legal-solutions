@@ -78,6 +78,9 @@ export interface PIMedicalRecord {
   medicationsAdministered?: Array<{ name: string; dose?: string; route?: string; frequency?: string }>;
   medicationsPrescribed?: Array<{ name: string; dose?: string; frequency?: string; duration?: string }>;
 
+  // Tier 6 — itemized visits from multi-DOS billing summaries
+  visits?: Array<{ date?: string; code?: string; provider?: string; charge?: number }>;
+
   // Billing Information
   billedAmount?: number;
   adjustedAmount?: number;

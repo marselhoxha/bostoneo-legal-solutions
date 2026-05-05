@@ -8,42 +8,49 @@ export const CLIENT_MENU: MenuItem[] = [
     id: 'client-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/client/dashboard'
   },
   {
     id: 'client-cases',
     label: 'My Cases',
     icon: 'ri-briefcase-line',
+    lucideIcon: 'folder',
     link: '/client/cases'
   },
   {
     id: 'client-documents',
     label: 'Documents',
     icon: 'ri-file-text-line',
+    lucideIcon: 'file-text',
     link: '/client/documents'
   },
   {
     id: 'client-appointments',
     label: 'Appointments',
     icon: 'ri-calendar-check-line',
+    lucideIcon: 'calendar-check',
     link: '/client/appointments'
   },
   {
     id: 'client-messages',
     label: 'Messages',
     icon: 'ri-message-2-line',
+    lucideIcon: 'message-circle',
     link: '/client/messages'
   },
   {
     id: 'client-invoices',
     label: 'Invoices',
     icon: 'ri-bill-line',
+    lucideIcon: 'receipt',
     link: '/client/invoices'
   },
   {
     id: 'client-profile',
     label: 'Profile',
     icon: 'ri-user-settings-line',
+    lucideIcon: 'user-cog',
     link: '/client/profile'
   }
 ];
@@ -57,24 +64,28 @@ export const SECRETARY_MENU: MenuItem[] = [
     id: 'sec-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'sec-calendar',
     label: 'Calendar',
     icon: 'ri-calendar-line',
+    lucideIcon: 'calendar',
     link: '/legal/calendar'
   },
   {
     id: 'sec-clients',
     label: 'Clients',
     icon: 'ri-user-3-line',
+    lucideIcon: 'users',
     link: '/clients'
   },
   {
     id: 'sec-crm',
     label: 'CRM',
     icon: 'ri-customer-service-2-line',
+    lucideIcon: 'headphones',
     link: '/crm/dashboard',
     subItems: [
       { id: 'sec-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'sec-crm' },
@@ -86,6 +97,7 @@ export const SECRETARY_MENU: MenuItem[] = [
     id: 'sec-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
+    lucideIcon: 'check-square',
     link: '/case-management/tasks'
   }
 ];
@@ -98,12 +110,14 @@ export const PARALEGAL_MENU: MenuItem[] = [
     id: 'para-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'para-case-mgmt',
     label: 'Case Management',
     icon: 'ri-briefcase-4-line',
+    lucideIcon: 'folder',
     link: '/legal/cases',
     subItems: [
       { id: 'para-case-cases', label: 'Cases', link: '/legal/cases', parentId: 'para-case-mgmt' },
@@ -114,18 +128,21 @@ export const PARALEGAL_MENU: MenuItem[] = [
     id: 'para-calendar',
     label: 'Calendar',
     icon: 'ri-calendar-line',
+    lucideIcon: 'calendar',
     link: '/legal/calendar'
   },
   {
     id: 'para-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
+    lucideIcon: 'check-square',
     link: '/case-management/tasks'
   },
   {
     id: 'para-time',
     label: 'Time Tracking',
     icon: 'ri-time-line',
+    lucideIcon: 'clock',
     link: '/time-tracking/dashboard',
     subItems: [
       { id: 'para-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'para-time' },
@@ -142,12 +159,14 @@ export const FINANCE_MENU: MenuItem[] = [
     id: 'fin-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'fin-financial',
     label: 'Financial',
     icon: 'ri-money-dollar-circle-line',
+    lucideIcon: 'dollar-sign',
     link: '/billing-dashboard',
     subItems: [
       { id: 'fin-billing-dash', label: 'Billing Dashboard', icon: 'ri-pie-chart-line', link: '/billing-dashboard', parentId: 'fin-financial' },
@@ -183,6 +202,7 @@ export const FINANCE_MENU: MenuItem[] = [
     id: 'fin-time-billing',
     label: 'Time & Billing',
     icon: 'ri-time-line',
+    lucideIcon: 'clock',
     link: '/time-tracking/dashboard',
     subItems: [
       { id: 'fin-time-dashboard', label: 'Dashboard', link: '/time-tracking/dashboard', parentId: 'fin-time-billing' },
@@ -195,6 +215,7 @@ export const FINANCE_MENU: MenuItem[] = [
     id: 'fin-clients',
     label: 'Clients',
     icon: 'ri-user-3-line',
+    lucideIcon: 'users',
     link: '/clients'
   }
 ];
@@ -208,30 +229,35 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
     id: 'solo-att-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'solo-att-cases',
     label: 'Cases',
     icon: 'ri-briefcase-4-line',
+    lucideIcon: 'folder',
     link: '/legal/cases'
   },
   {
     id: 'solo-att-calendar',
     label: 'Calendar',
     icon: 'ri-calendar-line',
+    lucideIcon: 'calendar',
     link: '/legal/calendar'
   },
   {
     id: 'solo-att-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
+    lucideIcon: 'check-square',
     link: '/case-management/tasks'
   },
   {
     id: 'solo-att-ai-tools',
     label: 'LegiTools',
     icon: 'ri-robot-line',
+    lucideIcon: 'wrench',
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'solo-att-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-att-ai-tools' },
@@ -243,12 +269,14 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
     id: 'solo-att-clients',
     label: 'Clients',
     icon: 'ri-user-3-line',
+    lucideIcon: 'users',
     link: '/clients'
   },
   {
     id: 'solo-att-billing',
     label: 'Billing',
     icon: 'ri-money-dollar-circle-line',
+    lucideIcon: 'dollar-sign',
     link: '/time-tracking/dashboard',
     subItems: [
       { id: 'solo-att-time-dashboard', label: 'Time Dashboard', link: '/time-tracking/dashboard', parentId: 'solo-att-billing' },
@@ -283,6 +311,7 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
     id: 'solo-att-signatures',
     label: 'E-Signatures',
     icon: 'ri-quill-pen-line',
+    lucideIcon: 'pen-tool',
     link: '/signatures'
   }
 ];
@@ -296,30 +325,35 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     id: 'solo-adm-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'solo-adm-cases',
     label: 'Cases',
     icon: 'ri-briefcase-4-line',
+    lucideIcon: 'folder',
     link: '/legal/cases'
   },
   {
     id: 'solo-adm-calendar',
     label: 'Calendar',
     icon: 'ri-calendar-line',
+    lucideIcon: 'calendar',
     link: '/legal/calendar'
   },
   {
     id: 'solo-adm-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
+    lucideIcon: 'check-square',
     link: '/case-management/tasks'
   },
   {
     id: 'solo-adm-ai-tools',
     label: 'LegiTools',
     icon: 'ri-robot-line',
+    lucideIcon: 'wrench',
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'solo-adm-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'solo-adm-ai-tools' },
@@ -331,12 +365,14 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     id: 'solo-adm-clients',
     label: 'Clients',
     icon: 'ri-user-3-line',
+    lucideIcon: 'users',
     link: '/clients'
   },
   {
     id: 'solo-adm-billing',
     label: 'Billing',
     icon: 'ri-money-dollar-circle-line',
+    lucideIcon: 'dollar-sign',
     link: '/time-tracking/dashboard',
     subItems: [
       { id: 'solo-adm-time-dashboard', label: 'Time Dashboard', link: '/time-tracking/dashboard', parentId: 'solo-adm-billing' },
@@ -371,6 +407,7 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     id: 'solo-adm-signatures',
     label: 'E-Signatures',
     icon: 'ri-quill-pen-line',
+    lucideIcon: 'pen-tool',
     link: '/signatures'
   },
 ];
@@ -384,12 +421,14 @@ export const ATTORNEY_MENU: MenuItem[] = [
     id: 'att-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'att-case-mgmt',
     label: 'Case Management',
     icon: 'ri-briefcase-4-line',
+    lucideIcon: 'folder',
     link: '/legal/cases',
     subItems: [
       { id: 'att-case-cases', label: 'Cases', icon: 'ri-folder-open-line', link: '/legal/cases', parentId: 'att-case-mgmt' },
@@ -400,18 +439,21 @@ export const ATTORNEY_MENU: MenuItem[] = [
     id: 'att-calendar',
     label: 'Calendar',
     icon: 'ri-calendar-line',
+    lucideIcon: 'calendar',
     link: '/legal/calendar'
   },
   {
     id: 'att-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
+    lucideIcon: 'check-square',
     link: '/case-management/tasks'
   },
   {
     id: 'att-ai-tools',
     label: 'LegiTools',
     icon: 'ri-robot-line',
+    lucideIcon: 'wrench',
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'att-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'att-ai-tools' },
@@ -423,12 +465,14 @@ export const ATTORNEY_MENU: MenuItem[] = [
     id: 'att-clients',
     label: 'Clients',
     icon: 'ri-user-3-line',
+    lucideIcon: 'users',
     link: '/clients'
   },
   {
     id: 'att-billing',
     label: 'Billing',
     icon: 'ri-money-dollar-circle-line',
+    lucideIcon: 'dollar-sign',
     link: '/time-tracking/dashboard',
     subItems: [
       { id: 'att-time-dashboard', label: 'Time Dashboard', icon: 'ri-dashboard-line', link: '/time-tracking/dashboard', parentId: 'att-billing' },
@@ -464,6 +508,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
     id: 'att-crm',
     label: 'CRM',
     icon: 'ri-customer-service-2-line',
+    lucideIcon: 'headphones',
     link: '/crm/dashboard',
     subItems: [
       { id: 'att-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'att-crm' },
@@ -476,6 +521,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
     id: 'att-signatures',
     label: 'E-Signatures',
     icon: 'ri-quill-pen-line',
+    lucideIcon: 'pen-tool',
     link: '/signatures'
   }
 ];
@@ -489,12 +535,14 @@ export const ADMIN_MENU: MenuItem[] = [
     id: 'admin-dashboard',
     label: 'Dashboard',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/home'
   },
   {
     id: 'admin-case-mgmt',
     label: 'Case Management',
     icon: 'ri-briefcase-4-line',
+    lucideIcon: 'folder',
     link: '/legal/cases',
     subItems: [
       { id: 'admin-case-cases', label: 'Cases', icon: 'ri-folder-open-line', link: '/legal/cases', parentId: 'admin-case-mgmt' },
@@ -505,18 +553,21 @@ export const ADMIN_MENU: MenuItem[] = [
     id: 'admin-calendar',
     label: 'Calendar',
     icon: 'ri-calendar-line',
+    lucideIcon: 'calendar',
     link: '/legal/calendar'
   },
   {
     id: 'admin-tasks',
     label: 'Tasks',
     icon: 'ri-task-line',
+    lucideIcon: 'check-square',
     link: '/case-management/tasks'
   },
   {
     id: 'admin-ai-tools',
     label: 'LegiTools',
     icon: 'ri-robot-line',
+    lucideIcon: 'wrench',
     link: '/legal/ai-assistant/legispace',
     subItems: [
       { id: 'admin-ai-workspace', label: 'LegiSpace', icon: 'ri-rocket-2-line', link: '/legal/ai-assistant/legispace', parentId: 'admin-ai-tools' },
@@ -528,12 +579,14 @@ export const ADMIN_MENU: MenuItem[] = [
     id: 'admin-clients',
     label: 'Clients',
     icon: 'ri-user-3-line',
+    lucideIcon: 'users',
     link: '/clients'
   },
   {
     id: 'admin-billing',
     label: 'Billing',
     icon: 'ri-money-dollar-circle-line',
+    lucideIcon: 'dollar-sign',
     link: '/billing-dashboard',
     subItems: [
       { id: 'admin-billing-dash', label: 'Billing Dashboard', icon: 'ri-pie-chart-line', link: '/billing-dashboard', parentId: 'admin-billing' },
@@ -571,6 +624,7 @@ export const ADMIN_MENU: MenuItem[] = [
     id: 'admin-crm',
     label: 'CRM',
     icon: 'ri-customer-service-2-line',
+    lucideIcon: 'headphones',
     link: '/crm/dashboard',
     subItems: [
       { id: 'admin-crm-dashboard', label: 'Dashboard', icon: 'ri-dashboard-line', link: '/crm/dashboard', parentId: 'admin-crm' },
@@ -583,6 +637,7 @@ export const ADMIN_MENU: MenuItem[] = [
     id: 'admin-signatures',
     label: 'E-Signatures',
     icon: 'ri-quill-pen-line',
+    lucideIcon: 'pen-tool',
     link: '/signatures'
   },
 ];
@@ -597,12 +652,14 @@ export const SUPERADMIN_MENU: MenuItem[] = [
     id: 'sa-overview',
     label: 'Overview',
     icon: 'ri-dashboard-2-line',
+    lucideIcon: 'layout-dashboard',
     link: '/superadmin/dashboard'
   },
   {
     id: 'sa-organizations',
     label: 'Organizations',
     icon: 'ri-building-2-line',
+    lucideIcon: 'building-2',
     subItems: [
       { id: 'sa-org-list', label: 'All Organizations', link: '/superadmin/organizations', parentId: 'sa-organizations' },
       { id: 'sa-org-create', label: 'Create New', link: '/superadmin/organizations/new', parentId: 'sa-organizations' }
@@ -612,12 +669,14 @@ export const SUPERADMIN_MENU: MenuItem[] = [
     id: 'sa-users',
     label: 'Users',
     icon: 'ri-group-line',
+    lucideIcon: 'users',
     link: '/superadmin/users'
   },
   {
     id: 'sa-analytics',
     label: 'Analytics',
     icon: 'ri-bar-chart-2-line',
+    lucideIcon: 'bar-chart-2',
     subItems: [
       { id: 'sa-analytics-platform', label: 'Platform Analytics', link: '/superadmin/analytics', parentId: 'sa-analytics' },
       { id: 'sa-analytics-security', label: 'Security', link: '/superadmin/security', parentId: 'sa-analytics' }
@@ -627,6 +686,7 @@ export const SUPERADMIN_MENU: MenuItem[] = [
     id: 'sa-system',
     label: 'System',
     icon: 'ri-settings-3-line',
+    lucideIcon: 'settings',
     subItems: [
       { id: 'sa-system-health', label: 'System Health', link: '/superadmin/system-health', parentId: 'sa-system' },
       { id: 'sa-system-audit', label: 'Audit Logs', link: '/superadmin/audit-logs', parentId: 'sa-system' },
@@ -638,6 +698,7 @@ export const SUPERADMIN_MENU: MenuItem[] = [
     id: 'sa-announcements',
     label: 'Announcements',
     icon: 'ri-megaphone-line',
+    lucideIcon: 'megaphone',
     link: '/superadmin/announcements'
   }
 ];

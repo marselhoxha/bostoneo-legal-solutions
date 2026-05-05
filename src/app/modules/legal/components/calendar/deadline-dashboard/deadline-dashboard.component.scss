@@ -1,41 +1,41 @@
 // Card styling
 .card {
-  background-color: var(--vz-card-bg);
+  background-color: var(--legience-bg-card);
   border: none;
   box-shadow: var(--vz-card-box-shadow);
   
   .card-header {
     background-color: var(--vz-card-cap-bg);
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
   }
   
   .card-header.bg-soft-primary {
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
   }
 }
 
 // Button styling
 .btn-soft-success {
-  color: var(--vz-success);
-  background-color: rgba(var(--vz-success-rgb), 0.1);
+  color: var(--legience-success);
+  background-color: rgba(var(--legience-success-rgb), 0.1);
   border-color: transparent;
   
   &:hover, &:focus, &:active {
     color: #fff;
-    background-color: var(--vz-success);
-    border-color: var(--vz-success);
+    background-color: var(--legience-success);
+    border-color: var(--legience-success);
   }
 }
 
 .btn-soft-secondary {
-  color: var(--vz-secondary);
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
   border-color: transparent;
   
   &:hover, &:focus, &:active {
     color: #fff;
-    background-color: var(--vz-secondary);
-    border-color: var(--vz-secondary);
+    background-color: var(--legience-secondary);
+    border-color: var(--legience-secondary);
   }
 }
 
@@ -50,70 +50,70 @@
 }
 
 .btn-soft-info {
-  color: var(--vz-info);
-  background-color: rgba(var(--vz-info-rgb), 0.1);
+  color: var(--legience-info);
+  background-color: rgba(var(--legience-info-rgb), 0.1);
   
   &:hover {
     color: #fff;
-    background-color: var(--vz-info);
+    background-color: var(--legience-info);
   }
 }
 
 .btn-soft-primary {
-  color: var(--vz-primary);
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--legience-accent);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
   
   &:hover {
     color: #fff;
-    background-color: var(--vz-primary);
+    background-color: var(--legience-accent);
   }
 }
 
 .btn-soft-danger {
-  color: var(--vz-danger);
-  background-color: rgba(var(--vz-danger-rgb), 0.1);
+  color: var(--legience-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.1);
   
   &:hover {
     color: #fff;
-    background-color: var(--vz-danger);
+    background-color: var(--legience-danger);
   }
 }
 
 // Form control styling
 .form-control, .form-select {
-  border-color: var(--vz-border-color);
+  border-color: var(--legience-border-hairline);
   
   &:focus {
-    border-color: var(--vz-primary);
-    box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+    border-color: var(--legience-accent);
+    box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
   }
 }
 
 // Table styling
 .table {
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   
   th {
     font-weight: 600;
   }
   
   .table-light {
-    background-color: var(--vz-light);
-    color: var(--vz-body-color);
+    background-color: var(--legience-bg-card-hover);
+    color: var(--legience-text-secondary);
   }
   
   tbody tr {
     transition: all 0.2s;
     
     &:hover {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
     }
     
     &.table-danger {
-      background-color: rgba(var(--vz-danger-rgb), 0.08);
+      background-color: rgba(var(--legience-danger-rgb), 0.08);
       
       &:hover {
-        background-color: rgba(var(--vz-danger-rgb), 0.15);
+        background-color: rgba(var(--legience-danger-rgb), 0.15);
       }
     }
   }
@@ -127,33 +127,33 @@
   border-radius: 0.25rem;
   
   &.bg-soft-primary {
-    background-color: rgba(var(--vz-primary-rgb), 0.1) !important;
-    color: var(--vz-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
+    color: var(--legience-accent);
   }
   
   &.bg-soft-success {
-    background-color: rgba(var(--vz-success-rgb), 0.1) !important;
-    color: var(--vz-success);
+    background-color: rgba(var(--legience-success-rgb), 0.1) !important;
+    color: var(--legience-success);
   }
   
   &.bg-soft-warning {
-    background-color: rgba(var(--vz-warning-rgb), 0.1) !important;
-    color: var(--vz-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.1) !important;
+    color: var(--legience-warning);
   }
   
   &.bg-soft-danger {
-    background-color: rgba(var(--vz-danger-rgb), 0.1) !important;
-    color: var(--vz-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1) !important;
+    color: var(--legience-danger);
   }
   
   &.bg-soft-info {
-    background-color: rgba(var(--vz-info-rgb), 0.1) !important;
-    color: var(--vz-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1) !important;
+    color: var(--legience-info);
   }
   
   &.bg-soft-dark {
-    background-color: rgba(var(--vz-dark-rgb), 0.1) !important;
-    color: var(--vz-dark);
+    background-color: rgba(var(--legience-dark-rgb), 0.1) !important;
+    color: var(--legience-dark);
   }
 }
 
@@ -165,8 +165,8 @@
 
 .avatar-title {
   align-items: center;
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   display: flex;
   font-weight: 500;
   height: 100%;
@@ -190,15 +190,15 @@
 // Dark mode overrides
 [data-layout-mode="dark"] {
   .card {
-    background-color: var(--vz-card-bg);
+    background-color: var(--legience-bg-card);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.075);
     
     .table {
       tr.table-danger {
-        background-color: rgba(var(--vz-danger-rgb), 0.15);
+        background-color: rgba(var(--legience-danger-rgb), 0.15);
         
         &:hover {
-          background-color: rgba(var(--vz-danger-rgb), 0.25);
+          background-color: rgba(var(--legience-danger-rgb), 0.25);
         }
       }
       

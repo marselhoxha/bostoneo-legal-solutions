@@ -2,6 +2,8 @@ export interface MenuItem {
   id?: number | string;
   label?: string;
   icon?: string;
+  /** Lucide icon name (preferred over Remix `icon` for the horizontal topbar). */
+  lucideIcon?: string;
   link?: string;
   subItems?: MenuItem[];
   isTitle?: boolean;

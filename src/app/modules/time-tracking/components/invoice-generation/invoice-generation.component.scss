@@ -2,7 +2,7 @@
 
 /* Container and Layout */
 .container-fluid {
-  background-color: var(--vz-body-bg);
+  background-color: var(--legience-bg-page);
   min-height: 100vh;
   padding-bottom: 2rem;
 }
@@ -12,13 +12,13 @@
   margin-bottom: 2rem;
   
   h4 {
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     font-weight: 700;
     letter-spacing: -0.025em;
     margin-bottom: 0.5rem;
     
     i {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       margin-right: 0.5rem;
     }
   }
@@ -31,18 +31,18 @@
 
     .breadcrumb-item {
       a {
-        color: var(--vz-secondary);
+        color: var(--legience-secondary);
         text-decoration: none;
         transition: color 0.2s ease;
         
         &:hover {
-          color: var(--vz-primary);
+          color: var(--legience-accent);
           text-decoration: underline;
         }
       }
       
       &.active {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
         font-weight: 500;
       }
     }
@@ -52,7 +52,7 @@
 /* Enhanced Statistics Cards */
 .card-animate {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   
   &:hover {
     transform: translateY(-2px);
@@ -72,7 +72,7 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--vz-primary), var(--vz-secondary));
+      background: linear-gradient(90deg, var(--legience-accent), var(--legience-secondary));
       opacity: 0;
       transition: opacity 0.3s ease;
     }
@@ -149,25 +149,25 @@
   
   .card-header {
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    border-bottom: 2px solid var(--vz-border-color);
+    border-bottom: 2px solid var(--legience-border-hairline);
     padding: 1.5rem;
     border-radius: 0.75rem 0.75rem 0 0;
     
     .card-title {
-      color: var(--vz-heading-color);
+      color: var(--legience-text-primary);
       font-weight: 600;
       margin-bottom: 0;
       font-size: 1.1rem;
       
       i {
-        color: var(--vz-primary);
+        color: var(--legience-accent);
         margin-right: 0.5rem;
       }
     }
     
     .fs-13 {
       font-size: 0.8125rem !important;
-      color: var(--vz-secondary);
+      color: var(--legience-secondary);
       margin-top: 0.25rem;
     }
   }
@@ -180,17 +180,17 @@
 /* Form Styling */
 .form-label {
   font-weight: 600;
-  color: var(--vz-heading-color);
+  color: var(--legience-text-primary);
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   
   i {
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     margin-right: 0.25rem;
   }
   
   .text-danger {
-    color: var(--vz-danger) !important;
+    color: var(--legience-danger) !important;
   }
 }
 
@@ -202,34 +202,34 @@
   transition: all 0.2s ease;
   
   &:focus {
-    border-color: var(--vz-primary);
+    border-color: var(--legience-accent);
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
   }
   
   &::placeholder {
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     opacity: 0.7;
   }
 }
 
 .input-group {
   .input-group-text {
-    background-color: var(--vz-light);
+    background-color: var(--legience-bg-card-hover);
     border: 1px solid var(--vz-input-border-color);
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     font-weight: 500;
   }
 }
 
 .form-text {
   font-size: 0.75rem;
-  color: var(--vz-secondary);
+  color: var(--legience-secondary);
   margin-top: 0.25rem;
 }
 
 .invalid-feedback {
   font-size: 0.75rem;
-  color: var(--vz-danger);
+  color: var(--legience-danger);
   margin-top: 0.25rem;
 }
 
@@ -237,14 +237,14 @@
 ::ng-deep {
   .custom-ng-select {
     .ng-select-container {
-      background-color: var(--vz-body-bg);
+      background-color: var(--legience-bg-page);
       border: 1px solid var(--vz-input-border-color);
       border-radius: 0.5rem;
       min-height: 45px;
       transition: all 0.2s ease;
       
       &:hover {
-        border-color: var(--vz-primary);
+        border-color: var(--legience-accent);
       }
       
       .ng-value-container {
@@ -252,14 +252,14 @@
         padding-right: 1rem;
         
         .ng-placeholder {
-          color: var(--vz-secondary);
+          color: var(--legience-secondary);
           opacity: 0.7;
           font-size: 0.875rem;
         }
         
         .ng-value {
           font-size: 0.875rem;
-          color: var(--vz-body-color);
+          color: var(--legience-text-secondary);
         }
       }
       
@@ -267,7 +267,7 @@
         padding-right: 1rem;
         
         .ng-arrow {
-          border-color: var(--vz-secondary) transparent transparent;
+          border-color: var(--legience-secondary) transparent transparent;
         }
       }
       
@@ -275,7 +275,7 @@
         padding-right: 0.5rem;
         
         .ng-clear {
-          color: var(--vz-secondary);
+          color: var(--legience-secondary);
           font-size: 1rem;
         }
       }
@@ -283,23 +283,23 @@
     
     &.ng-select-focused {
       .ng-select-container {
-        border-color: var(--vz-primary);
+        border-color: var(--legience-accent);
         box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
       }
     }
     
     &.ng-select-disabled {
       .ng-select-container {
-        background-color: var(--vz-light);
-        color: var(--vz-secondary);
+        background-color: var(--legience-bg-card-hover);
+        color: var(--legience-secondary);
         opacity: 0.6;
       }
     }
   }
   
   .ng-dropdown-panel {
-    background-color: var(--vz-body-bg);
-    border: 1px solid var(--vz-border-color);
+    background-color: var(--legience-bg-page);
+    border: 1px solid var(--legience-border-hairline);
     border-radius: 0.5rem;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     margin-top: 4px;
@@ -307,32 +307,32 @@
     
     .ng-dropdown-panel-items {
       .ng-option {
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
         padding: 0.75rem 1rem;
-        background-color: var(--vz-body-bg);
+        background-color: var(--legience-bg-page);
         transition: all 0.2s ease;
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
         
         &:last-child {
           border-bottom: none;
         }
         
         &:hover {
-          background-color: var(--vz-light);
+          background-color: var(--legience-bg-card-hover);
         }
         
         &.ng-option-highlighted {
           background-color: rgba(13, 110, 253, 0.1);
-          color: var(--vz-primary);
+          color: var(--legience-accent);
         }
         
         &.ng-option-selected {
-          background-color: var(--vz-primary);
+          background-color: var(--legience-accent);
           color: white;
           font-weight: 500;
           
           &:hover {
-            background-color: var(--vz-primary);
+            background-color: var(--legience-accent);
           }
         }
         
@@ -351,7 +351,7 @@
         }
         
         small {
-          color: var(--vz-secondary);
+          color: var(--legience-secondary);
           font-size: 0.75rem;
         }
       }
@@ -370,7 +370,7 @@
     border: 1px solid rgba(13, 110, 253, 0.2);
     
     .alert-heading {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       font-weight: 600;
       
       i {
@@ -394,22 +394,22 @@
   }
   
   &.btn-primary {
-    background: linear-gradient(135deg, var(--vz-primary), #4f46e5);
+    background: linear-gradient(135deg, var(--legience-accent), #4f46e5);
     color: white;
     
     &:hover {
-      background: linear-gradient(135deg, #4f46e5, var(--vz-primary));
+      background: linear-gradient(135deg, #4f46e5, var(--legience-accent));
       box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
     }
   }
   
   &.btn-outline-primary {
-    border: 1px solid var(--vz-primary);
-    color: var(--vz-primary);
+    border: 1px solid var(--legience-accent);
+    color: var(--legience-accent);
     background: transparent;
     
     &:hover {
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       color: white;
       box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
     }
@@ -417,7 +417,7 @@
   
   &.btn-soft-primary {
     background-color: rgba(13, 110, 253, 0.1);
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     border: 1px solid rgba(13, 110, 253, 0.2);
     
     &:hover {
@@ -428,7 +428,7 @@
   
   &.btn-soft-secondary {
     background-color: rgba(108, 117, 125, 0.1);
-    color: var(--vz-secondary);
+    color: var(--legience-secondary);
     border: 1px solid rgba(108, 117, 125, 0.2);
     
     &:hover {
@@ -455,18 +455,18 @@
 
 /* Table Styling */
 .table {
-  color: var(--vz-body-color);
+  color: var(--legience-text-secondary);
   
   th {
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--vz-heading-color);
-    border-bottom: 2px solid var(--vz-border-color);
+    color: var(--legience-text-primary);
+    border-bottom: 2px solid var(--legience-border-hairline);
     padding: 1rem 0.75rem;
-    background-color: var(--vz-light);
+    background-color: var(--legience-bg-card-hover);
     
     &.sticky-top {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
       z-index: 10;
     }
   }
@@ -475,7 +475,7 @@
     vertical-align: middle;
     font-size: 0.875rem;
     padding: 1rem 0.75rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
   }
   
   tbody tr {
@@ -487,17 +487,17 @@
     
     &.table-active {
       background-color: rgba(13, 110, 253, 0.1);
-      border-left: 3px solid var(--vz-primary);
+      border-left: 3px solid var(--legience-accent);
     }
   }
   
   .form-check-input {
     cursor: pointer;
-    border: 2px solid var(--vz-border-color);
+    border: 2px solid var(--legience-border-hairline);
     
     &:checked {
-      background-color: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background-color: var(--legience-accent);
+      border-color: var(--legience-accent);
     }
   }
   
@@ -542,11 +542,11 @@
 }
 
 .text-success {
-  color: #198754 !important;
+  color: var(--legience-success, #198754) !important;
 }
 
 .text-warning {
-  color: #ffc107 !important;
+  color: var(--legience-warning, #ffc107) !important;
 }
 
 .text-info {
@@ -554,11 +554,11 @@
 }
 
 .text-danger {
-  color: #dc3545 !important;
+  color: var(--legience-danger, #dc3545) !important;
 }
 
 .text-primary {
-  color: #0d6efd !important;
+  color: var(--legience-accent, #0d6efd) !important;
 }
 
 /* Modal Styling */
@@ -569,10 +569,10 @@
   
   .modal-header {
     padding: 1.5rem;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     
     &.bg-primary {
-      background: linear-gradient(135deg, var(--vz-primary), #4f46e5);
+      background: linear-gradient(135deg, var(--legience-accent), #4f46e5);
       
       .modal-title {
         color: white;
@@ -604,10 +604,10 @@
   
   .modal-footer {
     padding: 1.5rem;
-    border-top: 1px solid var(--vz-border-color);
+    border-top: 1px solid var(--legience-border-hairline);
     
     &.bg-light {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
     }
   }
 }
@@ -618,15 +618,15 @@
   line-height: 1.6;
   
   h2, h4, h5, h6 {
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
     margin-bottom: 1rem;
   }
   
   .table-bordered {
-    border: 1px solid var(--vz-border-color);
+    border: 1px solid var(--legience-border-hairline);
     
     th, td {
-      border: 1px solid var(--vz-border-color);
+      border: 1px solid var(--legience-border-hairline);
       padding: 0.75rem;
     }
     
@@ -635,13 +635,13 @@
       
       th, td {
         background-color: rgba(13, 110, 253, 0.1);
-        color: var(--vz-primary);
+        color: var(--legience-accent);
         font-weight: 600;
       }
     }
     
     .table-light {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
     }
   }
 }
@@ -663,7 +663,7 @@
 /* Loading State */
 .spinner-border {
   &.text-primary {
-    color: var(--vz-primary) !important;
+    color: var(--legience-accent) !important;
   }
 }
 

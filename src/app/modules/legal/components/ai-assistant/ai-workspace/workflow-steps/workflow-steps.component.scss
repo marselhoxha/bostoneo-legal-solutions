@@ -38,7 +38,7 @@
         height: 34px;
         border-radius: 50%;
         border: 2px solid transparent;
-        border-top-color: var(--vz-primary);
+        border-top-color: var(--legience-accent);
         animation: spin 1s linear infinite;
         z-index: 0;
       }
@@ -51,14 +51,14 @@
       justify-self: center;
       width: 2px;
       min-height: 20px;
-      background: var(--vz-border-color);
+      background: var(--legience-border-hairline);
       border-style: dashed;
       border-width: 0;
       // Use a gradient trick for dashed look on pending
       background-image: repeating-linear-gradient(
         to bottom,
-        var(--vz-border-color) 0,
-        var(--vz-border-color) 3px,
+        var(--legience-border-hairline) 0,
+        var(--legience-border-hairline) 3px,
         transparent 3px,
         transparent 6px
       );
@@ -67,7 +67,7 @@
 
       &.completed {
         background-image: none;
-        background-color: var(--vz-success);
+        background-color: var(--legience-success);
       }
     }
 
@@ -91,14 +91,14 @@
     // Pending
     &.pending {
       .indicator-circle {
-        border: 1.5px solid var(--vz-border-color);
-        background: rgba(var(--vz-secondary-rgb), 0.08);
-        color: var(--vz-secondary);
+        border: 1.5px solid var(--legience-border-hairline);
+        background: rgba(var(--legience-secondary-rgb), 0.08);
+        color: var(--legience-secondary);
         opacity: 0.6;
       }
 
       .step-text {
-        color: var(--vz-secondary);
+        color: var(--legience-secondary);
         opacity: 0.5;
       }
     }
@@ -106,9 +106,9 @@
     // Active
     &.active {
       .indicator-circle {
-        background: rgba(var(--vz-primary-rgb), 0.15);
-        color: var(--vz-primary);
-        border: 1.5px solid rgba(var(--vz-primary-rgb), 0.3);
+        background: rgba(var(--legience-accent-rgb), 0.15);
+        color: var(--legience-accent);
+        border: 1.5px solid rgba(var(--legience-accent-rgb), 0.3);
 
         i {
           font-size: 14px;
@@ -117,16 +117,16 @@
 
       .step-text {
         font-weight: 600;
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
       }
     }
 
     // Completed
     &.completed {
       .indicator-circle {
-        background: rgba(var(--vz-success-rgb), 0.15);
-        color: var(--vz-success);
-        border: 1.5px solid rgba(var(--vz-success-rgb), 0.3);
+        background: rgba(var(--legience-success-rgb), 0.15);
+        color: var(--legience-success);
+        border: 1.5px solid rgba(var(--legience-success-rgb), 0.3);
 
         i {
           font-size: 14px;
@@ -134,7 +134,7 @@
       }
 
       .step-text {
-        color: var(--vz-body-color);
+        color: var(--legience-text-secondary);
         opacity: 0.85;
       }
     }
@@ -142,9 +142,9 @@
     // Error
     &.error {
       .indicator-circle {
-        background: rgba(var(--vz-danger-rgb), 0.15);
-        color: var(--vz-danger);
-        border: 1.5px solid rgba(var(--vz-danger-rgb), 0.3);
+        background: rgba(var(--legience-danger-rgb), 0.15);
+        color: var(--legience-danger);
+        border: 1.5px solid rgba(var(--legience-danger-rgb), 0.3);
 
         i {
           font-size: 14px;
@@ -152,7 +152,7 @@
       }
 
       .step-text {
-        color: var(--vz-danger);
+        color: var(--legience-danger);
       }
     }
   }

@@ -1177,7 +1177,7 @@ a.ck.ck-button.ck-on {
     padding: 12px 40px 12px 16px !important;
     text-align: left !important;
     overflow: visible !important;
-    border-left: 4px solid #0ab39c;
+    border-left: 4px solid var(--legience-success, #0ab39c);
     background: #fff !important;
   }
 
@@ -1224,18 +1224,21 @@ a.ck.ck-button.ck-on {
     padding: 0.3rem 0.75rem !important;
     border-radius: 0.25rem !important;
     font-weight: 500 !important;
-    background: #405189 !important;
-    border: 1px solid #405189 !important;
+    background: var(--legience-accent, #405189) !important;
+    border: 1px solid var(--legience-accent, #405189) !important;
     box-shadow: none !important;
 
     &:hover {
-      background: #364574 !important;
-      border-color: #364574 !important;
+      // Hover stays slightly darker than the accent — Velzon's #364574 was
+      // the Velzon-purple-dark; on Rox blue this approximates by mixing the
+      // accent with text-primary (near-black) at 80% accent.
+      background: color-mix(in srgb, var(--legience-accent) 80%, var(--legience-text-primary)) !important;
+      border-color: color-mix(in srgb, var(--legience-accent) 80%, var(--legience-text-primary)) !important;
     }
   }
 
   .swal2-timer-progress-bar {
-    background: #0ab39c !important;
+    background: var(--legience-success, #0ab39c) !important;
     height: 3px !important;
   }
 
@@ -1278,11 +1281,11 @@ a.ck.ck-button.ck-on {
 
 .ai-task-toast-error {
   .swal2-html-container {
-    border-left-color: #f06548 !important;
+    border-left-color: var(--legience-danger, #f06548) !important;
   }
 
   .swal2-timer-progress-bar {
-    background: #f06548 !important;
+    background: var(--legience-danger, #f06548) !important;
   }
 }
 

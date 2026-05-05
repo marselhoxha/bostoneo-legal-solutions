@@ -15,7 +15,7 @@
   transition: background-color 0.2s ease;
 
   &:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.04);
+    background-color: rgba(var(--legience-accent-rgb), 0.04);
   }
 }
 
@@ -28,7 +28,7 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     font-size: 16px;
   }
 
@@ -37,8 +37,8 @@
     border-radius: 6px;
 
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.1);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.1);
     }
   }
 }
@@ -85,41 +85,41 @@
 }
 
 // Soft background colors
-.bg-primary-subtle { background-color: rgba(var(--vz-primary-rgb), 0.15) !important; }
-.bg-success-subtle { background-color: rgba(var(--vz-success-rgb), 0.15) !important; }
-.bg-warning-subtle { background-color: rgba(var(--vz-warning-rgb), 0.15) !important; }
-.bg-danger-subtle { background-color: rgba(var(--vz-danger-rgb), 0.15) !important; }
-.bg-info-subtle { background-color: rgba(var(--vz-info-rgb), 0.15) !important; }
-.bg-secondary-subtle { background-color: rgba(var(--vz-secondary-rgb), 0.15) !important; }
+.bg-primary-subtle { background-color: rgba(var(--legience-accent-rgb), 0.15) !important; }
+.bg-success-subtle { background-color: rgba(var(--legience-success-rgb), 0.15) !important; }
+.bg-warning-subtle { background-color: rgba(var(--legience-warning-rgb), 0.15) !important; }
+.bg-danger-subtle { background-color: rgba(var(--legience-danger-rgb), 0.15) !important; }
+.bg-info-subtle { background-color: rgba(var(--legience-info-rgb), 0.15) !important; }
+.bg-secondary-subtle { background-color: rgba(var(--legience-secondary-rgb), 0.15) !important; }
 
 // Soft badge styles
 .badge-soft-primary {
-  color: var(--vz-primary);
-  background-color: rgba(var(--vz-primary-rgb), 0.15);
+  color: var(--legience-accent);
+  background-color: rgba(var(--legience-accent-rgb), 0.15);
 }
 .badge-soft-success {
-  color: var(--vz-success);
-  background-color: rgba(var(--vz-success-rgb), 0.15);
+  color: var(--legience-success);
+  background-color: rgba(var(--legience-success-rgb), 0.15);
 }
 .badge-soft-warning {
-  color: var(--vz-warning);
-  background-color: rgba(var(--vz-warning-rgb), 0.15);
+  color: var(--legience-warning);
+  background-color: rgba(var(--legience-warning-rgb), 0.15);
 }
 .badge-soft-danger {
-  color: var(--vz-danger);
-  background-color: rgba(var(--vz-danger-rgb), 0.15);
+  color: var(--legience-danger);
+  background-color: rgba(var(--legience-danger-rgb), 0.15);
 }
 .badge-soft-info {
-  color: var(--vz-info);
-  background-color: rgba(var(--vz-info-rgb), 0.15);
+  color: var(--legience-info);
+  background-color: rgba(var(--legience-info-rgb), 0.15);
 }
 .badge-soft-secondary {
-  color: var(--vz-secondary);
-  background-color: rgba(var(--vz-secondary-rgb), 0.15);
+  color: var(--legience-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.15);
 }
 .badge-soft-dark {
-  color: var(--vz-dark);
-  background-color: rgba(var(--vz-dark-rgb), 0.15);
+  color: var(--legience-dark);
+  background-color: rgba(var(--legience-dark-rgb), 0.15);
 }
 
 // Font sizes
@@ -138,14 +138,14 @@
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--vz-secondary-color);
-      border-bottom: 1px solid var(--vz-border-color);
+      color: var(--legience-text-muted);
+      border-bottom: 1px solid var(--legience-border-hairline);
     }
   }
 
   tbody {
     tr {
-      border-bottom: 1px solid var(--vz-border-color);
+      border-bottom: 1px solid var(--legience-border-hairline);
 
       &:last-child {
         border-bottom: none;
@@ -156,38 +156,38 @@
 
 // Button soft styles
 .btn-soft-primary {
-  color: var(--vz-primary);
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
+  color: var(--legience-accent);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: var(--vz-primary);
-    border-color: var(--vz-primary);
+    background-color: var(--legience-accent);
+    border-color: var(--legience-accent);
   }
 }
 
 .btn-soft-success {
-  color: var(--vz-success);
-  background-color: rgba(var(--vz-success-rgb), 0.1);
+  color: var(--legience-success);
+  background-color: rgba(var(--legience-success-rgb), 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: var(--vz-success);
-    border-color: var(--vz-success);
+    background-color: var(--legience-success);
+    border-color: var(--legience-success);
   }
 }
 
 .btn-soft-secondary {
-  color: var(--vz-secondary);
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
+  color: var(--legience-secondary);
+  background-color: rgba(var(--legience-secondary-rgb), 0.1);
   border-color: transparent;
 
   &:hover {
     color: #fff;
-    background-color: var(--vz-secondary);
-    border-color: var(--vz-secondary);
+    background-color: var(--legience-secondary);
+    border-color: var(--legience-secondary);
   }
 }
 
@@ -239,7 +239,7 @@
 
   h4 {
     font-weight: 600;
-    color: var(--vz-heading-color);
+    color: var(--legience-text-primary);
   }
 }
 
@@ -249,21 +249,21 @@
     border-radius: 4px;
     margin: 0 2px;
     border: none;
-    color: var(--vz-body-color);
+    color: var(--legience-text-secondary);
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
+      background-color: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
     }
   }
 
   .page-item.active .page-link {
-    background-color: var(--vz-primary);
+    background-color: var(--legience-accent);
     color: #fff;
   }
 
   .page-item.disabled .page-link {
-    color: var(--vz-secondary-color);
+    color: var(--legience-text-muted);
     opacity: 0.5;
   }
 }
@@ -289,23 +289,23 @@
   border: none;
 
   &.alert-success {
-    background-color: rgba(var(--vz-success-rgb), 0.15);
-    color: var(--vz-success);
+    background-color: rgba(var(--legience-success-rgb), 0.15);
+    color: var(--legience-success);
   }
 
   &.alert-warning {
-    background-color: rgba(var(--vz-warning-rgb), 0.15);
-    color: var(--vz-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.15);
+    color: var(--legience-warning);
   }
 
   &.alert-danger {
-    background-color: rgba(var(--vz-danger-rgb), 0.15);
-    color: var(--vz-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.15);
+    color: var(--legience-danger);
   }
 
   &.alert-secondary {
-    background-color: rgba(var(--vz-secondary-rgb), 0.15);
-    color: var(--vz-secondary);
+    background-color: rgba(var(--legience-secondary-rgb), 0.15);
+    color: var(--legience-secondary);
   }
 
   .alert-heading {

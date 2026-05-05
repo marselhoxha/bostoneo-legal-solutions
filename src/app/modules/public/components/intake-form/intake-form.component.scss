@@ -15,8 +15,8 @@
 // Hero Banner
 // ========================================
 .intake-hero {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--legience-bg-card, #fff);
+  border: 1px solid var(--legience-border-hairline, #e5e7eb);
   border-radius: 12px;
   overflow: hidden;
 
@@ -29,7 +29,7 @@
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: #f3f6f9;
+    background: var(--legience-bg-card-hover, #f3f6f9);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -37,12 +37,12 @@
 
     i {
       font-size: 1.4rem;
-      color: var(--vz-primary);
+      color: var(--legience-accent);
     }
   }
 
   h2 {
-    color: #1f2937;
+    color: var(--legience-text-primary, #1f2937);
     font-weight: 700;
     font-size: 1.5rem;
     margin-bottom: 0.4rem;
@@ -51,14 +51,14 @@
   .intake-hero-org {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--legience-text-muted, #6b7280);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.25rem;
   }
 
   p {
-    color: #6b7280;
+    color: var(--legience-text-muted, #6b7280);
     font-size: 0.9rem;
     margin-bottom: 1rem;
   }
@@ -75,16 +75,16 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.35rem 0.85rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--legience-bg-card-hover, #f9fafb);
+    border: 1px solid var(--legience-border-hairline, #e5e7eb);
     border-radius: 20px;
-    color: #4b5563;
+    color: var(--legience-text-secondary, #4b5563);
     font-size: 0.8rem;
     font-weight: 500;
 
     i {
       font-size: 0.85rem;
-      color: var(--vz-primary);
+      color: var(--legience-accent);
     }
   }
 }
@@ -102,13 +102,13 @@
     left: calc(100% / (var(--total-steps, 4) * 2));
     right: calc(100% / (var(--total-steps, 4) * 2));
     height: 3px;
-    background: #e9ecef;
+    background: var(--legience-bg-subtle, #e9ecef);
     border-radius: 2px;
     z-index: 0;
 
     .stepper-fill {
       height: 100%;
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       border-radius: 2px;
       transition: width 0.4s ease;
     }
@@ -131,50 +131,50 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #fff;
-      border: 2px solid #e9ecef;
+      background: var(--legience-bg-card, #fff);
+      border: 2px solid var(--legience-border-hairline, #e9ecef);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 0.8rem;
       font-weight: 600;
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
       transition: all 0.3s ease;
     }
 
     .stepper-label {
       margin-top: 0.5rem;
       font-size: 0.75rem;
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
       font-weight: 500;
       text-align: center;
     }
 
     &.active .stepper-circle {
-      background: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background: var(--legience-accent);
+      border-color: var(--legience-accent);
       color: #fff;
-      box-shadow: 0 0 0 4px rgba(var(--vz-primary-rgb), 0.12);
+      box-shadow: 0 0 0 4px rgba(var(--legience-accent-rgb), 0.12);
     }
 
     &.active .stepper-label {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       font-weight: 600;
     }
 
     &.completed .stepper-circle {
-      background: var(--vz-success);
-      border-color: var(--vz-success);
+      background: var(--legience-success);
+      border-color: var(--legience-success);
       color: #fff;
     }
 
     &.completed .stepper-label {
-      color: var(--vz-success);
+      color: var(--legience-success);
     }
 
     &.accessible:hover .stepper-circle {
-      border-color: var(--vz-primary);
-      box-shadow: 0 2px 8px rgba(var(--vz-primary-rgb), 0.2);
+      border-color: var(--legience-accent);
+      box-shadow: 0 2px 8px rgba(var(--legience-accent-rgb), 0.2);
     }
   }
 }
@@ -187,13 +187,13 @@
   border-radius: 12px;
 
   .intake-card-header {
-    background: #fff;
-    border-bottom: 1px dashed #e9ecef;
+    background: var(--legience-bg-card, #fff);
+    border-bottom: 1px dashed var(--legience-border-hairline, #e9ecef);
     padding: 1.25rem 1.5rem;
 
     h5 {
       font-weight: 600;
-      color: #333;
+      color: var(--legience-text-primary, #333);
     }
   }
 }
@@ -203,40 +203,40 @@
 // ========================================
 .practice-area-card {
   cursor: pointer;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--legience-border-hairline, #e9ecef);
   border-radius: 10px;
   transition: all 0.2s ease;
-  background: #fff;
+  background: var(--legience-bg-card, #fff);
   height: 100%;
 
   &:hover {
-    border-color: rgba(var(--vz-primary-rgb), 0.3);
+    border-color: rgba(var(--legience-accent-rgb), 0.3);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     transform: translateY(-2px);
 
     .practice-area-icon {
-      background: rgba(var(--vz-primary-rgb), 0.1);
-      color: var(--vz-primary);
+      background: rgba(var(--legience-accent-rgb), 0.1);
+      color: var(--legience-accent);
     }
   }
 
   &.selected {
-    border-color: var(--vz-primary);
-    background: rgba(var(--vz-primary-rgb), 0.03);
-    box-shadow: 0 4px 16px rgba(var(--vz-primary-rgb), 0.15);
+    border-color: var(--legience-accent);
+    background: rgba(var(--legience-accent-rgb), 0.03);
+    box-shadow: 0 4px 16px rgba(var(--legience-accent-rgb), 0.15);
 
     .practice-area-icon {
-      background: var(--vz-primary);
+      background: var(--legience-accent);
       color: #fff;
     }
 
     .practice-area-title {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
     }
 
     .practice-area-check {
-      background: var(--vz-primary);
-      border-color: var(--vz-primary);
+      background: var(--legience-accent);
+      border-color: var(--legience-accent);
 
       i {
         opacity: 1;
@@ -255,7 +255,7 @@
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: #f3f6f9;
+    background: var(--legience-bg-card-hover, #f3f6f9);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -264,7 +264,7 @@
 
     i {
       font-size: 1.3rem;
-      color: #6c757d;
+      color: var(--legience-text-muted, #6c757d);
     }
   }
 
@@ -272,12 +272,12 @@
     font-weight: 600;
     font-size: 0.9rem;
     margin-bottom: 0.35rem;
-    color: #333;
+    color: var(--legience-text-primary, #333);
   }
 
   .practice-area-desc {
     font-size: 0.8rem;
-    color: #6c757d;
+    color: var(--legience-text-muted, #6c757d);
     margin-bottom: 0;
     line-height: 1.4;
   }
@@ -289,7 +289,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    border: 2px solid #dee2e6;
+    border: 2px solid var(--legience-border-hairline, #dee2e6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -311,7 +311,7 @@
 
   .form-label {
     font-size: 0.875rem;
-    color: #495057;
+    color: var(--legience-text-secondary, #495057);
     margin-bottom: 0.4rem;
   }
 
@@ -319,22 +319,22 @@
   .form-select {
     border-radius: 8px;
     padding: 0.65rem 0.875rem;
-    border: 1.5px solid #e0e4e8;
+    border: 1.5px solid var(--legience-border-hairline, #e0e4e8);
     font-size: 0.9rem;
     transition: all 0.2s ease;
 
     &:focus {
-      border-color: var(--vz-primary);
-      box-shadow: 0 0 0 3px rgba(var(--vz-primary-rgb), 0.1);
+      border-color: var(--legience-accent);
+      box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.1);
     }
 
     &.is-invalid {
-      border-color: var(--vz-danger);
-      box-shadow: 0 0 0 3px rgba(var(--vz-danger-rgb), 0.08);
+      border-color: var(--legience-danger);
+      box-shadow: 0 0 0 3px rgba(var(--legience-danger-rgb), 0.08);
     }
 
     &.is-valid {
-      border-color: var(--vz-success);
+      border-color: var(--legience-success);
       box-shadow: none;
     }
   }
@@ -346,35 +346,35 @@
 .file-upload-section {
   h6 {
     font-size: 0.9rem;
-    color: #333;
+    color: var(--legience-text-primary, #333);
   }
 }
 
 .file-upload-zone {
-  border: 2px dashed #d1d5db;
+  border: 2px dashed var(--legience-border-hairline, #d1d5db);
   border-radius: 10px;
   padding: 2rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #fafbfc;
+  background: var(--legience-bg-card-hover, #fafbfc);
 
   &:hover {
-    border-color: var(--vz-primary);
-    background: rgba(var(--vz-primary-rgb), 0.03);
+    border-color: var(--legience-accent);
+    background: rgba(var(--legience-accent-rgb), 0.03);
   }
 
   .file-upload-content {
     > i {
       font-size: 2rem;
-      color: #9ca3af;
+      color: var(--legience-text-subtle, #9ca3af);
       display: block;
       margin-bottom: 0.5rem;
     }
 
     p {
       font-size: 0.875rem;
-      color: #4b5563;
+      color: var(--legience-text-secondary, #4b5563);
     }
   }
 }
@@ -390,8 +390,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.625rem 0.875rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--legience-bg-card-hover, #f9fafb);
+  border: 1px solid var(--legience-border-hairline, #e5e7eb);
   border-radius: 8px;
 
   .file-info {
@@ -403,14 +403,14 @@
 
   .file-icon {
     font-size: 1.25rem;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     flex-shrink: 0;
   }
 
   .file-name {
     font-size: 0.85rem;
     font-weight: 500;
-    color: #333;
+    color: var(--legience-text-primary, #333);
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -434,7 +434,7 @@
 // Consent Sections
 // ========================================
 .consent-block {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--legience-border-hairline, #e5e7eb);
   border-radius: 10px;
   overflow: hidden;
 
@@ -443,26 +443,26 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1.25rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--legience-bg-card-hover, #f9fafb);
+    border-bottom: 1px solid var(--legience-border-hairline, #e5e7eb);
 
     > i {
       font-size: 1.15rem;
-      color: var(--vz-primary);
+      color: var(--legience-accent);
     }
 
     h6 {
-      color: #1f2937;
+      color: var(--legience-text-primary, #1f2937);
       font-weight: 600;
       font-size: 0.875rem;
     }
 
     small {
-      color: #6b7280;
+      color: var(--legience-text-muted, #6b7280);
     }
 
     &.ai > i {
-      color: #6b7280;
+      color: var(--legience-text-muted, #6b7280);
     }
   }
 
@@ -476,16 +476,16 @@
   align-items: flex-start;
   gap: 0.625rem;
   padding: 0.75rem 1rem;
-  background: #f9fafb;
-  border-left: 3px solid #d1d5db;
+  background: var(--legience-bg-card-hover, #f9fafb);
+  border-left: 3px solid var(--legience-border-hairline, #d1d5db);
   border-radius: 0 8px 8px 0;
   font-size: 0.8125rem;
-  color: #495057;
+  color: var(--legience-text-secondary, #495057);
   line-height: 1.5;
 
   > i {
     margin-top: 2px;
-    color: #6b7280;
+    color: var(--legience-text-muted, #6b7280);
     font-size: 1rem;
     flex-shrink: 0;
   }
@@ -499,7 +499,7 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 0.5rem;
-  border-top: 1px solid #f3f3f9;
+  border-top: 1px solid var(--legience-border-hairline, #f3f3f9);
 
   .btn-lg {
     padding: 0.75rem 2rem;
@@ -515,7 +515,7 @@
 .intake-privacy-footer {
   text-align: center;
   padding: 0.75rem;
-  color: #6c757d;
+  color: var(--legience-text-muted, #6c757d);
   font-size: 0.8rem;
 
   .privacy-line {
@@ -525,7 +525,7 @@
     gap: 0.5rem;
 
     > i {
-      color: var(--vz-primary);
+      color: var(--legience-accent);
       font-size: 1rem;
     }
   }
@@ -555,8 +555,8 @@
 
 // Form check
 .form-check-input:checked {
-  background-color: var(--vz-primary);
-  border-color: var(--vz-primary);
+  background-color: var(--legience-accent);
+  border-color: var(--legience-accent);
 }
 
 // ========================================
@@ -609,10 +609,10 @@
   .intake-nav {
     position: sticky;
     bottom: 0;
-    background: #fff;
+    background: var(--legience-bg-card, #fff);
     margin: 0 -1rem -1rem;
     padding: 1rem;
-    border-top: 1px solid #e9ecef;
+    border-top: 1px solid var(--legience-border-hairline, #e9ecef);
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
     z-index: 10;
 
