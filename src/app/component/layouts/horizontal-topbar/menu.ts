@@ -98,7 +98,7 @@ export const SECRETARY_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     lucideIcon: 'check-square',
-    link: '/case-management/tasks'
+    link: '/tasks'
   }
 ];
 
@@ -136,7 +136,7 @@ export const PARALEGAL_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     lucideIcon: 'check-square',
-    link: '/case-management/tasks'
+    link: '/tasks'
   },
   {
     id: 'para-time',
@@ -251,7 +251,7 @@ export const SOLO_ATTORNEY_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     lucideIcon: 'check-square',
-    link: '/case-management/tasks'
+    link: '/tasks'
   },
   {
     id: 'solo-att-ai-tools',
@@ -347,7 +347,7 @@ export const SOLO_ADMIN_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     lucideIcon: 'check-square',
-    link: '/case-management/tasks'
+    link: '/tasks'
   },
   {
     id: 'solo-adm-ai-tools',
@@ -447,7 +447,7 @@ export const ATTORNEY_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     lucideIcon: 'check-square',
-    link: '/case-management/tasks'
+    link: '/tasks'
   },
   {
     id: 'att-ai-tools',
@@ -561,7 +561,7 @@ export const ADMIN_MENU: MenuItem[] = [
     label: 'Tasks',
     icon: 'ri-task-line',
     lucideIcon: 'check-square',
-    link: '/case-management/tasks'
+    link: '/tasks'
   },
   {
     id: 'admin-ai-tools',

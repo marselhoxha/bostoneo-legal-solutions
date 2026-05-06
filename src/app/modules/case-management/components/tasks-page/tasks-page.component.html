@@ -1,0 +1,30 @@
+<div class="tasks-page">
+  <header class="page-head">
+    <div class="head-row">
+      <div>
+        <h2>Tasks</h2>
+        <div class="sub">All your tasks across cases</div>
+      </div>
+      <div class="head-actions">
+        <div class="view-switcher" role="tablist" aria-label="View">
+          <button class="chip" [class.active]="activeView === 'inbox'" (click)="switchView('inbox')">
+            Inbox
+          </button>
+          <button class="chip" [class.active]="activeView === 'pipeline'" (click)="switchView('pipeline')" disabled title="Phase 2">
+            Pipeline
+          </button>
+          <button class="chip" [class.active]="activeView === 'workload'" (click)="switchView('workload')" disabled title="Phase 3">
+            Workload
+          </button>
+        </div>
+        <button class="btn-primary btn">+ New task</button>
+      </div>
+    </div>
+  </header>
+
+  <ng-container [ngSwitch]="activeView">
+    <div class="placeholder" *ngSwitchCase="'inbox'">Inbox view ships in Phase C &mdash; coming next.</div>
+    <div class="placeholder" *ngSwitchCase="'pipeline'">Pipeline view ships in Phase 2.</div>
+    <div class="placeholder" *ngSwitchCase="'workload'">Workload view ships in Phase 3.</div>
+  </ng-container>
+</div>

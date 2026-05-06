@@ -1,0 +1,85 @@
+@use 'sass:color';
+
+:host { display: block; min-height: 100%; background: var(--legience-bg-page); }
+
+.tasks-page { display: flex; flex-direction: column; }
+
+.page-head {
+  padding: 22px 28px 18px;
+  background: var(--legience-bg-elevated);
+  border-bottom: 1px solid var(--legience-border-hairline);
+
+  .head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  h2 {
+    margin: 0;
+    font: 600 22px/1.2 var(--legience-font-sans);
+    letter-spacing: -0.025em;
+    color: var(--legience-text-primary);
+  }
+
+  .sub {
+    font: 400 13px/1.4 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+    margin-top: 4px;
+  }
+
+  .head-actions { display: flex; align-items: center; gap: 8px; }
+}
+
+.view-switcher {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--legience-radius-buttons);
+  background: var(--legience-bg-subtle);
+
+  .chip {
+    padding: 5px 12px;
+    border: none;
+    background: transparent;
+    color: var(--legience-text-subtle);
+    font: 500 12.5px/1 var(--legience-font-sans);
+    border-radius: var(--legience-radius-sm, 4px);
+    cursor: pointer;
+
+    &.active {
+      background: var(--legience-bg-elevated);
+      color: var(--legience-text-primary);
+      box-shadow: var(--legience-shadow-sm);
+      font-weight: 600;
+    }
+
+    &[disabled] { opacity: 0.5; cursor: not-allowed; }
+  }
+}
+
+.btn { /* fallback if global .btn isn't reachable here */
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-primary);
+  border-radius: var(--legience-radius-buttons);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  cursor: pointer;
+
+  &.btn-primary {
+    background: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+    border-color: var(--legience-accent);
+    box-shadow: var(--legience-shadow-button);
+  }
+}
+
+.placeholder {
+  padding: 80px 28px;
+  text-align: center;
+  color: var(--legience-text-muted);
+  font: 500 14px/1.4 var(--legience-font-sans);
+}

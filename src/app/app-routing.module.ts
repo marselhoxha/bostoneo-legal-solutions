@@ -50,10 +50,18 @@ const routes: Routes = [
       { path: 'time-tracking', loadChildren: () => import('./modules/time-tracking/time-tracking.module').then(m => m.TimeTrackingModule) },
 
       // Case management module
-      { 
-        path: 'case-management', 
+      {
+        path: 'case-management',
         loadChildren: () => import('./modules/case-management/case-management.module').then(m => m.CaseManagementModule),
         canActivate: [AuthenticationGuard]
+      },
+
+      // Tasks (top-level, lazy)
+      {
+        path: 'tasks',
+        loadChildren: () => import('./modules/case-management/components/tasks-page/tasks.module').then(m => m.TasksModule),
+        canActivate: [AuthenticationGuard],
+        data: { breadcrumb: 'Tasks' }
       },
 
       // File manager module

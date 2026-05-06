@@ -32,12 +32,8 @@ const routes: Routes = [
       },
       {
         path: 'tasks',
-        component: TaskManagementComponent,
-        canActivate: [AuthenticationGuard],
-        data: {
-          title: 'All Tasks',
-          breadcrumb: 'Tasks'
-        }
+        redirectTo: '/tasks',
+        pathMatch: 'full'
       },
       {
         path: 'tasks/:caseId',
