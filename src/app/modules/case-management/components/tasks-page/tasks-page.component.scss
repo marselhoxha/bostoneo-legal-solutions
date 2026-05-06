@@ -40,6 +40,9 @@
   background: var(--legience-bg-subtle);
 
   .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     padding: 5px 12px;
     border: none;
     background: transparent;
@@ -47,6 +50,12 @@
     font: 500 12.5px/1 var(--legience-font-sans);
     border-radius: var(--legience-radius-sm, 4px);
     cursor: pointer;
+
+    .chip-icon {
+      font-size: 13px;
+      opacity: 0.85;
+      line-height: 1;
+    }
 
     &.active {
       background: var(--legience-bg-elevated);
@@ -57,6 +66,18 @@
 
     &[disabled] { opacity: 0.5; cursor: not-allowed; }
   }
+}
+
+.kbd-hint {
+  font-family: var(--legience-font-mono, ui-monospace, 'SF Mono', Menlo, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--legience-text-secondary);
+  margin-right: 4px;
 }
 
 .btn { /* fallback if global .btn isn't reachable here */

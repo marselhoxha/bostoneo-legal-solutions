@@ -1,0 +1,233 @@
+.inbox-counts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px 0;
+  font: 500 13px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  background: var(--legience-bg-elevated);
+
+  strong { color: var(--legience-text-primary); font-weight: 600; }
+  .overdue-count strong { color: var(--legience-danger); }
+  .dot { color: var(--legience-text-muted); }
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 28px;
+  background: var(--legience-bg-elevated);
+  border-bottom: 1px solid var(--legience-border-hairline);
+}
+.filter-divider {
+  height: 16px;
+  width: 1px;
+  background: var(--legience-border-hairline);
+  margin: 0 4px;
+}
+.filter-spacer { flex: 1; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--legience-radius-pill);
+  font: 500 12.5px/1 var(--legience-font-sans);
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  color: var(--legience-text-secondary);
+  cursor: pointer;
+
+  &.active {
+    background: var(--legience-accent-bg-subtle);
+    border-color: rgba(var(--legience-accent-rgb), 0.30);
+    color: var(--legience-accent);
+    font-weight: 600;
+  }
+
+  .count { color: var(--legience-text-muted); font-weight: 500; }
+  .chip-icon { font-size: 13px; opacity: 0.85; line-height: 1; }
+}
+
+.t-empty {
+  padding: 80px 28px;
+  text-align: center;
+  color: var(--legience-text-muted);
+
+  .empty-title {
+    font: 600 16px/1.4 var(--legience-font-sans);
+    margin-bottom: 14px;
+  }
+}
+
+.t-list { background: var(--legience-bg-elevated); }
+
+.t-group + .t-group { border-top: 1px solid var(--legience-border-hairline); }
+
+.t-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px 8px;
+  font: 600 11.5px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-subtle);
+
+  &.danger { color: var(--legience-danger); }
+
+  .count { color: var(--legience-text-muted); font-weight: 500; }
+}
+
+.t-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto auto auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 28px;
+  border-top: 1px solid var(--legience-border-hairline);
+  cursor: pointer;
+  transition: background 100ms ease;
+
+  &:hover { background: var(--legience-bg-row-hover); }
+  &.selected { background: var(--legience-accent-bg-subtle); }
+}
+
+.t-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--legience-border-emphasis);
+  border-radius: 4px;
+  background: var(--legience-bg-elevated);
+
+  &.checked {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+  }
+}
+
+.t-title {
+  font: 500 13.5px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.done {
+    text-decoration: line-through;
+    color: var(--legience-text-muted);
+  }
+}
+
+.case-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font: 500 11px/1.5 var(--legience-font-sans);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-secondary);
+  border: 1px solid var(--legience-border-hairline);
+  white-space: nowrap;
+
+  .case-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--legience-accent);
+  }
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font: 600 10.5px/1.4 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+
+  .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+.pill-info    { background: var(--legience-info-bg-subtle);    color: var(--legience-info);    border-color: rgba(var(--legience-info-rgb), 0.25); }
+.pill-warning { background: var(--legience-warning-bg-subtle); color: #b45309;                 border-color: rgba(var(--legience-warning-rgb), 0.25); }
+.pill-danger  { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger);  border-color: rgba(var(--legience-danger-rgb), 0.25); }
+.pill-orange  { background: var(--legience-orange-soft);       color: var(--legience-orange);  border-color: rgba(var(--legience-orange-rgb), 0.25); }
+.pill-subtle  { background: var(--legience-bg-subtle);         color: var(--legience-text-subtle); border-color: var(--legience-border-hairline); }
+
+.t-due {
+  font: 500 11.5px/1 var(--legience-font-sans);
+  color: var(--legience-text-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &.overdue { color: var(--legience-danger); font-weight: 600; }
+  &.today { color: var(--legience-accent); font-weight: 600; }
+}
+
+.av-ringed {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ring, var(--legience-accent));
+  flex-shrink: 0;
+
+  .inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--legience-bg-elevated);
+    padding: 1.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inner .content {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--bg, var(--legience-accent));
+    color: #fff;
+    font: 600 9px/1 var(--legience-font-sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--legience-text-subtle);
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--legience-radius-buttons);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--legience-bg-row-hover);
+    color: var(--legience-text-primary);
+  }
+}

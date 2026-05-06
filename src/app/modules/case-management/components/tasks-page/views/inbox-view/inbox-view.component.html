@@ -1,0 +1,74 @@
+<div class="inbox-counts">
+  <span><strong>{{ totalActiveCount }}</strong> open</span>
+  <ng-container *ngIf="overdueCount > 0">
+    <span class="dot">&middot;</span>
+    <span class="overdue-count"><strong>{{ overdueCount }}</strong> overdue</span>
+  </ng-container>
+  <span class="dot">&middot;</span>
+  <span>sorted by due date</span>
+</div>
+
+<div class="filter-bar">
+  <span class="chip active">All <span class="count">&middot; {{ totalActiveCount }}</span></span>
+  <span class="chip">Mine</span>
+  <span class="chip">Assigned</span>
+  <div class="filter-divider"></div>
+  <span class="chip">Case &#9662;</span>
+  <span class="chip">Priority &#9662;</span>
+  <span class="chip">Due &#9662;</span>
+  <span class="filter-spacer"></span>
+  <span class="chip"><span class="chip-icon">&#x229E;</span> Compact</span>
+</div>
+
+<div *ngIf="loading" class="t-empty">Loading&hellip;</div>
+
+<div *ngIf="!loading && groups.length === 0" class="t-empty">
+  <div class="empty-title">No tasks. Nice work.</div>
+  <button class="btn-primary btn">+ New task</button>
+</div>
+
+<div class="t-list" *ngIf="!loading && groups.length > 0">
+  <div class="t-group" *ngFor="let group of groups">
+    <div class="t-group-head" [class.danger]="group.emphasis === 'danger'">
+      {{ group.label }} <span class="count">&middot; {{ group.tasks.length }}</span>
+    </div>
+
+    <div
+      class="t-row"
+      *ngFor="let task of group.tasks; trackBy: trackById"
+      [class.selected]="task.id === selectedTaskId"
+      (click)="selectTask(task)"
+    >
+      <div class="t-checkbox" [class.checked]="task.status === 'COMPLETED'"></div>
+      <div class="t-title" [class.done]="task.status === 'COMPLETED'">{{ task.title }}</div>
+
+      <span class="case-pill" *ngIf="task.caseTitle || task.caseNumber">
+        <span class="case-dot"></span>
+        {{ task.caseTitle || task.caseNumber }}
+      </span>
+
+      <span class="pill" [ngClass]="'pill-' + (task.priority | priorityToTone)">
+        <span class="dot"></span>{{ task.priority | titlecase }}
+      </span>
+
+      <span
+        class="t-due"
+        [class.overdue]="group.key === 'overdue'"
+        [class.today]="group.key === 'today'"
+      >
+        {{ task.dueDate | dueLabel }}
+      </span>
+
+      <div
+        class="av-ringed"
+        *ngIf="task.assignedToName as name"
+        [style.--ring]="avatarColor(task.assignedToId ?? name)"
+        [style.--bg]="avatarColor(task.assignedToId ?? name)"
+      >
+        <div class="inner"><div class="content">{{ name | userInitials }}</div></div>
+      </div>
+
+      <button class="btn-ghost btn btn-icon" (click)="$event.stopPropagation()">&hellip;</button>
+    </div>
+  </div>
+</div>
