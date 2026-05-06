@@ -12,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +87,13 @@ public class CaseTask {
     
     @Column(name = "reminder_date")
     private LocalDateTime reminderDate;
-    
+
+    @Column(name = "blocker_reason", columnDefinition = "TEXT")
+    private String blockerReason;
+
+    @Column(name = "auto_unblock_date")
+    private LocalDate autoUnblockDate;
+
     @Type(JsonType.class)
     @Column(columnDefinition = "TEXT")
     private List<Long> dependencies = new ArrayList<>();

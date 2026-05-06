@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,8 +41,13 @@ public class UpdateTaskRequest {
     private LocalDateTime dueDate;
     
     private LocalDateTime reminderDate;
-    
+
     private List<Long> dependencies;
-    
+
     private List<String> tags;
+
+    @Size(max = 1000, message = "Blocker reason cannot exceed 1000 characters")
+    private String blockerReason;
+
+    private LocalDate autoUnblockDate;
 } 

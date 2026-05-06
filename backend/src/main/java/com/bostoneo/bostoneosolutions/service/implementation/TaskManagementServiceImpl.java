@@ -281,7 +281,13 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         if (request.getDependencies() != null) {
             task.setDependencies(request.getDependencies());
         }
-        
+        if (request.getBlockerReason() != null) {
+            task.setBlockerReason(request.getBlockerReason());
+        }
+        if (request.getAutoUnblockDate() != null) {
+            task.setAutoUnblockDate(request.getAutoUnblockDate());
+        }
+
         // Update assigned user if provided
         if (request.getAssignedToId() != null) {
             if (request.getAssignedToId() == 0) {
@@ -993,6 +999,8 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             .commentsCount(task.getComments() != null ? task.getComments().size() : 0)
             .overdue(isOverdue)
             .blocked(task.getStatus() == TaskStatus.BLOCKED)
+            .blockerReason(task.getBlockerReason())
+            .autoUnblockDate(task.getAutoUnblockDate())
             .createdAt(task.getCreatedAt())
             .updatedAt(task.getUpdatedAt())
             .build();

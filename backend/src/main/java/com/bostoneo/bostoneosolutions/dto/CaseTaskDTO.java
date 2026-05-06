@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -49,6 +50,8 @@ public class CaseTaskDTO {
     private Integer progressPercentage;
     private boolean overdue;
     private boolean blocked;
+    private String blockerReason;
+    private LocalDate autoUnblockDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 } 
