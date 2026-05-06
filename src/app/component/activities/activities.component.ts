@@ -723,16 +723,16 @@ export class ActivitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getActionBackgroundColor(action: string): string {
     switch (action?.toUpperCase()) {
-      case 'CREATE': return 'var(--vz-success)';
-      case 'UPDATE': return 'var(--vz-warning)';
-      case 'DELETE': return 'var(--vz-danger)';
+      case 'CREATE': return 'var(--legience-success)';
+      case 'UPDATE': return 'var(--legience-warning)';
+      case 'DELETE': return 'var(--legience-danger)';
       case 'LOGIN':
-      case 'LOGOUT': return 'var(--vz-primary)';
-      case 'UPLOAD': return 'var(--vz-success)';
-      case 'DOWNLOAD': return 'var(--vz-primary)';
-      case 'APPROVE': return 'var(--vz-success)';
-      case 'REJECT': return 'var(--vz-danger)';
-      default: return 'var(--vz-secondary)';
+      case 'LOGOUT': return 'var(--legience-accent)';
+      case 'UPLOAD': return 'var(--legience-success)';
+      case 'DOWNLOAD': return 'var(--legience-accent)';
+      case 'APPROVE': return 'var(--legience-success)';
+      case 'REJECT': return 'var(--legience-danger)';
+      default: return 'var(--legience-text-subtle)';
     }
   }
 

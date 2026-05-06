@@ -20,33 +20,33 @@
   }
   
   &.badge-soft-primary {
-    color: var(--bs-primary);
-    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--legience-accent);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
   }
   
   &.badge-soft-secondary {
-    color: var(--bs-secondary);
-    background-color: rgba(var(--bs-secondary-rgb), 0.1);
+    color: var(--legience-text-subtle);
+    background-color: rgba(var(--legience-text-subtle-rgb), 0.1);
   }
   
   &.badge-soft-success {
-    color: var(--bs-success);
-    background-color: rgba(var(--bs-success-rgb), 0.1);
+    color: var(--legience-success);
+    background-color: rgba(var(--legience-success-rgb), 0.1);
   }
   
   &.badge-soft-info {
-    color: var(--bs-info);
-    background-color: rgba(var(--bs-info-rgb), 0.1);
+    color: var(--legience-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
   }
   
   &.badge-soft-warning {
-    color: var(--bs-warning);
-    background-color: rgba(var(--bs-warning-rgb), 0.1);
+    color: var(--legience-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.1);
   }
   
   &.badge-soft-danger {
-    color: var(--bs-danger);
-    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    color: var(--legience-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
   }
 }
 
@@ -59,7 +59,7 @@
   }
   
   &.bg-light {
-    background-color: rgba(var(--bs-light-rgb), 0.5) !important;
+    background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5) !important;
   }
 }
 
@@ -68,15 +68,15 @@
   border-radius: 0.375rem;
   
   &.alert-danger {
-    color: var(--bs-danger);
-    background-color: rgba(var(--bs-danger-rgb), 0.1);
-    border-color: rgba(var(--bs-danger-rgb), 0.2);
+    color: var(--legience-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
+    border-color: rgba(var(--legience-danger-rgb), 0.2);
   }
   
   &.alert-info {
-    color: var(--bs-info);
-    background-color: rgba(var(--bs-info-rgb), 0.1);
-    border-color: rgba(var(--bs-info-rgb), 0.2);
+    color: var(--legience-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
+    border-color: rgba(var(--legience-info-rgb), 0.2);
   }
   
   .alert-heading {
@@ -91,23 +91,23 @@
 }
 
 .text-success {
-  color: var(--bs-success) !important;
+  color: var(--legience-success) !important;
 }
 
 .text-warning {
-  color: var(--bs-warning) !important;
+  color: var(--legience-warning) !important;
 }
 
 .text-danger {
-  color: var(--bs-danger) !important;
+  color: var(--legience-danger) !important;
 }
 
 .text-info {
-  color: var(--bs-info) !important;
+  color: var(--legience-info) !important;
 }
 
 .text-muted {
-  color: var(--bs-gray-600) !important;
+  color: var(--legience-text-subtle) !important;
 }
 
 .fw-semibold {

@@ -105,30 +105,9 @@
       color: var(--rox-text-primary) !important;
     }
 
-    // ---- pi-case-detail HERO (intentional dark — preserve, but Rox palette) ----
-    .pi-hero {
-      background: linear-gradient(135deg, #0c0a09 0%, #1c1917 50%, #292524 100%) !important;
-      box-shadow: none !important;
-      border: 1px solid #292524 !important;
-      border-radius: 10px !important;
-
-      &::before {
-        background-image:
-          radial-gradient(circle at 25% 20%, rgba(11, 100, 233, 0.14) 0%, transparent 60%),
-          radial-gradient(circle at 80% 80%, rgba(11, 100, 233, 0.06) 0%, transparent 50%) !important;
-      }
-
-      .pi-title { font-weight: 500 !important; letter-spacing: -0.02em !important; }
-      .pi-meta { color: rgba(255, 255, 255, 0.65) !important; }
-
-      .stage-pill, .manual-pill {
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: rgba(255, 255, 255, 0.9) !important;
-        border-color: rgba(255, 255, 255, 0.12) !important;
-        font-weight: 500 !important;
-        letter-spacing: 0.02em !important;
-      }
-    }
+    // ---- pi-case-detail HERO ----
+    // Styling now lives in pi-case-detail.component.scss using legience tokens
+    // that auto-flip between light and dark mode. No domain-level override needed.
 
     // ---- Custom buttons (legal-module-specific) ----
     .btn-pri {
@@ -160,12 +139,8 @@
       &:hover { background: var(--rox-bg-hover) !important; color: var(--rox-text-primary) !important; }
     }
 
-    .focus-cta {
-      background: rgba(11, 100, 233, 0.08) !important;
-      color: var(--vz-primary) !important;
-      border: 1px solid rgba(11, 100, 233, 0.18) !important;
-      border-radius: 6px !important;
-    }
+    // .focus-cta intentionally has NO background/border — it's just a flex
+    // wrapper for the CTAs. Styling lives on the buttons themselves.
 
     // ---- Status indicators (.phase / .dot / .pill-dot / dots) ----
     .phase, .pill-dot {
@@ -634,10 +609,7 @@
       border-color: var(--rox-border-hairline) !important;
     }
 
-    .pi-hero {
-      background: linear-gradient(135deg, #050505 0%, #141414 50%, #1c1917 100%) !important;
-      border-color: var(--rox-border-hairline) !important;
-    }
+    // .pi-hero dark mode handled via legience tokens in component SCSS
 
     .stat-item {
       &:hover { background: var(--rox-bg-hover) !important; }

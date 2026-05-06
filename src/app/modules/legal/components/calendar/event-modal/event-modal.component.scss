@@ -33,7 +33,7 @@
         }
         
         p {
-          color: var(--vz-gray-600);
+          color: var(--legience-text-subtle);
           font-size: 0.8125rem;
           margin-bottom: 0;
         }
@@ -81,7 +81,7 @@
           }
           
           p {
-            color: var(--vz-gray-400);
+            color: var(--legience-text-muted);
           }
         }
       }
@@ -316,7 +316,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--vz-white);
+      background-color: var(--legience-color-surface-white);
       border-radius: 50%;
       box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
@@ -440,7 +440,7 @@
         .reminder-label {
           display: block;
           font-size: 0.75rem;
-          color: var(--vz-gray-600);
+          color: var(--legience-text-subtle);
           font-style: italic;
         }
       }
@@ -598,7 +598,7 @@
         
         .info-content {
           .info-label {
-            color: var(--vz-gray-400);
+            color: var(--legience-text-muted);
           }
           
           .info-value {
@@ -606,7 +606,7 @@
           }
           
           .info-extra {
-            color: var(--vz-gray-500);
+            color: var(--legience-text-muted);
           }
         }
       }

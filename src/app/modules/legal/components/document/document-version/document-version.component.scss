@@ -10,8 +10,8 @@
 }
 
 .card-header {
-  background-color: var(--vz-card-cap-bg);
-  border-bottom: 1px solid var(--vz-card-border-color);
+  background-color: var(--legience-bg-card-hover);
+  border-bottom: 1px solid var(--legience-border-hairline);
   padding: 1rem 1.25rem;
 }
 
@@ -32,7 +32,7 @@
   }
 
   &:disabled {
-    background-color: var(--vz-input-disabled-bg);
+    background-color: var(--legience-bg-subtle);
     opacity: 0.6;
   }
 }
@@ -59,7 +59,7 @@
 /* Progress bar styling */
 .progress {
   height: 1rem;
-  background-color: var(--vz-light-bg-subtle);
+  background-color: var(--legience-bg-page);
   border-radius: 0.375rem;
   margin: 1rem 0;
 }

@@ -253,7 +253,7 @@ ul {
         top: 0;
         right: 0;
         left: 0px;
-        border-left: 1px solid var(--vz-border-color);
+        border-left: 1px solid var(--legience-border-hairline);
         transform: translateX(100%)
     }
     
@@ -261,7 +261,7 @@ ul {
         top: 0;
         left: 0;
         right: auto !important;
-        border-right: 1px solid var(--vz-border-color);
+        border-right: 1px solid var(--legience-border-hairline);
         transform: translateX(-100%)
     }
 }

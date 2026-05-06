@@ -39,7 +39,7 @@
                 padding: .5rem 1rem;
                 color: var(--#{$prefix}gray-600);
                 font-weight: $font-weight-semibold;
-                background-color: var(--vz-light);
+                background-color: var(--legience-bg-card-hover);
             }
 
 
@@ -227,7 +227,7 @@
         .completed {
             .nav-link {
                 color: #fff;
-                background-color: var(--vz-primary);
+                background-color: var(--legience-accent);
             }
         }
 
@@ -240,13 +240,13 @@
             &:after {
                 z-index: 0 !important;
                 height: 1px;
-                background-color: var(--vz-border-color);
+                background-color: var(--legience-border-hairline);
                 left: -52%;
             }
         }
 
         .step.completed+.step:after {
-            background-color: var(--vz-primary);
+            background-color: var(--legience-accent);
         }
     }
 }
@@ -259,15 +259,15 @@
 
         .completed {
             .nav-link {
-                color: var(--vz-primary);
+                color: var(--legience-accent);
             }
 
-            background-color: var(--vz-light);//rgba(var(--vz-primary-rgb), 0.15);
+            background-color: var(--legience-bg-card-hover);//rgba(var(--legience-accent-rgb), 0.15);
         }
 
         .active {
             .nav-link {
-                color: var(--vz-primary);
+                color: var(--legience-accent);
             }
         }
 
@@ -293,7 +293,7 @@
             bottom: 0 !important;
 
             i {
-                color: var(--vz-danger);
+                color: var(--legience-danger);
             }
         }
 
@@ -301,36 +301,36 @@
             gap: 8px;
 
             .step {
-                background-color: rgba(var(--vz-light-rgb), 0.4) !important;
-                border: 1px solid var(--vz-border-color);
+                background-color: rgba(var(--legience-bg-card-hover-rgb), 0.4) !important;
+                border: 1px solid var(--legience-border-hairline);
                 border-radius: 0.25rem;
 
                 &.active {
                     .nav-link {
                         .step-title {
                             i {
-                                color: var(--vz-primary);
+                                color: var(--legience-accent);
                             }
                         }
 
-                        color: var(--vz-primary);
+                        color: var(--legience-accent);
                     }
 
-                    border-color: rgba(var(--vz-primary-rgb), 1);
+                    border-color: rgba(var(--legience-accent-rgb), 1);
                 }
 
                 &.completed {
                     .nav-link {
                         .step-title {
                             i {
-                                color: var(--vz-success);
+                                color: var(--legience-success);
                             }
                         }
 
-                        color: var(--vz-success);
+                        color: var(--legience-success);
                     }
 
-                    border-color: rgba(var(--vz-success-rgb), 1);
+                    border-color: rgba(var(--legience-success-rgb), 1);
                 }
             }
         }

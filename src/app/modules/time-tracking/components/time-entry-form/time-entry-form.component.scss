@@ -200,18 +200,18 @@
 [data-bs-theme="dark"] {
   .card {
     background-color: var(--legience-dark);
-    border-color: var(--vz-border-color-dark);
+    border-color: var(--legience-border-emphasis);
   }
   
   .form-control, .form-select {
     background-color: var(--legience-dark);
-    border-color: var(--vz-border-color-dark);
+    border-color: var(--legience-border-emphasis);
     color: var(--legience-text-secondary);
   }
   
   .input-group-text {
-    background-color: var(--vz-gray-800);
-    border-color: var(--vz-border-color-dark);
+    background-color: var(--legience-text-secondary);
+    border-color: var(--legience-border-emphasis);
     color: var(--legience-text-secondary);
   }
 }

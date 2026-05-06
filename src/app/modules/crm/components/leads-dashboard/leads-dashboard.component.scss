@@ -41,12 +41,12 @@
 }
 
 .card-header {
-  background-color: rgba(var(--bs-light-rgb), 0.5);
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
   border-bottom: 1px solid rgba(0, 0, 0, 0.125);
 }
 
 .table-hover tbody tr:hover {
-  background-color: rgba(var(--bs-primary-rgb), 0.05);
+  background-color: rgba(var(--legience-accent-rgb), 0.05);
 }
 
 .avatar-xs {
@@ -69,43 +69,43 @@
   font-weight: 500;
   
   &.badge-soft-primary {
-    color: var(--bs-primary);
-    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--legience-accent);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
   }
   
   &.badge-soft-secondary {
-    color: var(--bs-secondary);
-    background-color: rgba(var(--bs-secondary-rgb), 0.1);
+    color: var(--legience-text-subtle);
+    background-color: rgba(var(--legience-text-subtle-rgb), 0.1);
   }
   
   &.badge-soft-success {
-    color: var(--bs-success);
-    background-color: rgba(var(--bs-success-rgb), 0.1);
+    color: var(--legience-success);
+    background-color: rgba(var(--legience-success-rgb), 0.1);
   }
   
   &.badge-soft-info {
-    color: var(--bs-info);
-    background-color: rgba(var(--bs-info-rgb), 0.1);
+    color: var(--legience-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
   }
   
   &.badge-soft-warning {
-    color: var(--bs-warning);
-    background-color: rgba(var(--bs-warning-rgb), 0.1);
+    color: var(--legience-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.1);
   }
   
   &.badge-soft-danger {
-    color: var(--bs-danger);
-    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    color: var(--legience-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
   }
   
   &.badge-soft-light {
-    color: var(--bs-gray-600);
-    background-color: rgba(var(--bs-light-rgb), 0.5);
+    color: var(--legience-text-subtle);
+    background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
   }
   
   &.badge-soft-dark {
-    color: var(--bs-dark);
-    background-color: rgba(var(--bs-dark-rgb), 0.1);
+    color: var(--legience-text-primary);
+    background-color: rgba(var(--legience-text-primary-rgb), 0.1);
   }
 }
 
@@ -152,7 +152,7 @@
 
 // Must use ::ng-deep to override Bootstrap's global .modal-content { background-color: var(--legience-bg-card, #fff) }
 :host ::ng-deep .modal .modal-content {
-  background-color: var(--vz-modal-bg) !important;
+  background-color: var(--legience-bg-elevated) !important;
   border-radius: 0.5rem;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
@@ -168,12 +168,12 @@
 }
 
 .bg-soft-primary {
-  background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
-  color: var(--bs-primary) !important;
+  background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
+  color: var(--legience-accent) !important;
 }
 
 .text-primary {
-  color: var(--bs-primary) !important;
+  color: var(--legience-accent) !important;
 }
 
 .pipeline-stage-card {
@@ -249,7 +249,7 @@
 .pipeline-column {
   min-height: 320px;
   background: var(--legience-bg-subtle);
-  border-radius: var(--vz-card-border-radius, 0.5rem);
+  border-radius: var(--legience-radius-buttons, 0.5rem);
   border: 1px solid var(--legience-border-hairline);
   display: flex;
   flex-direction: column;
@@ -438,7 +438,7 @@
     .form-control,
     .form-select {
       background-color: var(--legience-bg-input) !important;
-      color: var(--vz-input-color, var(--legience-text-secondary)) !important;
+      color: var(--legience-text-primary) !important;
 
       &::placeholder {
         color: var(--legience-text-muted) !important;
@@ -447,7 +447,7 @@
 
       &:focus {
         background-color: var(--legience-bg-input) !important;
-        color: var(--vz-input-color, var(--legience-text-secondary)) !important;
+        color: var(--legience-text-primary) !important;
         border-color: var(--legience-accent) !important;
         box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.15) !important;
       }
@@ -456,7 +456,7 @@
     .input-group-text {
       background-color: rgba(var(--legience-secondary-rgb), 0.08) !important;
       color: var(--legience-text-muted) !important;
-      border-color: var(--vz-input-border, var(--legience-border-hairline)) !important;
+      border-color: var(--legience-border-hairline) !important;
     }
 
     .modal-header, .modal-footer {
@@ -730,7 +730,7 @@
 .cdk-drag-preview {
   background: var(--legience-bg-card);
   border: 1px solid var(--legience-accent);
-  border-radius: var(--vz-card-border-radius, 0.5rem);
+  border-radius: var(--legience-radius-buttons, 0.5rem);
   padding: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   cursor: grabbing;
@@ -739,7 +739,7 @@
 .cdk-drag-placeholder {
   background: rgba(var(--legience-accent-rgb), 0.08);
   border: 2px dashed var(--legience-accent);
-  border-radius: var(--vz-card-border-radius, 0.5rem);
+  border-radius: var(--legience-radius-buttons, 0.5rem);
   min-height: 60px;
   margin-bottom: 8px;
 }

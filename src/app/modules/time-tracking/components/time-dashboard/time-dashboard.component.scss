@@ -104,7 +104,7 @@
 /* Enhanced card styling matching activities page */
 .card-enhanced {
   background: var(--legience-bg-card);
-  border: 1px solid var(--vz-border-color-light);
+  border: 1px solid var(--legience-border-subtle);
   border-radius: var(--legience-radius);
   box-shadow: var(--legience-shadow-sm);
 }
@@ -313,7 +313,7 @@
     .timer-time {
       font-size: 1.75rem;
       font-weight: 700;
-      font-family: var(--vz-font-monospace);
+      font-family: var(--legience-font-monospace);
       color: var(--legience-text-secondary);
       line-height: 1.2;
       margin-bottom: 0.5rem;
@@ -353,8 +353,8 @@
     text-align: center;
     padding: 0.75rem;
     border-radius: var(--legience-radius);
-    background: rgba(var(--vz-white-rgb), 0.8);
-    border: 1px solid var(--vz-border-color-light);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--legience-border-subtle);
     transition: all 0.3s ease;
     
     &:hover {
@@ -579,7 +579,7 @@
         font-size: 0.75rem;
         color: var(--legience-text-muted);
         font-weight: 500;
-        font-family: var(--vz-font-monospace);
+        font-family: var(--legience-font-monospace);
         margin-bottom: 0.625rem;
         background: rgba(var(--legience-secondary-rgb), 0.1);
         padding: 0.2rem 0.4rem;
@@ -742,7 +742,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(var(--vz-body-bg-rgb), 0.95);
+  background: rgba(var(--legience-bg-card-hover-rgb), 0.95);
   border-radius: var(--legience-radius);
   z-index: 10;
   
@@ -890,7 +890,7 @@
 
 .table tbody td {
   color: var(--legience-text-secondary);
-  border-bottom: 1px solid var(--vz-border-color-light);
+  border-bottom: 1px solid var(--legience-border-subtle);
   padding: 0.75rem;
   vertical-align: middle;
   
@@ -1159,7 +1159,7 @@
       }
       
       td {
-        border-bottom: 1px solid var(--vz-border-color-light);
+        border-bottom: 1px solid var(--legience-border-subtle);
         
         // Enhanced column styling
         .fw-medium {
@@ -1441,7 +1441,7 @@
     border-radius: 4px;
     
     &:hover {
-      background: var(--vz-primary-dark);
+      background: var(--legience-accent-hover);
     }
   }
 }

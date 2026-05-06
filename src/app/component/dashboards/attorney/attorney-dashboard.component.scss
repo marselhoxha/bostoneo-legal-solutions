@@ -79,9 +79,9 @@
         height: 1rem;
         background: linear-gradient(
           90deg,
-          rgba(var(--vz-secondary-rgb), 0.05) 0%,
-          rgba(var(--vz-secondary-rgb), 0.1) 50%,
-          rgba(var(--vz-secondary-rgb), 0.05) 100%
+          rgba(var(--legience-text-subtle-rgb), 0.05) 0%,
+          rgba(var(--legience-text-subtle-rgb), 0.1) 50%,
+          rgba(var(--legience-text-subtle-rgb), 0.05) 100%
         );
         background-size: 200% 100%;
         border-radius: 3px;
@@ -518,7 +518,7 @@
 
       &-secondary {
         background-color: var(--legience-bg-card);
-        background-image: linear-gradient(135deg, rgba(var(--vz-secondary-rgb), 0.15) 0%, rgba(var(--vz-secondary-rgb), 0.25) 100%);
+        background-image: linear-gradient(135deg, rgba(var(--legience-text-subtle-rgb), 0.15) 0%, rgba(var(--legience-text-subtle-rgb), 0.25) 100%);
         color: var(--legience-text-muted);
       }
     }
@@ -565,7 +565,7 @@
       }
 
       &-secondary {
-        background-color: rgba(var(--vz-secondary-rgb), 0.12);
+        background-color: rgba(var(--legience-text-subtle-rgb), 0.12);
         color: var(--legience-text-muted);
       }
     }
@@ -1084,7 +1084,7 @@
 
 // Minimal Case Cards - Velzon Theme
 .case-card-minimal {
-  // Was var(--vz-light) which renders as a gray tint and makes the cards
+  // Was var(--legience-bg-card-hover) which renders as a gray tint and makes the cards
   // look "off" against the page bg. Use the regular card surface so each
   // case card reads as a clean white surface (or dark-mode card bg in
   // dark mode) — same visual weight as the parent cases card.
@@ -1176,9 +1176,9 @@
     .skeleton-pill {
       background: linear-gradient(
         90deg,
-        rgba(var(--vz-secondary-rgb), 0.08) 0%,
-        rgba(var(--vz-secondary-rgb), 0.16) 50%,
-        rgba(var(--vz-secondary-rgb), 0.08) 100%
+        rgba(var(--legience-text-subtle-rgb), 0.08) 0%,
+        rgba(var(--legience-text-subtle-rgb), 0.16) 50%,
+        rgba(var(--legience-text-subtle-rgb), 0.08) 100%
       );
       background-size: 200% 100%;
       animation: loading 1.4s ease-in-out infinite;
@@ -1207,12 +1207,12 @@
 }
 
 .case-badge-muted {
-  background-color: rgba(var(--vz-secondary-rgb), 0.12);
+  background-color: rgba(var(--legience-text-subtle-rgb), 0.12);
   color: var(--legience-text-muted);
 }
 
 .case-badge-light {
-  background-color: rgba(var(--vz-secondary-rgb), 0.08);
+  background-color: rgba(var(--legience-text-subtle-rgb), 0.08);
   color: var(--legience-text-muted);
 }
 
@@ -1227,7 +1227,7 @@
 }
 
 .case-badge-dark {
-  background-color: rgba(var(--vz-dark-rgb), 0.08);
+  background-color: rgba(var(--legience-text-primary-rgb), 0.08);
   color: var(--legience-text-secondary);
 }
 
@@ -1579,7 +1579,7 @@
   // of the card and leaves a big visual void on the right. Letting the
   // headline flow naturally inside the card padding fills the space.
   .focus-headline {
-    font-family: var(--vz-font-sans-serif);
+    font-family: var(--legience-font-sans);
     font-size: 28px;
     font-weight: 700;
     color: var(--legience-text-primary);
@@ -1655,7 +1655,7 @@
       color: var(--legience-text-primary);
       font-weight: 600;
       margin-left: 1px;
-      font-family: var(--vz-font-sans-serif);
+      font-family: var(--legience-font-sans);
     }
   }
 
@@ -1993,7 +1993,7 @@
 }
 
 .schedule-empty-inline {
-  background: linear-gradient(180deg, var(--vz-light), var(--legience-bg-card) 70%);
+  background: linear-gradient(180deg, var(--legience-bg-card-hover), var(--legience-bg-card) 70%);
 
   .schedule-empty-icon {
     background: rgba(var(--legience-success-rgb), 0.12);
@@ -2300,7 +2300,7 @@
     align-items: flex-start;
     gap: 10px;
     padding: 6px 0;
-    border-top: 1px dashed rgba(var(--vz-border-rgb, 0,0,0), 0.06);
+    border-top: 1px dashed rgba(var(--legience-border-hairline-rgb), 0.06);
 
     &:first-child { border-top: 0; }
 

@@ -21,102 +21,112 @@
 // 1. TOKENS
 // =====================================================
 :root[data-design="rox"] {
-  // Brand (single accent philosophy)
-  --vz-primary: #0b64e9;            --vz-primary-rgb: 11, 100, 233;
-  --bs-primary: #0b64e9;            --bs-primary-rgb: 11, 100, 233;
-  --vz-secondary: #57534d;          --vz-secondary-rgb: 87, 83, 77;
-  --bs-secondary: #57534d;          --bs-secondary-rgb: 87, 83, 77;
+  // =====================================================
+  // BOOTSTRAP/VELZON COMPAT SHIM (post-2026-05-05 migration)
+  //
+  // Every --vz-* and --bs-* declaration below DERIVES from --legience-*
+  // (defined canonically in `themes/_legience-tokens.scss`). This block
+  // exists ONLY to feed Bootstrap's compiled vendor CSS. App code must
+  // reference --legience-* directly, never --vz-* or --bs-* (enforced
+  // by stylelint Phase 4).
+  // =====================================================
 
-  --vz-success: #16a34a;            --vz-success-rgb: 22, 163, 74;
-  --bs-success: #16a34a;            --bs-success-rgb: 22, 163, 74;
-  --vz-info: #6b4aff;               --vz-info-rgb: 107, 74, 255;
-  --bs-info: #6b4aff;               --bs-info-rgb: 107, 74, 255;
-  --vz-warning: #f9b703;            --vz-warning-rgb: 249, 183, 3;
-  --bs-warning: #f9b703;            --bs-warning-rgb: 249, 183, 3;
-  --vz-danger: #f24149;             --vz-danger-rgb: 242, 65, 73;
-  --bs-danger: #f24149;             --bs-danger-rgb: 242, 65, 73;
+  // Brand (single accent philosophy)
+  --vz-primary:        var(--legience-accent);                --vz-primary-rgb:        var(--legience-accent-rgb);
+  --bs-primary:        var(--legience-accent);                --bs-primary-rgb:        var(--legience-accent-rgb);
+  --vz-secondary:      var(--legience-text-subtle);           --vz-secondary-rgb:      var(--legience-text-subtle-rgb);
+  --bs-secondary:      var(--legience-text-subtle);           --bs-secondary-rgb:      var(--legience-text-subtle-rgb);
+
+  --vz-success:        var(--legience-success);               --vz-success-rgb:        var(--legience-success-rgb);
+  --bs-success:        var(--legience-success);               --bs-success-rgb:        var(--legience-success-rgb);
+  --vz-info:           var(--legience-info);                  --vz-info-rgb:           var(--legience-info-rgb);
+  --bs-info:           var(--legience-info);                  --bs-info-rgb:           var(--legience-info-rgb);
+  --vz-warning:        var(--legience-warning);               --vz-warning-rgb:        var(--legience-warning-rgb);
+  --bs-warning:        var(--legience-warning);               --bs-warning-rgb:        var(--legience-warning-rgb);
+  --vz-danger:         var(--legience-danger);                --vz-danger-rgb:         var(--legience-danger-rgb);
+  --bs-danger:         var(--legience-danger);                --bs-danger-rgb:         var(--legience-danger-rgb);
 
   // Surfaces
-  --vz-body-bg: #f5f5f4;            --vz-body-bg-rgb: 245, 245, 244;
-  --vz-body-color: #0c0a09;         --vz-body-color-rgb: 12, 10, 9;
-  --bs-body-bg: #f5f5f4;            --bs-body-color: #0c0a09;
-  --vz-secondary-bg: #ffffff;       --vz-tertiary-bg: #ececea;
-  --bs-secondary-bg: #ffffff;       --bs-tertiary-bg: #ececea;
+  --vz-body-bg:        var(--legience-bg-page);               --vz-body-bg-rgb:        var(--legience-bg-card-hover-rgb);
+  --vz-body-color:     var(--legience-text-primary);          --vz-body-color-rgb:     var(--legience-text-primary-rgb);
+  --bs-body-bg:        var(--legience-bg-page);               --bs-body-color:         var(--legience-text-primary);
+  --vz-secondary-bg:   var(--legience-bg-card);               --vz-tertiary-bg:        var(--legience-bg-subtle);
+  --bs-secondary-bg:   var(--legience-bg-card);               --bs-tertiary-bg:        var(--legience-bg-subtle);
 
   // Borders & radius
-  --vz-border-color: #e7e5e4;
-  --vz-border-color-translucent: rgba(12, 10, 9, 0.08);
-  --bs-border-color: #e7e5e4;
-  --bs-border-color-translucent: rgba(12, 10, 9, 0.08);
+  --vz-border-color:               var(--legience-border-hairline);
+  --vz-border-color-translucent:   rgba(12, 10, 9, 0.08);
+  --bs-border-color:               var(--legience-border-hairline);
+  --bs-border-color-translucent:   rgba(12, 10, 9, 0.08);
 
-  // Muted-text overrides — Velzon's defaults render too pale on Rox white
-  // surfaces (≈ #a6a09b). Pinning every "muted/secondary" token to a single
-  // readable mid-grey ensures `.text-muted`, `::placeholder`, secondary
-  // labels, and helper text all stay legible without per-component overrides.
-  --vz-secondary-color: #57534d;     --vz-secondary-color-rgb: 87, 83, 77;
-  --bs-secondary-color: #57534d;     --bs-secondary-color-rgb: 87, 83, 77;
-  --vz-text-muted: #57534d;          --bs-text-muted: #57534d;
-  --vz-border-radius: 0.375rem;     --vz-border-radius-sm: 0.25rem;     --vz-border-radius-lg: 0.5rem;
-  --bs-border-radius: 0.375rem;     --bs-border-radius-sm: 0.25rem;     --bs-border-radius-lg: 0.5rem;
-  --vz-border-radius-pill: 100px;   --bs-border-radius-pill: 100px;
+  // Muted/secondary text — pinned to readable mid-grey for Rox surfaces.
+  --vz-secondary-color:    var(--legience-text-subtle);    --vz-secondary-color-rgb: var(--legience-text-subtle-rgb);
+  --bs-secondary-color:    var(--legience-text-subtle);    --bs-secondary-color-rgb: var(--legience-text-subtle-rgb);
+  --vz-text-muted:         var(--legience-text-subtle);    --bs-text-muted:          var(--legience-text-subtle);
+
+  // Radius — Bootstrap's small/default/large maps to Legience radius-sm/radius/radius-buttons.
+  // Bootstrap's `-lg` historically = 0.5rem (8px) — matches our legience-radius-buttons,
+  // NOT legience-radius-lg (12px, reserved for hero surfaces).
+  --vz-border-radius:      var(--legience-radius);         --vz-border-radius-sm:   var(--legience-radius-sm);    --vz-border-radius-lg:   var(--legience-radius-buttons);
+  --bs-border-radius:      var(--legience-radius);         --bs-border-radius-sm:   var(--legience-radius-sm);    --bs-border-radius-lg:   var(--legience-radius-buttons);
+  --vz-border-radius-pill: var(--legience-radius-pill);    --bs-border-radius-pill: var(--legience-radius-pill);
 
   // Typography
-  --vz-font-sans-serif: 'Geist', system-ui, -apple-system, sans-serif;
-  --bs-font-sans-serif: 'Geist', system-ui, -apple-system, sans-serif;
-  --vz-heading-color: #0c0a09;      --bs-heading-color: #0c0a09;
+  --vz-font-sans-serif:    var(--legience-font-sans);
+  --bs-font-sans-serif:    var(--legience-font-sans);
+  --vz-heading-color:      var(--legience-text-primary);   --bs-heading-color:      var(--legience-text-primary);
 
-  // Graduated text/border utilities
-  --rox-text-primary: #0c0a09;
-  --rox-text-secondary: #44403c;
-  --rox-text-subtle: #57534d;
-  // Bumped from #a6a09b — that value was barely visible. Aligned with
-  // --rox-text-subtle and --vz-secondary-color above so all "muted" labels
-  // render at one consistent, readable mid-grey on light surfaces.
-  --rox-text-muted: #57534d;
-  // Original Rox hairline — matches the PI case detail border treatment
-  // (which uses --vz-border-color = #e7e5e4). Both keep the same subtle
-  // hairline weight so the dashboard reads consistent with PI surfaces.
-  --rox-border-hairline: #e7e5e4;
-  --rox-bg-hover: #f5f5f4;
+  // Graduated text/border utilities (foundation-internal aliases).
+  // Kept for legacy component overrides further down this file. Derive from legience.
+  --rox-text-primary:     var(--legience-text-primary);
+  --rox-text-secondary:   #44403c;                                   // intermediate value, no clean Rox match — kept as-is
+  --rox-text-subtle:      var(--legience-text-subtle);
+  --rox-text-muted:       var(--legience-text-subtle);                // matches --vz-text-muted above
+  --rox-border-hairline:  var(--legience-border-hairline);
+  --rox-bg-hover:         var(--legience-bg-card-hover);
 
   // Links
-  --vz-link-color: #0b64e9;         --vz-link-hover-color: #0950bd;
-  --bs-link-color: #0b64e9;         --bs-link-hover-color: #0950bd;
+  --vz-link-color:           var(--legience-text-link);    --vz-link-hover-color:    #0950bd;     // Bootstrap-specific darker shade
+  --bs-link-color:           var(--legience-text-link);    --bs-link-hover-color:    #0950bd;
 
-  // Subtle / emphasis variants
+  // Subtle / emphasis variants — Bootstrap-internal palette tints (used by .alert-*,
+  // .text-bg-*, .badge bg-*-subtle utility classes). NOT app-facing — the legience
+  // equivalent (`--legience-X-bg-subtle`) is the rgba 10% form. App code uses legience.
   --vz-primary-bg-subtle: #dbeafe;       --vz-primary-text-emphasis: #0950bd;       --vz-primary-border-subtle: #93c5fd;
   --bs-primary-bg-subtle: #dbeafe;       --bs-primary-text-emphasis: #0950bd;       --bs-primary-border-subtle: #93c5fd;
   --vz-success-bg-subtle: #d4f5e0;       --vz-success-text-emphasis: #14532d;       --vz-success-border-subtle: #86efac;
   --bs-success-bg-subtle: #d4f5e0;       --bs-success-text-emphasis: #14532d;       --bs-success-border-subtle: #86efac;
   --vz-warning-bg-subtle: #fef3c7;       --vz-warning-text-emphasis: #78350f;       --vz-warning-border-subtle: #fde68a;
   --bs-warning-bg-subtle: #fef3c7;       --bs-warning-text-emphasis: #78350f;       --bs-warning-border-subtle: #fde68a;
-  --vz-danger-bg-subtle: #fde2e3;        --vz-danger-text-emphasis: #7f1d1d;        --vz-danger-border-subtle: #fca5a5;
-  --bs-danger-bg-subtle: #fde2e3;        --bs-danger-text-emphasis: #7f1d1d;        --bs-danger-border-subtle: #fca5a5;
-  --vz-info-bg-subtle: #ede9fe;          --vz-info-text-emphasis: #4c1d95;          --vz-info-border-subtle: #c4b5fd;
-  --bs-info-bg-subtle: #ede9fe;          --bs-info-text-emphasis: #4c1d95;          --bs-info-border-subtle: #c4b5fd;
+  --vz-danger-bg-subtle:  #fde2e3;       --vz-danger-text-emphasis:  #7f1d1d;       --vz-danger-border-subtle:  #fca5a5;
+  --bs-danger-bg-subtle:  #fde2e3;       --bs-danger-text-emphasis:  #7f1d1d;       --bs-danger-border-subtle:  #fca5a5;
+  --vz-info-bg-subtle:    #ede9fe;       --vz-info-text-emphasis:    #4c1d95;       --vz-info-border-subtle:    #c4b5fd;
+  --bs-info-bg-subtle:    #ede9fe;       --bs-info-text-emphasis:    #4c1d95;       --bs-info-border-subtle:    #c4b5fd;
 
-  // Layout chrome (Velzon-baked vars)
-  --vz-vertical-menu-bg: #ffffff;
-  --vz-vertical-menu-item-color: #44403c;
-  --vz-vertical-menu-sub-item-color: #57534d;
-  --vz-vertical-menu-item-bg: rgba(11, 100, 233, 0.06);
-  --vz-vertical-menu-item-active-bg: rgba(11, 100, 233, 0.06);
-  --vz-vertical-menu-item-active-color: #0b64e9;
-  --vz-vertical-menu-item-hover-color: #0c0a09;
-  --vz-vertical-menu-sub-item-active-color: #0b64e9;
-  --vz-vertical-menu-sub-item-hover-color: #0c0a09;
-  --vz-vertical-menu-title-color: #a6a09b;
-  --vz-topnav-item-active-color: #0b64e9;
-  --vz-header-bg: #ffffff;
-  --vz-header-item-color: #57534d;
-  --vz-header-item-bg: rgba(12, 10, 9, 0.04);
+  // Layout chrome (Velzon-baked vars) — derive from legience where possible.
+  --vz-vertical-menu-bg:                  var(--legience-bg-card);
+  --vz-vertical-menu-item-color:          #44403c;                                  // foundation-specific intermediate
+  --vz-vertical-menu-sub-item-color:      var(--legience-text-subtle);
+  --vz-vertical-menu-item-bg:             rgba(var(--legience-accent-rgb), 0.06);
+  --vz-vertical-menu-item-active-bg:      rgba(var(--legience-accent-rgb), 0.06);
+  --vz-vertical-menu-item-active-color:   var(--legience-accent);
+  --vz-vertical-menu-item-hover-color:    var(--legience-text-primary);
+  --vz-vertical-menu-sub-item-active-color: var(--legience-accent);
+  --vz-vertical-menu-sub-item-hover-color:  var(--legience-text-primary);
+  --vz-vertical-menu-title-color:         var(--legience-text-muted);
+  --vz-topnav-item-active-color:          var(--legience-accent);
+  --vz-header-bg:                         var(--legience-bg-card);
+  --vz-header-item-color:                 var(--legience-text-subtle);
+  --vz-header-item-bg:                    rgba(12, 10, 9, 0.04);
 
-  // Shadow tier
+  // Shadow tier — Bootstrap-internal box-shadow vars (consumed by Velzon's compiled
+  // utility classes like `.shadow-sm`). Kept as raw rgba to match Bootstrap's exact
+  // values; legience-shadow-* are the app-facing alternatives with the same intent.
   --vz-box-shadow-sm: rgba(0, 0, 0, 0.04) 0 1px 2px 0;
-  --vz-box-shadow: rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.04) 0 1px 2px -1px;
+  --vz-box-shadow:    rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.04) 0 1px 2px -1px;
   --vz-box-shadow-lg: rgba(0, 0, 0, 0.08) 0 8px 16px 0;
   --bs-box-shadow-sm: rgba(0, 0, 0, 0.04) 0 1px 2px 0;
-  --bs-box-shadow: rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.04) 0 1px 2px -1px;
+  --bs-box-shadow:    rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.04) 0 1px 2px -1px;
   --bs-box-shadow-lg: rgba(0, 0, 0, 0.08) 0 8px 16px 0;
 
   // Body — letter-spacing signature, antialiasing
@@ -337,7 +347,11 @@
   .client-comm-health,
   .cross-matter-intel,
   .risk-alerts-band {
-    background: transparent;
+    // Use the canonical legience card surface — translucent in light, opaque
+    // in dark (per Tier 1 token definitions). Cards rely primarily on
+    // hairline border + soft shadow for definition; the tint is a 10%
+    // white wash that keeps the surface barely-distinct from the page.
+    background: var(--legience-bg-card);
     border: 1px solid var(--rox-border-hairline);
     border-radius: 8px;
     box-shadow: var(--legience-shadow-sm);

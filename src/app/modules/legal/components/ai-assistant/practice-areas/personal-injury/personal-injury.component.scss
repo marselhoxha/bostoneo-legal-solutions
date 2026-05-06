@@ -2127,13 +2127,13 @@
         transition: all 0.2s ease;
 
         &.has-offer {
-          background: var(--vz-warning-bg-subtle);
+          background: var(--legience-warning-bg-subtle);
           border-color: var(--legience-warning);
           color: var(--legience-warning);
         }
 
         &.has-counter {
-          background: var(--vz-success-bg-subtle);
+          background: var(--legience-success-bg-subtle);
           border-color: var(--legience-success);
           color: var(--legience-success);
         }
@@ -2203,7 +2203,7 @@
           padding: 0;
 
           &:hover {
-            background: var(--vz-danger-bg-subtle);
+            background: var(--legience-danger-bg-subtle);
             color: var(--legience-danger);
           }
         }
@@ -6940,7 +6940,7 @@ ol.ai-ordered-list {
   }
 
   .editor-header {
-    background: var(--vz-card-cap-bg);
+    background: var(--legience-bg-card-hover);
     border-bottom: 1px solid var(--legience-border-hairline);
 
     h6 {
@@ -7061,7 +7061,7 @@ ol.ai-ordered-list {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--vz-card-cap-bg);
+    background: var(--legience-bg-card-hover);
 
     h6 {
       margin: 0;
@@ -7319,7 +7319,7 @@ ol.ai-ordered-list {
   }
 
   .ff-secondary {
-    font-family: var(--vz-font-secondary);
+    font-family: var(--legience-font-system);
   }
 }
 
@@ -8612,7 +8612,7 @@ ol.ai-ordered-list {
 }
 
 // Horizontal timeline bar — Green Active + Floating Chips
-// Uses var(--vz-*) variables throughout so dark mode auto-adapts
+// Uses --legience-* variables throughout so dark mode auto-adapts
 .timeline-bar-container {
   position: relative;
 }

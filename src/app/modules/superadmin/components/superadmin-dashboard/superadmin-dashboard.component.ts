@@ -352,7 +352,7 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
       dataLabels: { enabled: true, style: { fontSize: '11px' } },
       xaxis: { categories: data.map(d => d.organizationName) },
       yaxis: { labels: { style: { fontSize: '12px' } } },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 },
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3 },
       tooltip: { y: { formatter: (val: number) => val + ' users' } }
     };
   }
@@ -402,7 +402,7 @@ export class SuperadminDashboardComponent implements OnInit, OnDestroy {
       },
       tooltip: { shared: true },
       dataLabels: { enabled: false },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 }
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3 }
     };
   }
 }

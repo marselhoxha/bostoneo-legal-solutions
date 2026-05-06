@@ -28,8 +28,8 @@
 }
 
 .card-header {
-  background-color: var(--vz-card-cap-bg);
-  border-bottom: 1px solid var(--vz-card-border-color);
+  background-color: var(--legience-bg-card-hover);
+  border-bottom: 1px solid var(--legience-border-hairline);
   padding: 1rem 1.25rem;
 }
 
@@ -38,7 +38,7 @@
 }
 
 .card-footer {
-  background-color: var(--vz-card-cap-bg);
+  background-color: var(--legience-bg-card-hover);
   border-top: 1px dashed var(--legience-border-hairline);
   padding: 0.75rem 1.25rem;
 }
@@ -191,7 +191,7 @@
 }
 
 .bg-light-subtle {
-  background-color: var(--vz-light-bg-subtle) !important;
+  background-color: var(--legience-bg-page) !important;
 }
 
 /* Text colors */
@@ -266,7 +266,7 @@
   
   .card-footer {
     padding: 0.75rem 1.25rem;
-    background-color: var(--vz-card-cap-bg);
+    background-color: var(--legience-bg-card-hover);
     border-top: 1px dashed var(--legience-border-hairline);
     
     .btn-icon {
@@ -340,7 +340,7 @@
   }
   
   tbody tr:hover {
-    background-color: var(--vz-light-bg-subtle);
+    background-color: var(--legience-bg-page);
   }
 }
 
@@ -482,7 +482,7 @@
 }
 
 .modal-header, .modal-footer {
-  background-color: var(--vz-card-cap-bg);
+  background-color: var(--legience-bg-card-hover);
   border-color: var(--legience-border-hairline);
 }
 
@@ -1043,12 +1043,12 @@
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 1rem;
-    box-shadow: 0 1px 2px rgba(var(--vz-black-rgb), 0.05);
+    box-shadow: 0 1px 2px rgba(var(--legience-text-primary-rgb), 0.05);
     transition: all 0.3s ease;
     
     &:hover {
       background-color: rgba(var(--legience-bg-card-hover-rgb), 0.8);
-      box-shadow: 0 2px 4px rgba(var(--vz-black-rgb), 0.1);
+      box-shadow: 0 2px 4px rgba(var(--legience-text-primary-rgb), 0.1);
     }
     
     .version-heading {

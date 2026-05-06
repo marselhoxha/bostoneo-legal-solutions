@@ -225,7 +225,7 @@
 
     &:hover {
       color: var(--legience-danger);
-      background: var(--vz-danger-bg-subtle);
+      background: var(--legience-danger-bg-subtle);
     }
   }
 }
@@ -264,7 +264,7 @@
 
   &.suggested {
     border-color: var(--legience-success);
-    background: var(--vz-success-bg-subtle);
+    background: var(--legience-success-bg-subtle);
 
     &::after {
       content: 'SUGGESTED';
@@ -353,8 +353,8 @@
       color: #7a5502;
     }
     &.imp {
-      background: var(--vz-info-bg-subtle);
-      color: var(--vz-info-text-emphasis);
+      background: var(--legience-info-bg-subtle);
+      color: var(--legience-info);
       i { font-size: 0.7rem; }
     }
   }
@@ -424,10 +424,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.85rem 1rem;
-  background: var(--vz-danger-bg-subtle);
+  background: var(--legience-danger-bg-subtle);
   border: 1px solid var(--legience-danger);
   border-radius: 8px;
-  color: var(--vz-danger-text-emphasis);
+  color: var(--legience-danger);
   font-size: 0.82rem;
 
   i { font-size: 1.1rem; }

@@ -335,7 +335,7 @@
   align-self: center;
 
   &:hover {
-    background: var(--vz-primary-dark, #354170);
+    background: var(--legience-accent-hover);
   }
 }
 
@@ -402,12 +402,12 @@
 // Dark mode support
 [data-layout-mode="dark"] {
   .tasks-badge {
-    background: var(--vz-dark-bg-secondary, #2a2f34);
-    border-color: var(--vz-dark-border-color, #32383e);
-    color: var(--vz-dark-text-color, #ced4da);
+    background: var(--legience-bg-card);
+    border-color: var(--legience-border-hairline);
+    color: var(--legience-text-primary);
 
     &:hover {
-      background: var(--vz-dark-bg-tertiary, #32383e);
+      background: var(--legience-bg-subtle);
     }
 
     &.has-active {
@@ -423,35 +423,35 @@
     }
 
     .task-count {
-      background: var(--vz-dark-bg-tertiary, #32383e);
-      color: var(--vz-dark-text-color, #ced4da);
+      background: var(--legience-bg-subtle);
+      color: var(--legience-text-primary);
     }
   }
 
   .tasks-panel {
-    background: var(--vz-dark-bg-secondary, #2a2f34);
-    border-color: var(--vz-dark-border-color, #32383e);
+    background: var(--legience-bg-card);
+    border-color: var(--legience-border-hairline);
   }
 
   .panel-header {
-    background: var(--vz-dark-bg-tertiary, #32383e);
-    border-color: var(--vz-dark-border-color, #32383e);
+    background: var(--legience-bg-subtle);
+    border-color: var(--legience-border-hairline);
 
     .header-title {
-      color: var(--vz-dark-text-color, #ced4da);
+      color: var(--legience-text-primary);
     }
   }
 
   .task-item:hover {
-    background: var(--vz-dark-bg-tertiary, #32383e);
+    background: var(--legience-bg-subtle);
   }
 
   .task-name {
-    color: var(--vz-dark-text-color, #ced4da);
+    color: var(--legience-text-primary);
   }
 
   .panel-footer {
-    background: var(--vz-dark-bg-tertiary, #32383e);
-    border-color: var(--vz-dark-border-color, #32383e);
+    background: var(--legience-bg-subtle);
+    border-color: var(--legience-border-hairline);
   }
 }

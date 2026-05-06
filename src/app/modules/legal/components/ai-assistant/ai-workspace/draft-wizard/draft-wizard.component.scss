@@ -59,7 +59,7 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: var(--vz-white, #fff);
+      background: var(--legience-color-surface-white);
       border: 2px solid var(--legience-border-hairline, #e9ebec);
       color: var(--legience-text-muted, #74788d);
       display: flex;
@@ -128,7 +128,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--vz-success-bg-subtle, #e6f6f3);
+  background: var(--legience-success-bg-subtle);
   border-left: 4px solid var(--legience-success, #0ab39c);
   color: var(--legience-text-secondary, #212529);
   padding: 0.625rem 1rem;
@@ -137,7 +137,7 @@
   margin-bottom: 1rem;
 
   i { color: var(--legience-success, #0ab39c); font-size: 1.1rem; }
-  strong { color: var(--vz-success-text-emphasis, #066a5e); }
+  strong { color: var(--legience-success); }
 }
 
 /* ─── Step 1 — Practice Area grid ───────────────────────────────────── */
@@ -179,7 +179,7 @@
 
     &.inherited {
       border-color: var(--legience-success, #0ab39c);
-      background: var(--vz-success-bg-subtle, #f0fcf9);
+      background: var(--legience-success-bg-subtle);
 
       .pa-icon {
         background: var(--legience-success, #0ab39c);
@@ -227,7 +227,7 @@
 /* ─── Step 2 — PA pill + "change" link ──────────────────────────────── */
 .pa-pill {
   display: inline-block;
-  background: var(--vz-info-bg-subtle, #e6f4fb);
+  background: var(--legience-info-bg-subtle);
   color: var(--legience-info, #299cdb);
   font-size: 0.7rem;
   font-weight: 600;
@@ -371,8 +371,8 @@
 }
 .catalog-error {
   color: var(--legience-danger, #f06548);
-  background: var(--vz-danger-bg-subtle, #fdeceb);
-  border-color: var(--vz-danger-border-subtle, #f8c9c0);
+  background: var(--legience-danger-bg-subtle);
+  border-color: var(--legience-danger-bg-subtle);
 
   i { font-size: 1rem; }
   .btn-link { padding: 0 0.25rem; }
@@ -517,9 +517,9 @@
   font-size: 0.55rem;
   font-weight: 700;
   padding: 0.15rem 0.4rem;
-  background: var(--vz-warning-bg-subtle, #fff3d9);
-  color: var(--vz-warning-text-emphasis, #8a5b00);
-  border: 1px solid var(--vz-warning-border-subtle, #fce1a4);
+  background: var(--legience-warning-bg-subtle);
+  color: var(--legience-warning);
+  border: 1px solid var(--legience-warning-bg-subtle);
   border-radius: 999px;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -530,7 +530,7 @@
 // Tooltip-hint glyph — shared across Step 3 fields (jurisdiction, court level).
 // Small, unobtrusive question mark with a soft hover tint.
 .jur-tip {
-  color: var(--vz-gray-500, #adb5bd);
+  color: var(--legience-text-muted);
   font-size: 0.8rem;
   cursor: help;
   margin-left: 0.3rem;
@@ -555,7 +555,7 @@
 
   .jur-label {
     font-weight: 600;
-    color: var(--vz-info-text-emphasis, #0f5a73);
+    color: var(--legience-info);
     font-size: 0.85rem;
     min-width: 130px;
     display: flex;
@@ -564,7 +564,7 @@
     flex-shrink: 0;
 
     .jur-tip {
-      color: var(--vz-gray-500, #adb5bd);
+      color: var(--legience-text-muted);
       font-size: 0.8rem;
       cursor: help;
       transition: color 0.15s ease;
@@ -714,7 +714,7 @@
    tokens, auto-flip dark). Don't swap to rgba(var, 0.06) tints — they render
    nearly invisible over white. */
 .template-resolution-card {
-  background: linear-gradient(135deg, var(--vz-success-bg-subtle, #f0fcf9) 0%, var(--legience-accent-bg-subtle, #f0f4fc) 100%);
+  background: linear-gradient(135deg, var(--legience-success-bg-subtle) 0%, var(--legience-accent-bg-subtle, #f0f4fc) 100%);
   border: 2px solid var(--legience-success, #0ab39c);
   border-radius: 0.625rem;
   padding: 1.25rem;
@@ -723,7 +723,7 @@
   h6 {
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--vz-success-text-emphasis, #066a5e);
+    color: var(--legience-success);
     margin-bottom: 0.75rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -752,14 +752,14 @@
     }
 
     .value {
-      color: var(--vz-success-text-emphasis, #066a5e);
+      color: var(--legience-success);
       font-weight: 600;
       flex: 1;
       word-break: break-word;
     }
 
     .template-target {
-      font-family: var(--vz-font-family-monospace, 'SFMono-Regular', Menlo, monospace);
+      font-family: var(--legience-font-monospace);
       font-size: 0.75rem;
     }
 
@@ -796,9 +796,9 @@
 }
 
 .wizard-warning-alert {
-  background: var(--vz-warning-bg-subtle, #fff7e6);
+  background: var(--legience-warning-bg-subtle);
   border-left: 3px solid var(--legience-warning, #f7b84b);
-  color: var(--vz-warning-text-emphasis, #7a5e1a);
+  color: var(--legience-warning);
 
   i { color: var(--legience-warning, #f7b84b); }
 
@@ -891,7 +891,7 @@
   letter-spacing: 0.03em;
   white-space: nowrap;
 
-  &.purple { background: var(--vz-purple, #6f42c1); }
+  &.purple { background: var(--legience-info); }
   &.info   { background: var(--legience-info, #299cdb); }
 }
 

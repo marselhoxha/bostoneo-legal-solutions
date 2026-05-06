@@ -185,9 +185,9 @@ export interface CaseTimeline {
   `,
   styles: [`
     .case-progress-manager {
-      background: var(--vz-card-bg);
+      background: var(--legience-bg-card);
       border-radius: 0.5rem;
-      border: 1px solid var(--vz-border-color);
+      border: 1px solid var(--legience-border-hairline);
       margin-bottom: 1.5rem;
     }
 
@@ -196,8 +196,8 @@ export interface CaseTimeline {
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--vz-border-color);
-      background: var(--vz-light);
+      border-bottom: 1px solid var(--legience-border-hairline);
+      background: var(--legience-bg-card-hover);
       border-radius: 0.5rem 0.5rem 0 0;
     }
 
@@ -217,7 +217,7 @@ export interface CaseTimeline {
     .header-subtitle {
       margin: 0.25rem 0 0 0;
       font-size: 0.8125rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-subtle);
     }
 
     .header-actions {
@@ -245,12 +245,12 @@ export interface CaseTimeline {
 
       i {
         font-size: 2.5rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-subtle);
         margin-bottom: 1rem;
       }
 
       p {
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-subtle);
         margin: 0.5rem 0;
       }
     }
@@ -268,7 +268,7 @@ export interface CaseTimeline {
 
       .progress-track {
         height: 8px;
-        background: var(--vz-light);
+        background: var(--legience-bg-card-hover);
         border-radius: 4px;
         overflow: hidden;
       }
@@ -285,7 +285,7 @@ export interface CaseTimeline {
         justify-content: space-between;
         margin-top: 0.5rem;
         font-size: 0.75rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-subtle);
       }
     }
 
@@ -300,7 +300,7 @@ export interface CaseTimeline {
       padding: 1rem 0;
 
       &:not(:last-child) {
-        border-bottom: 1px solid var(--vz-border-color);
+        border-bottom: 1px solid var(--legience-border-hairline);
       }
     }
 
@@ -315,14 +315,14 @@ export interface CaseTimeline {
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        border: 2px solid var(--vz-border-color);
-        background: var(--vz-card-bg);
+        border: 2px solid var(--legience-border-hairline);
+        background: var(--legience-bg-card);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 0.875rem;
         font-weight: 600;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-subtle);
         transition: all 0.3s ease;
 
         i {
@@ -333,7 +333,7 @@ export interface CaseTimeline {
       .indicator-line {
         flex: 1;
         width: 2px;
-        background: var(--vz-border-color);
+        background: var(--legience-border-hairline);
         margin: 0.5rem 0;
         min-height: 20px;
 
@@ -409,7 +409,7 @@ export interface CaseTimeline {
     .phase-description {
       margin: 0;
       font-size: 0.8125rem;
-      color: var(--vz-secondary-color);
+      color: var(--legience-text-subtle);
       line-height: 1.4;
     }
 
@@ -437,8 +437,8 @@ export interface CaseTimeline {
       }
 
       .badge-secondary {
-        background: var(--vz-light);
-        color: var(--vz-secondary-color);
+        background: var(--legience-bg-card-hover);
+        color: var(--legience-text-subtle);
       }
 
       .badge-warning {
@@ -471,7 +471,7 @@ export interface CaseTimeline {
         align-items: center;
         gap: 0.375rem;
         font-size: 0.75rem;
-        color: var(--vz-secondary-color);
+        color: var(--legience-text-subtle);
 
         i {
           font-size: 0.875rem;
@@ -514,12 +514,12 @@ export interface CaseTimeline {
     /* Dark mode */
     [data-layout-mode="dark"] {
       .case-progress-manager {
-        background: var(--vz-card-bg);
-        border-color: var(--vz-border-color);
+        background: var(--legience-bg-card);
+        border-color: var(--legience-border-hairline);
       }
 
       .progress-manager-header {
-        background: var(--vz-tertiary-bg);
+        background: var(--legience-bg-subtle);
       }
     }
 

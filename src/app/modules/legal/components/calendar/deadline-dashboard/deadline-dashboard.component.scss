@@ -2,10 +2,10 @@
 .card {
   background-color: var(--legience-bg-card);
   border: none;
-  box-shadow: var(--vz-card-box-shadow);
+  box-shadow: var(--legience-shadow-sm);
   
   .card-header {
-    background-color: var(--vz-card-cap-bg);
+    background-color: var(--legience-bg-card-hover);
     border-bottom: 1px solid var(--legience-border-hairline);
   }
   

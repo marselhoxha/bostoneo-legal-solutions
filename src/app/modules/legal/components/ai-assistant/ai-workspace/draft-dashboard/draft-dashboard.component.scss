@@ -2,7 +2,7 @@
 // Typography matches the LegiSpace welcome screen (ai-workspace.component.scss
 // `.welcome-title` / `.action-card`) so users crossing from welcome → LegiDraft
 // see the same type system: light-weight display sans-serif, -apple-system/Inter
-// stack, tight tracking. All colors use var(--vz-*) tokens with hex fallback so
+// stack, tight tracking. All colors use --legience-* tokens with hex fallback so
 // [data-bs-theme='dark'] flips cleanly.
 
 $legidraft-font-stack: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",

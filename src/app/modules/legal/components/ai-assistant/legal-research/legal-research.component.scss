@@ -466,18 +466,18 @@ $gray-700: #495057;
   .ai-analysis-content {
     font-size: 0.9375rem;
     line-height: 1.7;
-    color: var(--bs-body-color) !important; // Bootstrap semantic color for dark mode
+    color: var(--legience-text-primary) !important; // Bootstrap semantic color for dark mode
 
     h1, h2, h3, h4, h5, h6 {
       font-weight: 600;
-      color: var(--bs-body-color) !important;
+      color: var(--legience-text-primary) !important;
       margin-top: 1.25rem;
       margin-bottom: 0.75rem;
     }
 
     h3 {
       font-size: 1.125rem;
-      color: var(--bs-body-color) !important;
+      color: var(--legience-text-primary) !important;
     }
 
     h4 {
@@ -487,12 +487,12 @@ $gray-700: #495057;
 
     h5 {
       font-size: 0.9375rem;
-      color: var(--bs-body-color) !important;
+      color: var(--legience-text-primary) !important;
     }
 
     p {
       margin-bottom: 0.75rem;
-      color: var(--bs-body-color) !important;
+      color: var(--legience-text-primary) !important;
     }
 
     ul, ol {
@@ -501,27 +501,27 @@ $gray-700: #495057;
 
       li {
         margin-bottom: 0.25rem;
-        color: var(--bs-body-color) !important;
+        color: var(--legience-text-primary) !important;
       }
     }
 
     strong {
       font-weight: 600;
-      color: var(--bs-body-color) !important;
+      color: var(--legience-text-primary) !important;
     }
 
     em {
-      color: var(--bs-body-secondary-color) !important;
+      color: var(--legience-text-subtle) !important;
     }
 
     // Ensure all text elements are visible in dark mode
     * {
-      color: var(--bs-body-color) !important;
+      color: var(--legience-text-primary) !important;
     }
 
     // Override any inherited styles that might cause invisibility
     .text-muted {
-      color: var(--bs-body-secondary-color) !important;
+      color: var(--legience-text-subtle) !important;
     }
   }
 

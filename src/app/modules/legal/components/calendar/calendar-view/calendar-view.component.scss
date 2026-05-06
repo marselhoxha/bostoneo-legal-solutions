@@ -223,7 +223,7 @@
               &:hover, &.fc-button-active {
                 background-color: var(--legience-accent);
                 border-color: var(--legience-accent);
-                color: var(--vz-white);
+                color: var(--legience-color-surface-white);
               }
 
               &:focus {
@@ -236,7 +236,7 @@
             text-transform: capitalize;
             background-color: var(--legience-accent);
             border-color: var(--legience-accent);
-            color: var(--vz-white);
+            color: var(--legience-color-surface-white);
             font-weight: 500;
             padding: 0.4rem 0.8rem;
 

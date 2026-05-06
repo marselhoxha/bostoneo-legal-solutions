@@ -2838,7 +2838,7 @@ export class PersonalInjuryComponent extends PracticeAreaBaseComponent implement
             </div>
           </div>
           ` : `
-          <div class="mb-3 p-2 rounded" style="background: rgba(var(--vz-info-rgb), 0.05); border-left: 3px solid var(--vz-info);">
+          <div class="mb-3 p-2 rounded" style="background: rgba(var(--legience-info-rgb), 0.05); border-left: 3px solid var(--legience-info);">
             <div class="text-muted small mb-1"><i class="ri-stethoscope-line me-1"></i>Clinical Record</div>
             <div class="small">This is a clinical record documenting treatment, not a billing statement.</div>
           </div>

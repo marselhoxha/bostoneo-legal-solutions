@@ -34,15 +34,15 @@
   }
 
   &.border-danger {
-    border-left-color: var(--bs-danger);
+    border-left-color: var(--legience-danger);
   }
 
   &.border-warning {
-    border-left-color: var(--bs-warning);
+    border-left-color: var(--legience-warning);
   }
 
   &.border-success {
-    border-left-color: var(--bs-success);
+    border-left-color: var(--legience-success);
   }
 }
 
@@ -67,7 +67,7 @@
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: var(--bs-primary);
+    border-color: var(--legience-accent);
     background: #f8f9ff;
   }
 

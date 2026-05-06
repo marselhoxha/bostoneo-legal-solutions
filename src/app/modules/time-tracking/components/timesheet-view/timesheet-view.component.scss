@@ -104,7 +104,7 @@
 /* Enhanced card styling matching activities page */
 .card-enhanced {
   background: var(--legience-bg-card);
-  border: 1px solid var(--vz-border-color-light);
+  border: 1px solid var(--legience-border-subtle);
   border-radius: var(--legience-radius);
   box-shadow: var(--legience-shadow-sm);
 }
@@ -194,7 +194,7 @@
 }
 
 .btn-outline-secondary:hover {
-  color: var(--vz-white);
+  color: var(--legience-color-surface-white);
   background-color: var(--legience-secondary);
   border-color: var(--legience-secondary);
 }
@@ -573,7 +573,7 @@
 
 [data-bs-theme="dark"] .nav-tabs-wrapper {
   background: var(--legience-dark);
-  border-color: var(--vz-border-color-dark);
+  border-color: var(--legience-border-emphasis);
 }
 
 /* === ENHANCED NAV PILLS === */
@@ -948,7 +948,7 @@
 [data-bs-theme="dark"] {
   .card {
     background-color: var(--legience-dark);
-    border-color: var(--vz-border-color-dark);
+    border-color: var(--legience-border-emphasis);
   }
   
   .table {
@@ -959,7 +959,7 @@
   .form-control,
   .form-select {
     background-color: var(--legience-dark);
-    border-color: var(--vz-border-color-dark);
+    border-color: var(--legience-border-emphasis);
     color: var(--legience-bg-card-hover);
   }
 }

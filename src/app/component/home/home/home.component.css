@@ -120,7 +120,7 @@
   }
   
   .metric-card:hover .card-footer {
-    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+    background-color: rgba(var(--legience-accent-rgb), 0.1) !important;
   }
   
   /* Button Hover Effects */
@@ -165,7 +165,7 @@
   
   .activity-feed-scroll {
     scrollbar-width: thin;
-    scrollbar-color: rgba(var(--bs-primary-rgb), 0.3) transparent;
+    scrollbar-color: rgba(var(--legience-accent-rgb), 0.3) transparent;
   }
   
   .activity-feed-scroll::-webkit-scrollbar {
@@ -177,7 +177,7 @@
   }
   
   .activity-feed-scroll::-webkit-scrollbar-thumb {
-    background-color: rgba(var(--bs-primary-rgb), 0.3);
+    background-color: rgba(var(--legience-accent-rgb), 0.3);
     border-radius: 10px;
   }
   
@@ -194,8 +194,8 @@
   }
   
   .activity-item:hover {
-    background-color: rgba(var(--bs-primary-rgb), 0.05);
-    border-left-color: rgba(var(--bs-primary-rgb), 0.3);
+    background-color: rgba(var(--legience-accent-rgb), 0.05);
+    border-left-color: rgba(var(--legience-accent-rgb), 0.3);
     transform: translateX(3px);
   }
   
@@ -243,7 +243,7 @@
   }
   
   .activity-feed-card .card-header {
-    background: rgba(var(--bs-primary-rgb), 0.08) !important;
+    background: rgba(var(--legience-accent-rgb), 0.08) !important;
     border-color: rgba(0, 0, 0, 0.05) !important;
   }
   
@@ -257,7 +257,7 @@
   }
   
   .activity-item:hover {
-    background-color: rgba(var(--bs-primary-rgb), 0.05) !important;
+    background-color: rgba(var(--legience-accent-rgb), 0.05) !important;
   }
   
   /* Theme Support - Dark Theme */
@@ -267,7 +267,7 @@
   }
   
   .activity-feed-card.dark-theme .card-header {
-    background: rgba(var(--bs-primary-rgb), 0.15) !important;
+    background: rgba(var(--legience-accent-rgb), 0.15) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
   }
   
@@ -296,9 +296,9 @@
   }
   
   .activity-feed-card.dark-theme .btn-soft-primary {
-    background-color: rgba(var(--bs-primary-rgb), 0.1);
-    border-color: rgba(var(--bs-primary-rgb), 0.2);
-    color: var(--bs-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
+    border-color: rgba(var(--legience-accent-rgb), 0.2);
+    color: var(--legience-accent);
   }
   
   .activity-feed-card.dark-theme .btn-soft-secondary {
@@ -308,9 +308,9 @@
   }
   
   .activity-feed-card.dark-theme .btn-soft-info {
-    background-color: rgba(var(--bs-info-rgb), 0.1);
-    border-color: rgba(var(--bs-info-rgb), 0.2);
-    color: var(--bs-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
+    border-color: rgba(var(--legience-info-rgb), 0.2);
+    color: var(--legience-info);
   }
   
   /* Badge animations */
@@ -461,8 +461,8 @@
   .clock-widget,
   .weather-widget,
   .system-info-widget {
-    background: rgba(var(--bs-primary-rgb), 0.05);
-    border: 1px solid rgba(var(--bs-primary-rgb), 0.1);
+    background: rgba(var(--legience-accent-rgb), 0.05);
+    border: 1px solid rgba(var(--legience-accent-rgb), 0.1);
     border-radius: 12px;
     padding: 1rem 1.5rem;
     transition: all 0.3s ease;
@@ -471,30 +471,30 @@
   .clock-widget:hover,
   .weather-widget:hover,
   .system-info-widget:hover {
-    background: rgba(var(--bs-primary-rgb), 0.08);
-    border-color: rgba(var(--bs-primary-rgb), 0.2);
+    background: rgba(var(--legience-accent-rgb), 0.08);
+    border-color: rgba(var(--legience-accent-rgb), 0.2);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   }
   
   .weather-widget {
-    background: rgba(var(--bs-warning-rgb), 0.05);
-    border-color: rgba(var(--bs-warning-rgb), 0.1);
+    background: rgba(var(--legience-warning-rgb), 0.05);
+    border-color: rgba(var(--legience-warning-rgb), 0.1);
   }
   
   .weather-widget:hover {
-    background: rgba(var(--bs-warning-rgb), 0.08);
-    border-color: rgba(var(--bs-warning-rgb), 0.2);
+    background: rgba(var(--legience-warning-rgb), 0.08);
+    border-color: rgba(var(--legience-warning-rgb), 0.2);
   }
   
   .system-info-widget {
-    background: rgba(var(--bs-info-rgb), 0.05);
-    border-color: rgba(var(--bs-info-rgb), 0.1);
+    background: rgba(var(--legience-info-rgb), 0.05);
+    border-color: rgba(var(--legience-info-rgb), 0.1);
   }
   
   .system-info-widget:hover {
-    background: rgba(var(--bs-info-rgb), 0.08);
-    border-color: rgba(var(--bs-info-rgb), 0.2);
+    background: rgba(var(--legience-info-rgb), 0.08);
+    border-color: rgba(var(--legience-info-rgb), 0.2);
   }
   
   /* Enhanced Velzon Gradient */
@@ -672,7 +672,7 @@
   .hover-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-    border-color: rgba(var(--bs-primary-rgb), 0.2);
+    border-color: rgba(var(--legience-accent-rgb), 0.2);
   }
   
   .advanced-header-card.dark-theme .hover-card {
@@ -798,12 +798,12 @@
   
   /* Clean Top Navigation */
   .professional-header .card-header {
-    background: rgba(var(--bs-light-rgb), 0.5);
+    background: rgba(var(--legience-bg-card-hover-rgb), 0.5);
     backdrop-filter: blur(10px);
   }
   
   .professional-header[data-bs-theme="dark"] .card-header {
-    background: rgba(var(--bs-dark-rgb), 0.8);
+    background: rgba(var(--legience-text-primary-rgb), 0.8);
   }
   
   .status-dot {
@@ -909,7 +909,7 @@
   }
   
   .metric-summary:hover {
-    background: rgba(var(--bs-primary-rgb), 0.1);
+    background: rgba(var(--legience-accent-rgb), 0.1);
   }
   
   .metric-summary i {
@@ -923,7 +923,7 @@
   
   /* Dark Theme Support */
   .professional-header[data-bs-theme="dark"] .card-footer {
-    background: rgba(var(--bs-gray-800-rgb), 0.8) !important;
+    background: rgba(var(--legience-text-secondary-rgb), 0.8) !important;
   }
   
   .professional-header[data-bs-theme="dark"] .metric-summary:hover {
@@ -2123,19 +2123,19 @@
   
   /* Velzon Typography Classes */
   .fw-medium {
-    font-weight: var(--vz-font-weight-medium) !important;
+    font-weight: var(--legience-font-weight-medium) !important;
   }
   
   .fw-semibold {
-    font-weight: var(--vz-font-weight-semibold) !important;
+    font-weight: var(--legience-font-weight-semibold) !important;
   }
   
   .text-primary {
-    color: var(--vz-primary) !important;
+    color: var(--legience-accent) !important;
   }
   
   .text-secondary {
-    color: var(--vz-secondary) !important;
+    color: var(--legience-text-subtle) !important;
   }
   
   
@@ -2144,20 +2144,20 @@
   }
   
   .border-primary {
-    border-color: var(--vz-primary) !important;
+    border-color: var(--legience-accent) !important;
   }
   
   /* Velzon Button Styles */
   .btn {
-    font-family: var(--vz-font-family);
-    font-weight: var(--vz-font-weight-medium);
-    border-radius: var(--vz-border-radius);
+    font-family: var(--legience-font-sans);
+    font-weight: var(--legience-font-weight-medium);
+    border-radius: var(--legience-radius);
     transition: all 0.3s ease;
   }
   
   .btn-primary {
-    background-color: var(--vz-primary);
-    border-color: var(--vz-primary);
+    background-color: var(--legience-accent);
+    border-color: var(--legience-accent);
     color: #ffffff;
   }
   
@@ -2171,15 +2171,15 @@
   
   /* Velzon Card Styles */
   .card {
-    border-radius: var(--vz-border-radius-lg);
-    box-shadow: var(--vz-box-shadow);
+    border-radius: var(--legience-radius-buttons);
+    box-shadow: var(--legience-shadow);
     border: 1px solid rgba(0, 0, 0, 0.05);
   }
   
   .card-header {
-    background-color: rgba(var(--vz-light), 0.5);
+    background-color: rgba(var(--legience-bg-card-hover), 0.5);
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    font-weight: var(--vz-font-weight-semibold);
+    font-weight: var(--legience-font-weight-semibold);
   }
   
   /* Responsive Design with Velzon Breakpoints */
@@ -2236,7 +2236,7 @@
     }
     
     .btn-search-professional {
-      border-radius: var(--vz-border-radius) !important;
+      border-radius: var(--legience-radius) !important;
       margin-top: 0.5rem;
     }
     
@@ -2502,9 +2502,9 @@
   
   /* Enhanced Professional Activity Stream - Premium Velzon Design */
   .activity-stream-horizontal {
-    background: var(--vz-card-bg, #ffffff);
-    border-radius: var(--vz-border-radius-lg, 0.75rem);
-    border: 1px solid var(--vz-border-color, #dee2e6);
+    background: var(--legience-bg-card);
+    border-radius: var(--legience-radius-buttons);
+    border: 1px solid var(--legience-border-hairline);
     box-shadow: 
       0 0.125rem 0.25rem rgba(0, 0, 0, 0.075),
       0 0.25rem 0.5rem rgba(0, 0, 0, 0.05);
@@ -2512,8 +2512,8 @@
     position: relative;
     overflow: hidden; /* Essential to contain horizontal scrolling cards */
     background-image: 
-      radial-gradient(circle at 25% 25%, rgba(var(--vz-primary-rgb), 0.02) 0%, transparent 60%),
-      radial-gradient(circle at 75% 75%, rgba(var(--vz-info-rgb), 0.02) 0%, transparent 60%);
+      radial-gradient(circle at 25% 25%, rgba(var(--legience-accent-rgb), 0.02) 0%, transparent 60%),
+      radial-gradient(circle at 75% 75%, rgba(var(--legience-info-rgb), 0.02) 0%, transparent 60%);
   }
   
   .activity-stream-horizontal::before,
@@ -2532,7 +2532,7 @@
     left: 0;
     background: linear-gradient(
       to right,
-      var(--vz-card-bg, #ffffff) 0%,
+      var(--legience-bg-card) 0%,
       rgba(255, 255, 255, 0.95) 40%,
       rgba(255, 255, 255, 0.7) 70%,
       transparent 100%
@@ -2543,7 +2543,7 @@
     right: 0;
     background: linear-gradient(
       to left,
-      var(--vz-card-bg, #ffffff) 0%,
+      var(--legience-bg-card) 0%,
       rgba(255, 255, 255, 0.95) 40%,
       rgba(255, 255, 255, 0.7) 70%,
       transparent 100%
@@ -2580,21 +2580,21 @@
   .activity-card-velzon {
     min-width: 320px;
     max-width: 320px;
-    background: var(--vz-card-bg, #ffffff);
-    border: 1px solid var(--vz-border-color-translucent, rgba(0, 0, 0, 0.06));
-    border-radius: var(--vz-border-radius, 0.5rem);
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-subtle);
+    border-radius: var(--legience-radius);
     padding: 1.5rem;
     transition: all 0.3s ease;
     position: relative;
     cursor: pointer;
     flex-shrink: 0;
-    box-shadow: var(--vz-box-shadow-sm, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
+    box-shadow: var(--legience-shadow-sm);
   }
   
   .activity-card-velzon:hover {
     transform: translateY(-0.25rem);
-    box-shadow: var(--vz-box-shadow, 0 0.5rem 1rem rgba(0, 0, 0, 0.15));
-    border-color: var(--vz-primary, #405189);
+    box-shadow: var(--legience-shadow);
+    border-color: var(--legience-accent);
   }
   
   /* Activity Header */
@@ -2608,7 +2608,7 @@
   .activity-icon-velzon {
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: var(--vz-border-radius, 0.5rem);
+    border-radius: var(--legience-radius);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2623,33 +2623,33 @@
   
   /* Velzon Color Variants */
   .activity-type-client .activity-icon-velzon {
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
+    color: var(--legience-accent);
   }
   
   .activity-type-case .activity-icon-velzon {
-    background-color: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background-color: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
   
   .activity-type-document .activity-icon-velzon {
-    background-color: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
   }
   
   .activity-type-payment .activity-icon-velzon {
-    background-color: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
   }
   
   .activity-type-appointment .activity-icon-velzon {
-    background-color: rgba(var(--vz-secondary-rgb), 0.1);
-    color: var(--vz-secondary);
+    background-color: rgba(var(--legience-text-subtle-rgb), 0.1);
+    color: var(--legience-text-subtle);
   }
   
   .activity-type-deadline .activity-icon-velzon {
-    background-color: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
+    color: var(--legience-danger);
   }
   
   /* Typography - Velzon Style */
@@ -2659,10 +2659,10 @@
   }
   
   .activity-title-velzon {
-    font-family: var(--vz-font-sans-serif);
+    font-family: var(--legience-font-sans);
     font-size: 0.875rem;
-    font-weight: var(--vz-font-weight-semibold, 600);
-    color: var(--vz-body-color);
+    font-weight: var(--legience-font-weight-semibold);
+    color: var(--legience-text-primary);
     margin-bottom: 0.375rem;
     line-height: 1.4;
     /* Remove truncation to show full titles */
@@ -2672,8 +2672,8 @@
   }
   
   .activity-description-velzon {
-    font-size: var(--vz-font-size-sm);
-    color: var(--vz-secondary-color);
+    font-size: var(--legience-font-size-sm);
+    color: var(--legience-text-subtle);
     line-height: 1.5;
     margin-bottom: 0.75rem;
     /* Allow longer descriptions to show */
@@ -2688,14 +2688,14 @@
     align-items: center;
     justify-content: space-between;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--vz-border-color-translucent);
+    border-top: 1px solid var(--legience-border-subtle);
   }
   
   .activity-time-velzon {
-    font-family: var(--vz-font-sans-serif);
-    font-size: var(--vz-font-size-xs, 0.75rem);
-    color: var(--vz-secondary-color);
-    font-weight: var(--vz-font-weight-medium, 500);
+    font-family: var(--legience-font-sans);
+    font-size: var(--legience-font-size-xs);
+    color: var(--legience-text-subtle);
+    font-weight: var(--legience-font-weight-medium);
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -2711,49 +2711,49 @@
   }
   
   .activity-badge-velzon {
-    font-size: var(--vz-font-size-xs);
-    font-weight: var(--vz-font-weight-medium);
+    font-size: var(--legience-font-size-xs);
+    font-weight: var(--legience-font-weight-medium);
     padding: 0.25rem 0.5rem;
-    border-radius: var(--vz-border-radius-pill, 50rem);
+    border-radius: var(--legience-radius-pill);
     text-transform: uppercase;
     letter-spacing: 0.025em;
   }
   
   /* Status Badge Colors - Velzon */
   .activity-type-client .activity-badge-velzon {
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
-    color: var(--vz-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
+    color: var(--legience-accent);
   }
   
   .activity-type-case .activity-badge-velzon {
-    background-color: rgba(var(--vz-success-rgb), 0.1);
-    color: var(--vz-success);
+    background-color: rgba(var(--legience-success-rgb), 0.1);
+    color: var(--legience-success);
   }
   
   .activity-type-document .activity-badge-velzon {
-    background-color: rgba(var(--vz-warning-rgb), 0.1);
-    color: var(--vz-warning);
+    background-color: rgba(var(--legience-warning-rgb), 0.1);
+    color: var(--legience-warning);
   }
   
   .activity-type-payment .activity-badge-velzon {
-    background-color: rgba(var(--vz-info-rgb), 0.1);
-    color: var(--vz-info);
+    background-color: rgba(var(--legience-info-rgb), 0.1);
+    color: var(--legience-info);
   }
   
   .activity-type-appointment .activity-badge-velzon {
-    background-color: rgba(var(--vz-secondary-rgb), 0.1);
-    color: var(--vz-secondary);
+    background-color: rgba(var(--legience-text-subtle-rgb), 0.1);
+    color: var(--legience-text-subtle);
   }
   
   .activity-type-deadline .activity-badge-velzon {
-    background-color: rgba(var(--vz-danger-rgb), 0.1);
-    color: var(--vz-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.1);
+    color: var(--legience-danger);
   }
   
   /* View More Card - Velzon Style */
   .activity-more-velzon {
-    background-color: var(--vz-gray-100, #f3f6f9);
-    border: 1px dashed var(--vz-border-color);
+    background-color: var(--legience-bg-page);
+    border: 1px dashed var(--legience-border-hairline);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2763,8 +2763,8 @@
   }
   
   .activity-more-velzon:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.05);
-    border-color: var(--vz-primary);
+    background-color: rgba(var(--legience-accent-rgb), 0.05);
+    border-color: var(--legience-accent);
     transform: translateY(-0.25rem);
   }
   
@@ -2775,8 +2775,8 @@
   .more-icon-velzon {
     width: 3rem;
     height: 3rem;
-    border-radius: var(--vz-border-radius);
-    background-color: var(--vz-primary);
+    border-radius: var(--legience-radius);
+    background-color: var(--legience-accent);
     color: white;
     display: flex;
     align-items: center;
@@ -2787,30 +2787,30 @@
   
   .activity-more-velzon:hover .more-icon-velzon {
     transform: scale(1.05);
-    background-color: var(--vz-primary-darker, #364574);
+    background-color: var(--legience-accent-hover);
   }
   
   .more-title-velzon {
-    font-family: var(--vz-font-sans-serif);
+    font-family: var(--legience-font-sans);
     font-size: 0.875rem;
-    font-weight: var(--vz-font-weight-semibold);
-    color: var(--vz-body-color);
+    font-weight: var(--legience-font-weight-semibold);
+    color: var(--legience-text-primary);
     margin-bottom: 0.375rem;
   }
   
   .more-description-velzon {
-    font-family: var(--vz-font-sans-serif);
-    font-size: var(--vz-font-size-sm);
-    color: var(--vz-secondary-color);
+    font-family: var(--legience-font-sans);
+    font-size: var(--legience-font-size-sm);
+    color: var(--legience-text-subtle);
     margin-bottom: 0.75rem;
   }
   
   .more-link-velzon {
-    font-family: var(--vz-font-sans-serif);
-    font-size: var(--vz-font-size-sm);
-    color: var(--vz-primary);
+    font-family: var(--legience-font-sans);
+    font-size: var(--legience-font-size-sm);
+    color: var(--legience-accent);
     text-decoration: none;
-    font-weight: var(--vz-font-weight-medium);
+    font-weight: var(--legience-font-weight-medium);
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -2818,7 +2818,7 @@
   }
   
   .more-link-velzon:hover {
-    color: var(--vz-primary-darker);
+    color: var(--legience-accent-hover);
     transform: translateX(0.125rem);
   }
   
@@ -2826,7 +2826,7 @@
   [data-bs-theme="dark"] .activity-stream-horizontal::before {
     background: linear-gradient(
       to right,
-      var(--vz-card-bg) 0%,
+      var(--legience-bg-card) 0%,
       rgba(43, 48, 53, 0.8) 60%,
       transparent 100%
     );
@@ -2835,18 +2835,18 @@
   [data-bs-theme="dark"] .activity-stream-horizontal::after {
     background: linear-gradient(
       to left,
-      var(--vz-card-bg) 0%,
+      var(--legience-bg-card) 0%,
       rgba(43, 48, 53, 0.8) 60%,
       transparent 100%
     );
   }
   
   [data-bs-theme="dark"] .activity-more-velzon {
-    background-color: var(--vz-gray-800, #495057);
+    background-color: var(--legience-text-secondary);
   }
   
   [data-bs-theme="dark"] .activity-more-velzon:hover {
-    background-color: rgba(var(--vz-primary-rgb), 0.1);
+    background-color: rgba(var(--legience-accent-rgb), 0.1);
   }
   
   /* Responsive Design - Velzon */
@@ -2907,7 +2907,7 @@
     left: 0;
     width: 3px;
     height: 100%;
-    border-radius: var(--vz-border-radius) 0 0 var(--vz-border-radius);
+    border-radius: var(--legience-radius) 0 0 var(--legience-radius);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -2917,35 +2917,35 @@
   }
   
   .activity-type-client .activity-priority-indicator {
-    background-color: var(--vz-primary);
+    background-color: var(--legience-accent);
   }
   
   .activity-type-case .activity-priority-indicator {
-    background-color: var(--vz-success);
+    background-color: var(--legience-success);
   }
   
   .activity-type-document .activity-priority-indicator {
-    background-color: var(--vz-warning);
+    background-color: var(--legience-warning);
   }
   
   .activity-type-payment .activity-priority-indicator {
-    background-color: var(--vz-info);
+    background-color: var(--legience-info);
   }
   
   .activity-type-appointment .activity-priority-indicator {
-    background-color: var(--vz-secondary);
+    background-color: var(--legience-text-subtle);
   }
   
   .activity-type-deadline .activity-priority-indicator {
-    background-color: var(--vz-danger);
+    background-color: var(--legience-danger);
   }
   
   /* Velzon Button Styles for Activity Controls */
   .activity-controls .btn {
-    font-size: var(--vz-font-size-sm);
+    font-size: var(--legience-font-size-sm);
     padding: 0.375rem 0.75rem;
-    border-radius: var(--vz-border-radius-sm);
-    font-weight: var(--vz-font-weight-medium);
+    border-radius: var(--legience-radius-sm);
+    font-weight: var(--legience-font-weight-medium);
   }
   
   /* Smooth scroll behavior */
@@ -2957,9 +2957,9 @@
   
   /* Clean Activity Stream - Pure Velzon Design */
   .activity-stream-horizontal {
-    background: var(--vz-card-bg);
-    border-radius: var(--vz-border-radius);
-    border: 1px solid var(--vz-border-color);
+    background: var(--legience-bg-card);
+    border-radius: var(--legience-radius);
+    border: 1px solid var(--legience-border-hairline);
     padding: 1rem;
     position: relative;
     overflow: hidden; /* Essential to contain horizontal scrolling cards */
@@ -2978,12 +2978,12 @@
   
   .activity-stream-horizontal::before {
     left: 0;
-    background: linear-gradient(to right, var(--vz-card-bg) 0%, transparent 100%);
+    background: linear-gradient(to right, var(--legience-bg-card) 0%, transparent 100%);
   }
   
   .activity-stream-horizontal::after {
     right: 0;
-    background: linear-gradient(to left, var(--vz-card-bg) 0%, transparent 100%);
+    background: linear-gradient(to left, var(--legience-bg-card) 0%, transparent 100%);
   }
   
   .activity-ticker-container {
@@ -3005,9 +3005,9 @@
   /* Clean Activity Cards */
   .activity-card-velzon {
     min-width: 280px;
-    background: var(--vz-card-bg);
-    border: 1px solid var(--vz-border-color);
-    border-radius: var(--vz-border-radius);
+    background: var(--legience-bg-card);
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: var(--legience-radius);
     padding: 1.25rem;
     transition: all 0.3s ease;
     flex-shrink: 0;
@@ -3015,8 +3015,8 @@
   
   .activity-card-velzon:hover {
     transform: translateY(-2px);
-    box-shadow: var(--vz-box-shadow-lg);
-    border-color: var(--vz-primary);
+    box-shadow: var(--legience-shadow-lg);
+    border-color: var(--legience-accent);
   }
   
   .activity-header-velzon {
@@ -3029,7 +3029,7 @@
   .activity-icon-velzon {
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: var(--vz-border-radius);
+    border-radius: var(--legience-radius);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3044,33 +3044,33 @@
   
   /* Velzon Color Variants */
   .activity-type-client .activity-icon-velzon {
-    background: var(--vz-primary-bg-subtle);
-    color: var(--vz-primary);
+    background: var(--legience-accent-bg-subtle);
+    color: var(--legience-accent);
   }
   
   .activity-type-case .activity-icon-velzon {
-    background: var(--vz-success-bg-subtle);
-    color: var(--vz-success);
+    background: var(--legience-success-bg-subtle);
+    color: var(--legience-success);
   }
   
   .activity-type-document .activity-icon-velzon {
-    background: var(--vz-warning-bg-subtle);
-    color: var(--vz-warning);
+    background: var(--legience-warning-bg-subtle);
+    color: var(--legience-warning);
   }
   
   .activity-type-payment .activity-icon-velzon {
-    background: var(--vz-info-bg-subtle);
-    color: var(--vz-info);
+    background: var(--legience-info-bg-subtle);
+    color: var(--legience-info);
   }
   
   .activity-type-appointment .activity-icon-velzon {
-    background: var(--vz-secondary-bg-subtle);
-    color: var(--vz-secondary);
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-subtle);
   }
   
   .activity-type-deadline .activity-icon-velzon {
-    background: var(--vz-danger-bg-subtle);
-    color: var(--vz-danger);
+    background: var(--legience-danger-bg-subtle);
+    color: var(--legience-danger);
   }
   
   .activity-meta-velzon {
@@ -3079,16 +3079,16 @@
   }
   
   .activity-title-velzon {
-    font-size: var(--vz-font-size-base);
-    font-weight: var(--vz-font-weight-semibold);
-    color: var(--vz-body-color);
+    font-size: var(--legience-font-size-base);
+    font-weight: var(--legience-font-weight-semibold);
+    color: var(--legience-text-primary);
     margin-bottom: 0.25rem;
     line-height: 1.4;
   }
   
   .activity-description-velzon {
-    font-size: var(--vz-font-size-sm);
-    color: var(--vz-secondary-color);
+    font-size: var(--legience-font-size-sm);
+    color: var(--legience-text-subtle);
     line-height: 1.5;
     margin-bottom: 0.75rem;
   }
@@ -3098,59 +3098,59 @@
     align-items: center;
     justify-content: space-between;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--vz-border-color);
+    border-top: 1px solid var(--legience-border-hairline);
   }
   
   .activity-time-velzon {
-    font-size: var(--vz-font-size-xs);
-    color: var(--vz-secondary-color);
-    font-weight: var(--vz-font-weight-medium);
+    font-size: var(--legience-font-size-xs);
+    color: var(--legience-text-subtle);
+    font-weight: var(--legience-font-weight-medium);
   }
   
   .activity-badge-velzon {
-    font-size: var(--vz-font-size-xs);
-    font-weight: var(--vz-font-weight-semibold);
+    font-size: var(--legience-font-size-xs);
+    font-weight: var(--legience-font-weight-semibold);
     padding: 0.25rem 0.5rem;
-    border-radius: var(--vz-border-radius-pill);
+    border-radius: var(--legience-radius-pill);
     text-transform: uppercase;
     letter-spacing: 0.025em;
   }
   
   /* Badge Colors */
   .activity-type-client .activity-badge-velzon {
-    background: var(--vz-primary-bg-subtle);
-    color: var(--vz-primary);
+    background: var(--legience-accent-bg-subtle);
+    color: var(--legience-accent);
   }
   
   .activity-type-case .activity-badge-velzon {
-    background: var(--vz-success-bg-subtle);
-    color: var(--vz-success);
+    background: var(--legience-success-bg-subtle);
+    color: var(--legience-success);
   }
   
   .activity-type-document .activity-badge-velzon {
-    background: var(--vz-warning-bg-subtle);
-    color: var(--vz-warning);
+    background: var(--legience-warning-bg-subtle);
+    color: var(--legience-warning);
   }
   
   .activity-type-payment .activity-badge-velzon {
-    background: var(--vz-info-bg-subtle);
-    color: var(--vz-info);
+    background: var(--legience-info-bg-subtle);
+    color: var(--legience-info);
   }
   
   .activity-type-appointment .activity-badge-velzon {
-    background: var(--vz-secondary-bg-subtle);
-    color: var(--vz-secondary);
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-subtle);
   }
   
   .activity-type-deadline .activity-badge-velzon {
-    background: var(--vz-danger-bg-subtle);
-    color: var(--vz-danger);
+    background: var(--legience-danger-bg-subtle);
+    color: var(--legience-danger);
   }
   
   /* View More Card */
   .activity-more-velzon {
-    background: var(--vz-gray-100);
-    border: 1px dashed var(--vz-border-color);
+    background: var(--legience-bg-page);
+    border: 1px dashed var(--legience-border-hairline);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3159,8 +3159,8 @@
   }
   
   .activity-more-velzon:hover {
-    background: var(--vz-primary-bg-subtle);
-    border-color: var(--vz-primary);
+    background: var(--legience-accent-bg-subtle);
+    border-color: var(--legience-accent);
     transform: translateY(-2px);
   }
   
@@ -3171,8 +3171,8 @@
   .more-icon-velzon {
     width: 3rem;
     height: 3rem;
-    border-radius: var(--vz-border-radius);
-    background: var(--vz-primary);
+    border-radius: var(--legience-radius);
+    background: var(--legience-accent);
     color: white;
     display: flex;
     align-items: center;
@@ -3186,30 +3186,30 @@
   }
   
   .more-title-velzon {
-    font-size: var(--vz-font-size-base);
-    font-weight: var(--vz-font-weight-semibold);
-    color: var(--vz-body-color);
+    font-size: var(--legience-font-size-base);
+    font-weight: var(--legience-font-weight-semibold);
+    color: var(--legience-text-primary);
     margin-bottom: 0.5rem;
   }
   
   .more-description-velzon {
-    font-size: var(--vz-font-size-sm);
-    color: var(--vz-secondary-color);
+    font-size: var(--legience-font-size-sm);
+    color: var(--legience-text-subtle);
     margin-bottom: 0.75rem;
   }
   
   .more-link-velzon {
-    font-size: var(--vz-font-size-sm);
-    color: var(--vz-primary);
+    font-size: var(--legience-font-size-sm);
+    color: var(--legience-accent);
     text-decoration: none;
-    font-weight: var(--vz-font-weight-semibold);
+    font-weight: var(--legience-font-weight-semibold);
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
   }
   
   .more-link-velzon:hover {
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     text-decoration: underline;
   }
   
@@ -3256,7 +3256,7 @@
   
   /* Enhanced Activity Feed - Beautiful Velzon Design */
   .activity-feed-enhanced {
-    border-radius: var(--vz-border-radius-lg);
+    border-radius: var(--legience-radius-buttons);
     overflow: hidden; /* Add back to contain scrolling cards */
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
   }
@@ -3266,7 +3266,7 @@
     position: relative;
     width: 3rem;
     height: 3rem;
-    border-radius: var(--vz-border-radius-lg);
+    border-radius: var(--legience-radius-buttons);
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
     display: flex;
@@ -3299,9 +3299,9 @@
     background: rgba(255, 255, 255, 0.2);
     color: white;
     padding: 0.375rem 0.75rem;
-    border-radius: var(--vz-border-radius-pill);
-    font-size: var(--vz-font-size-sm);
-    font-weight: var(--vz-font-weight-semibold);
+    border-radius: var(--legience-radius-pill);
+    font-size: var(--legience-font-size-sm);
+    font-weight: var(--legience-font-weight-semibold);
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
   }
@@ -3316,7 +3316,7 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: var(--vz-border-radius);
+    border-radius: var(--legience-radius);
     border: 1px solid rgba(255, 255, 255, 0.15);
   }
   
@@ -3336,8 +3336,8 @@
   
   .refresh-text {
     color: rgba(255, 255, 255, 0.9);
-    font-size: var(--vz-font-size-xs);
-    font-weight: var(--vz-font-weight-medium);
+    font-size: var(--legience-font-size-xs);
+    font-weight: var(--legience-font-weight-medium);
   }
   
   .activity-quick-stats {
@@ -3346,7 +3346,7 @@
     gap: 1rem;
     padding: 0.75rem 1.25rem;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: var(--vz-border-radius-lg);
+    border-radius: var(--legience-radius-buttons);
     border: 1px solid rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
   }
@@ -3360,15 +3360,15 @@
   
   .stat-number {
     font-size: 1.125rem;
-    font-weight: var(--vz-font-weight-bold);
+    font-weight: var(--legience-font-weight-semibold);
     color: white;
     line-height: 1;
   }
   
   .stat-label {
-    font-size: var(--vz-font-size-xs);
+    font-size: var(--legience-font-size-xs);
     color: rgba(255, 255, 255, 0.75);
-    font-weight: var(--vz-font-weight-medium);
+    font-weight: var(--legience-font-weight-medium);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -3381,8 +3381,8 @@
   
   /* Enhanced Activity Feed Header Styles */
   .activity-feed-enhanced .card-header {
-    background: linear-gradient(135deg, rgba(var(--bs-secondary-rgb), 0.05) 0%, rgba(var(--bs-secondary-rgb), 0.1) 100%);
-    border-bottom: 1px solid rgba(var(--bs-secondary-rgb), 0.15);
+    background: linear-gradient(135deg, rgba(var(--legience-text-subtle-rgb), 0.05) 0%, rgba(var(--legience-text-subtle-rgb), 0.1) 100%);
+    border-bottom: 1px solid rgba(var(--legience-text-subtle-rgb), 0.15);
     position: relative;
   }
   
@@ -3398,24 +3398,24 @@
   
   @keyframes pulse-glow {
     0%, 100% { 
-      box-shadow: 0 0 5px rgba(var(--bs-success-rgb), 0.3);
+      box-shadow: 0 0 5px rgba(var(--legience-success-rgb), 0.3);
       transform: scale(1);
     }
     50% { 
-      box-shadow: 0 0 15px rgba(var(--bs-success-rgb), 0.5);
+      box-shadow: 0 0 15px rgba(var(--legience-success-rgb), 0.5);
       transform: scale(1.02);
     }
   }
   
   .activity-nav-button .btn {
-    background: linear-gradient(135deg, var(--bs-secondary) 0%, rgba(var(--bs-secondary-rgb), 0.8) 100%);
+    background: linear-gradient(135deg, var(--legience-text-subtle) 0%, rgba(var(--legience-text-subtle-rgb), 0.8) 100%);
     border: none;
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     font-weight: 500;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 10px rgba(var(--bs-secondary-rgb), 0.3);
+    box-shadow: 0 2px 10px rgba(var(--legience-text-subtle-rgb), 0.3);
     position: relative;
   }
   
@@ -3432,7 +3432,7 @@
   
   .activity-nav-button .btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(var(--bs-secondary-rgb), 0.4);
+    box-shadow: 0 5px 20px rgba(var(--legience-text-subtle-rgb), 0.4);
   }
   
   .activity-nav-button .btn:hover::before {
@@ -3473,17 +3473,17 @@
   }
   
   .footer-actions .btn-soft-secondary:hover {
-    background-color: var(--bs-secondary);
+    background-color: var(--legience-text-subtle);
     color: white;
   }
   
   .footer-actions .btn-soft-warning:hover {
-    background-color: var(--bs-warning);
-    color: var(--bs-dark);
+    background-color: var(--legience-warning);
+    color: var(--legience-text-primary);
   }
   
   .footer-actions .btn-soft-primary:hover {
-    background-color: var(--bs-primary);
+    background-color: var(--legience-accent);
     color: white;
   }
   
@@ -3511,7 +3511,7 @@
     display: flex;
     align-items: center;
     padding: 0.25rem 0.5rem;
-    background: rgba(var(--bs-success-rgb), 0.1);
+    background: rgba(var(--legience-success-rgb), 0.1);
     border-radius: 0.25rem;
     font-size: 0.75rem;
   }
@@ -3519,7 +3519,7 @@
   .footer-divider {
     width: 1px;
     height: 16px;
-    background: rgba(var(--bs-secondary-rgb), 0.3);
+    background: rgba(var(--legience-text-subtle-rgb), 0.3);
   }
   
   .activity-quick-stats {
@@ -3527,9 +3527,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem;
-    background: rgba(var(--bs-secondary-rgb), 0.1);
+    background: rgba(var(--legience-text-subtle-rgb), 0.1);
     border-radius: 0.5rem;
-    border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
+    border: 1px solid rgba(var(--legience-text-subtle-rgb), 0.2);
   }
   
   .quick-stat-item {
@@ -3562,9 +3562,9 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.375rem 0.75rem;
-    background: rgba(var(--bs-secondary-rgb), 0.1);
+    background: rgba(var(--legience-text-subtle-rgb), 0.1);
     border-radius: 0.375rem;
-    border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
+    border: 1px solid rgba(var(--legience-text-subtle-rgb), 0.2);
     font-size: 0.75rem;
     font-weight: 500;
   }
@@ -3573,7 +3573,7 @@
     width: 12px;
     height: 12px;
     border: 2px solid transparent;
-    border-top: 2px solid var(--bs-secondary);
+    border-top: 2px solid var(--legience-text-subtle);
     border-radius: 50%;
     animation: spin 2s linear infinite;
   }
@@ -3584,7 +3584,7 @@
   }
   
   .refresh-text {
-    color: var(--bs-secondary);
+    color: var(--legience-text-subtle);
     font-weight: 500;
   }
   
@@ -3599,18 +3599,18 @@
   }
   
   .activity-more-velzon {
-    background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.1) 0%, rgba(var(--bs-info-rgb), 0.1) 100%);
-    border: 2px dashed rgba(var(--bs-primary-rgb), 0.3);
+    background: linear-gradient(135deg, rgba(var(--legience-accent-rgb), 0.1) 0%, rgba(var(--legience-info-rgb), 0.1) 100%);
+    border: 2px dashed rgba(var(--legience-accent-rgb), 0.3);
   }
   
   .more-link-velzon {
-    background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-info) 100%);
+    background: linear-gradient(135deg, var(--legience-accent) 0%, var(--legience-info) 100%);
     transition: all 0.3s ease;
   }
   
   .more-link-velzon:hover {
     transform: translateX(3px);
-    box-shadow: 0 3px 15px rgba(var(--bs-primary-rgb), 0.3);
+    box-shadow: 0 3px 15px rgba(var(--legience-accent-rgb), 0.3);
   }
   
   /* Responsive Design */
@@ -3658,7 +3658,7 @@
   /* Entity reference styling */
   .entity-ref {
     font-weight: 500;
-    color: var(--vz-primary);
+    color: var(--legience-accent);
     font-size: 0.75rem;
   }
 
@@ -3677,7 +3677,7 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(var(--vz-success-rgb), 0.4) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(var(--legience-success-rgb), 0.4) 0%, transparent 70%);
     animation: pulse-enhanced 2s ease-in-out infinite;
   }
 
@@ -3698,14 +3698,14 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.4rem 0.8rem;
-    background: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.15) 0%, rgba(var(--vz-success-rgb), 0.25) 100%);
-    border: 1.5px solid rgba(var(--vz-success-rgb), 0.3);
+    background: linear-gradient(135deg, rgba(var(--legience-success-rgb), 0.15) 0%, rgba(var(--legience-success-rgb), 0.25) 100%);
+    border: 1.5px solid rgba(var(--legience-success-rgb), 0.3);
     border-radius: 1.2rem;
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    box-shadow: 0 2px 8px rgba(var(--vz-success-rgb), 0.2);
+    box-shadow: 0 2px 8px rgba(var(--legience-success-rgb), 0.2);
     backdrop-filter: blur(8px);
   }
 
@@ -3732,11 +3732,11 @@
     gap: 0.6rem;
     padding: 0.5rem 1.2rem;
     background: linear-gradient(135deg, 
-      rgba(var(--vz-secondary-rgb), 0.12) 0%, 
-      rgba(var(--vz-info-rgb), 0.08) 50%,
-      rgba(var(--vz-secondary-rgb), 0.15) 100%);
+      rgba(var(--legience-text-subtle-rgb), 0.12) 0%, 
+      rgba(var(--legience-info-rgb), 0.08) 50%,
+      rgba(var(--legience-text-subtle-rgb), 0.15) 100%);
     border-radius: 2rem;
-    border: 1.5px solid rgba(var(--vz-secondary-rgb), 0.25);
+    border: 1.5px solid rgba(var(--legience-text-subtle-rgb), 0.25);
     font-size: 0.75rem;
     font-weight: 600;
     backdrop-filter: blur(12px);
@@ -3749,9 +3749,9 @@
     width: 16px;
     height: 16px;
     border: 2.5px solid transparent;
-    border-top: 2.5px solid var(--vz-secondary);
-    border-right: 2.5px solid rgba(var(--vz-secondary-rgb), 0.4);
-    border-bottom: 2.5px solid rgba(var(--vz-secondary-rgb), 0.2);
+    border-top: 2.5px solid var(--legience-text-subtle);
+    border-right: 2.5px solid rgba(var(--legience-text-subtle-rgb), 0.4);
+    border-bottom: 2.5px solid rgba(var(--legience-text-subtle-rgb), 0.2);
     border-radius: 50%;
     animation: spin-premium 1.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
   }
@@ -3759,26 +3759,26 @@
   @keyframes spin-premium {
     0% { 
       transform: rotate(0deg);
-      border-top-color: var(--vz-secondary);
+      border-top-color: var(--legience-text-subtle);
     }
     25% {
-      border-top-color: var(--vz-info);
+      border-top-color: var(--legience-info);
     }
     50% { 
       transform: rotate(180deg);
-      border-top-color: var(--vz-primary);
+      border-top-color: var(--legience-accent);
     }
     75% {
-      border-top-color: var(--vz-secondary);
+      border-top-color: var(--legience-text-subtle);
     }
     100% { 
       transform: rotate(360deg);
-      border-top-color: var(--vz-secondary);
+      border-top-color: var(--legience-text-subtle);
     }
   }
 
   .refresh-text-premium {
-    color: var(--vz-secondary);
+    color: var(--legience-text-subtle);
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
@@ -3796,35 +3796,35 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.25rem 0.75rem;
-    background: linear-gradient(135deg, rgba(var(--vz-success-rgb), 0.1) 0%, rgba(var(--vz-success-rgb), 0.05) 100%);
+    background: linear-gradient(135deg, rgba(var(--legience-success-rgb), 0.1) 0%, rgba(var(--legience-success-rgb), 0.05) 100%);
     border-radius: 1rem;
-    border: 1px solid rgba(var(--vz-success-rgb), 0.2);
+    border: 1px solid rgba(var(--legience-success-rgb), 0.2);
   }
 
   .live-dot {
     width: 8px;
     height: 8px;
-    background: var(--vz-success);
+    background: var(--legience-success);
     border-radius: 50%;
     animation: live-pulse 2s ease-in-out infinite;
-    box-shadow: 0 0 0 0 rgba(var(--vz-success-rgb), 0.7);
+    box-shadow: 0 0 0 0 rgba(var(--legience-success-rgb), 0.7);
   }
 
   @keyframes live-pulse {
     0%, 100% {
       transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(var(--vz-success-rgb), 0.7);
+      box-shadow: 0 0 0 0 rgba(var(--legience-success-rgb), 0.7);
     }
     50% {
       transform: scale(1.2);
-      box-shadow: 0 0 0 6px rgba(var(--vz-success-rgb), 0);
+      box-shadow: 0 0 0 6px rgba(var(--legience-success-rgb), 0);
     }
   }
 
   .live-text {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--vz-success);
+    color: var(--legience-success);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -3833,7 +3833,7 @@
   .footer-divider {
     width: 1px;
     height: 20px;
-    background: linear-gradient(to bottom, transparent 0%, var(--vz-border-color) 50%, transparent 100%);
+    background: linear-gradient(to bottom, transparent 0%, var(--legience-border-hairline) 50%, transparent 100%);
     opacity: 0.6;
   }
 
@@ -3884,9 +3884,9 @@
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, rgba(var(--bs-success-rgb), 0.1) 0%, rgba(var(--bs-success-rgb), 0.2) 100%);
+    background: linear-gradient(135deg, rgba(var(--legience-success-rgb), 0.1) 0%, rgba(var(--legience-success-rgb), 0.2) 100%);
     border-radius: 50%;
-    border: 2px solid rgba(var(--bs-success-rgb), 0.3);
+    border: 2px solid rgba(var(--legience-success-rgb), 0.3);
   }
 
   .activity-status-icon-enhanced i {
@@ -3908,14 +3908,14 @@
 
   /* Shimmer Text Effect */
   .shimmer-text {
-    color: var(--bs-dark) !important;
+    color: var(--legience-text-primary) !important;
     font-weight: 700 !important;
     font-size: 1.25rem;
   }
 
   /* Dark theme support */
   [data-bs-theme="dark"] .shimmer-text {
-    color: var(--bs-light) !important;
+    color: var(--legience-bg-card-hover) !important;
   }
 
   @keyframes shimmer-flow {
@@ -3928,13 +3928,13 @@
     position: relative;
     width: 60px;
     height: 60px;
-    background: radial-gradient(circle, rgba(var(--bs-success-rgb), 0.3) 0%, rgba(var(--bs-success-rgb), 0.08) 70%);
+    background: radial-gradient(circle, rgba(var(--legience-success-rgb), 0.3) 0%, rgba(var(--legience-success-rgb), 0.08) 70%);
     border-radius: 50%;
-    border: 3px solid rgba(var(--bs-success-rgb), 0.5);
+    border: 3px solid rgba(var(--legience-success-rgb), 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 20px rgba(var(--bs-success-rgb), 0.3);
+    box-shadow: 0 0 20px rgba(var(--legience-success-rgb), 0.3);
   }
 
   .activity-status-icon-enhanced::before {
@@ -3942,7 +3942,7 @@
     position: absolute;
     width: 300%;
     height: 300%;
-    background: conic-gradient(from 0deg, transparent 0deg, rgba(var(--bs-success-rgb), 0.4) 30deg, rgba(var(--bs-success-rgb), 0.6) 60deg, transparent 90deg);
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(var(--legience-success-rgb), 0.4) 30deg, rgba(var(--legience-success-rgb), 0.6) 60deg, transparent 90deg);
     animation: radar-sweep 6s linear infinite;
     border-radius: 50%;
   }
@@ -3952,7 +3952,7 @@
     position: absolute;
     width: 150%;
     height: 150%;
-    background: radial-gradient(circle, transparent 30%, rgba(var(--bs-success-rgb), 0.2) 40%, transparent 60%);
+    background: radial-gradient(circle, transparent 30%, rgba(var(--legience-success-rgb), 0.2) 40%, transparent 60%);
     animation: radar-ping 8s ease-in-out infinite;
     border-radius: 50%;
   }
@@ -3961,9 +3961,9 @@
     position: relative;
     z-index: 3;
     font-size: 35px !important;
-    color: var(--bs-success);
+    color: var(--legience-success);
     animation: radar-glow 6s ease-in-out infinite;
-    filter: drop-shadow(0 0 8px rgba(var(--bs-success-rgb), 0.7));
+    filter: drop-shadow(0 0 8px rgba(var(--legience-success-rgb), 0.7));
   }
 
   @keyframes radar-sweep {
@@ -3985,15 +3985,15 @@
   @keyframes radar-glow {
     0%, 100% { 
       transform: scale(1) rotate(0deg); 
-      filter: drop-shadow(0 0 8px rgba(var(--bs-success-rgb), 0.7));
+      filter: drop-shadow(0 0 8px rgba(var(--legience-success-rgb), 0.7));
     }
     33% { 
       transform: scale(1.05) rotate(120deg); 
-      filter: drop-shadow(0 0 12px rgba(var(--bs-success-rgb), 0.9));
+      filter: drop-shadow(0 0 12px rgba(var(--legience-success-rgb), 0.9));
     }
     66% { 
       transform: scale(1.05) rotate(240deg); 
-      filter: drop-shadow(0 0 12px rgba(var(--bs-success-rgb), 0.9));
+      filter: drop-shadow(0 0 12px rgba(var(--legience-success-rgb), 0.9));
     }
   }
 
@@ -4034,9 +4034,9 @@
     position: relative;
     overflow: hidden; /* Essential for containing horizontal scroll */
     background: linear-gradient(90deg, 
-      rgba(var(--vz-secondary-rgb), 0.02) 0%, 
-      rgba(var(--vz-primary-rgb), 0.02) 50%, 
-      rgba(var(--vz-secondary-rgb), 0.02) 100%);
+      rgba(var(--legience-text-subtle-rgb), 0.02) 0%, 
+      rgba(var(--legience-accent-rgb), 0.02) 50%, 
+      rgba(var(--legience-text-subtle-rgb), 0.02) 100%);
     border-radius: 8px;
     padding: 1rem 0;
     min-height: 120px;

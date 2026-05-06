@@ -190,7 +190,7 @@
     background: var(--legience-bg-card);
     border: 1px solid var(--legience-border-hairline);
     border-radius: 8px;
-    box-shadow: var(--vz-card-box-shadow, none);
+    box-shadow: var(--legience-shadow-sm);
   }
 
   // Table
@@ -269,12 +269,12 @@
 
   // Form Controls - Theme-aware
   .form-control, .form-select {
-    background-color: var(--vz-input-bg-custom, var(--legience-bg-page));
-    border-color: var(--vz-input-border-custom, var(--legience-border-hairline));
+    background-color: var(--legience-bg-input);
+    border-color: var(--legience-border-hairline);
     color: var(--legience-text-secondary);
 
     &:focus {
-      background-color: var(--vz-input-bg-custom, var(--legience-bg-page));
+      background-color: var(--legience-bg-input);
       border-color: var(--legience-accent);
       color: var(--legience-text-secondary);
       box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
@@ -307,7 +307,7 @@
 
   // Form Check
   .form-check-input {
-    background-color: var(--vz-input-bg-custom, var(--legience-bg-page));
+    background-color: var(--legience-bg-input);
     border-color: var(--legience-border-hairline);
 
     &:checked {

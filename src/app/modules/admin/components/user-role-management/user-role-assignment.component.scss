@@ -26,7 +26,7 @@
     top: 50%;
     right: 12px;
     transform: translateY(-50%);
-    color: var(--vz-gray-500);
+    color: var(--legience-text-muted);
     font-size: 16px;
     pointer-events: none;
   }
@@ -56,7 +56,7 @@
   cursor: pointer;
   
   &:hover {
-    background-color: var(--vz-gray-50);
+    background-color: var(--legience-bg-page);
     border-color: var(--legience-accent) !important;
   }
   
@@ -72,7 +72,7 @@
   transition: all 0.2s ease;
   
   &:hover {
-    background-color: var(--vz-gray-50);
+    background-color: var(--legience-bg-page);
     border-color: var(--legience-accent) !important;
   }
 }
@@ -169,27 +169,27 @@
   border-radius: 6px;
   
   &.bg-soft-info {
-    background-color: var(--vz-info-bg-subtle) !important;
-    color: var(--vz-info-text-emphasis) !important;
-    border: 1px solid var(--vz-info-border-subtle);
+    background-color: var(--legience-info-bg-subtle) !important;
+    color: var(--legience-info) !important;
+    border: 1px solid var(--legience-info-bg-subtle);
   }
   
   &.bg-soft-primary {
     background-color: var(--legience-accent-bg-subtle) !important;
-    color: var(--vz-primary-text-emphasis) !important;
-    border: 1px solid var(--vz-primary-border-subtle);
+    color: var(--legience-accent) !important;
+    border: 1px solid var(--legience-accent-bg-subtle);
   }
   
   &.bg-soft-success {
-    background-color: var(--vz-success-bg-subtle) !important;
-    color: var(--vz-success-text-emphasis) !important;
-    border: 1px solid var(--vz-success-border-subtle);
+    background-color: var(--legience-success-bg-subtle) !important;
+    color: var(--legience-success) !important;
+    border: 1px solid var(--legience-success-bg-subtle);
   }
   
   &.bg-soft-warning {
-    background-color: var(--vz-warning-bg-subtle) !important;
-    color: var(--vz-warning-text-emphasis) !important;
-    border: 1px solid var(--vz-warning-border-subtle);
+    background-color: var(--legience-warning-bg-subtle) !important;
+    color: var(--legience-warning) !important;
+    border: 1px solid var(--legience-warning-bg-subtle);
   }
 }
 
@@ -208,7 +208,7 @@
     padding: 1.5rem;
     
     &.bg-light {
-      background: var(--vz-gray-50) !important;
+      background: var(--legience-bg-page) !important;
     }
   }
   
@@ -282,12 +282,12 @@
     border: none;
     border-radius: 8px 8px 0 0;
     padding: 1rem 1.5rem;
-    color: var(--vz-gray-600);
+    color: var(--legience-text-subtle);
     transition: all 0.2s ease;
     
     &:hover {
       color: var(--legience-accent);
-      background-color: var(--vz-gray-50);
+      background-color: var(--legience-bg-page);
     }
     
     &.active {
@@ -301,7 +301,7 @@
 // Form styling
 .form-label {
   font-weight: 500;
-  color: var(--vz-gray-700);
+  color: var(--legience-text-secondary);
   margin-bottom: 0.5rem;
 }
 

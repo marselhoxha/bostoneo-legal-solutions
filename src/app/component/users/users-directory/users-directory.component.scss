@@ -121,9 +121,9 @@
     }
     
     &.disabled {
-      color: var(--vz-gray-500);
+      color: var(--legience-text-muted);
       pointer-events: none;
-      background-color: var(--vz-gray-100);
+      background-color: var(--legience-bg-page);
       border-color: var(--legience-border-hairline);
     }
   }
@@ -194,7 +194,7 @@
   
   h5 {
     margin-bottom: 1rem;
-    color: var(--vz-headings-color);
+    color: var(--legience-text-primary);
   }
   
   p {

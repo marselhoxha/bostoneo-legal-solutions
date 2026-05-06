@@ -1045,7 +1045,7 @@
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(20, 30, 55, 0.08);
-      border-color: color-mix(in srgb, var(--accent) 32%, var(--vz-border-color, #e9ebec));
+      border-color: color-mix(in srgb, var(--accent) 32%, var(--legience-border-hairline));
     }
 
     .stat-rail {
@@ -1123,7 +1123,7 @@
     background:
       linear-gradient(90deg, rgba(134, 92, 226, 0.06) 0%, rgba(134, 92, 226, 0.02) 100%),
       var(--legience-bg-card);
-    border: 1px solid color-mix(in srgb, var(--tmpl-primary) 22%, var(--vz-border-color, #e9ebec));
+    border: 1px solid color-mix(in srgb, var(--tmpl-primary) 22%, var(--legience-border-hairline));
     box-shadow: 0 4px 14px rgba(134, 92, 226, 0.08);
     animation: tmpl-toolbar-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
 
@@ -1180,7 +1180,7 @@
       i { font-size: 0.9rem; line-height: 1; }
 
       &:hover {
-        border-color: color-mix(in srgb, var(--tmpl-primary) 35%, var(--vz-border-color, #e9ebec));
+        border-color: color-mix(in srgb, var(--tmpl-primary) 35%, var(--legience-border-hairline));
         background: var(--tmpl-primary-ghost);
       }
 
@@ -1192,7 +1192,7 @@
 
     .bulk-btn-danger {
       color: var(--legience-danger, #f06548);
-      border-color: color-mix(in srgb, #f06548 35%, var(--vz-border-color, #e9ebec));
+      border-color: color-mix(in srgb, #f06548 35%, var(--legience-border-hairline));
 
       &:hover {
         color: #fff;
@@ -1300,7 +1300,7 @@
     border-color: var(--legience-border-hairline);
 
     .view-mode-btn {
-      color: var(--vz-body-secondary-color);
+      color: var(--legience-text-subtle);
 
       &:hover { color: var(--tmpl-primary); }
     }

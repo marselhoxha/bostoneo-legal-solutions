@@ -538,7 +538,7 @@
       tbody {
         tr {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border-bottom: 1px solid var(--vz-border-color-light);
+          border-bottom: 1px solid var(--legience-border-subtle);
           
           &.table-row-enhanced {
             &:hover {
@@ -579,7 +579,7 @@
         td {
           vertical-align: middle;
           padding: 0.75rem;
-          border-bottom: 1px solid var(--vz-border-color-light);
+          border-bottom: 1px solid var(--legience-border-subtle);
           color: var(--legience-text-secondary);
           
           &:first-child {
@@ -1164,7 +1164,7 @@
 /* === PROFESSIONAL STATS CARDS === */
 .stats-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid var(--vz-border-color-light);
+  border: 1px solid var(--legience-border-subtle);
   background: var(--legience-bg-card);
   animation: slideIn 0.6s ease-out;
   position: relative;
@@ -1214,7 +1214,7 @@
   }
   
   .stat-number {
-    font-family: var(--vz-font-monospace);
+    font-family: var(--legience-font-monospace);
     font-weight: 800;
     letter-spacing: -1px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -1270,7 +1270,7 @@
 /* === ENHANCED FILTERS BAR === */
 .filters-bar {
   background: var(--legience-bg-card);
-  border: 1px solid var(--vz-border-color-light);
+  border: 1px solid var(--legience-border-subtle);
   border-radius: var(--legience-radius-lg);
   box-shadow: var(--legience-shadow-sm);
   animation: slideIn 0.8s ease-out;
@@ -1290,7 +1290,7 @@
   
   .form-label {
     font-weight: 600;
-    color: var(--vz-gray-700);
+    color: var(--legience-text-secondary);
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
     letter-spacing: 0.3px;
@@ -1315,7 +1315,7 @@
   .input-group-text {
     border: 2px solid var(--legience-border-hairline);
     border-right: none;
-    background: var(--vz-gray-50);
+    background: var(--legience-bg-page);
     transition: all 0.3s ease;
   }
   
@@ -1364,12 +1364,12 @@
   box-shadow: var(--legience-shadow);
   
   .table-header {
-    background: linear-gradient(135deg, var(--vz-gray-50), var(--vz-gray-100));
+    background: linear-gradient(135deg, var(--legience-bg-page), var(--legience-bg-page));
     border-bottom: 2px solid var(--legience-border-hairline);
     
     .table-title {
       font-weight: 700;
-      color: var(--vz-gray-800);
+      color: var(--legience-text-secondary);
       
       .title-icon {
         margin-right: 0.5rem;
@@ -1388,11 +1388,11 @@
     
     .table-stats {
       font-size: 0.875rem;
-      color: var(--vz-gray-600);
+      color: var(--legience-text-subtle);
       margin-top: 0.25rem;
       
       strong {
-        color: var(--vz-gray-800);
+        color: var(--legience-text-secondary);
       }
     }
     
@@ -1409,7 +1409,7 @@
       
       .form-check-label {
         font-weight: 600;
-        color: var(--vz-gray-700);
+        color: var(--legience-text-secondary);
         margin-left: 0.5rem;
       }
     }
@@ -1419,9 +1419,9 @@
     margin-bottom: 0;
     
     thead th {
-      background: var(--vz-gray-50);
+      background: var(--legience-bg-page);
       border-bottom: 2px solid var(--legience-border-hairline);
-      color: var(--vz-gray-800);
+      color: var(--legience-text-secondary);
       font-weight: 700;
       font-size: 0.875rem;
       letter-spacing: 0.5px;
@@ -1433,10 +1433,10 @@
     
     tbody tr {
       transition: all 0.3s ease;
-      border-bottom: 1px solid var(--vz-border-color-light);
+      border-bottom: 1px solid var(--legience-border-subtle);
       
       &:hover {
-        background: var(--vz-gray-50);
+        background: var(--legience-bg-page);
         transform: scale(1.01);
         box-shadow: 0 4px 8px rgba(0,0,0,0.05);
       }
@@ -1472,7 +1472,7 @@
     td {
       padding: 1rem 0.75rem;
       vertical-align: middle;
-      border-bottom: 1px solid var(--vz-border-color-light);
+      border-bottom: 1px solid var(--legience-border-subtle);
     }
   }
 }
@@ -1500,12 +1500,12 @@
   
   .employee-name {
     font-weight: 700;
-    color: var(--vz-gray-800);
+    color: var(--legience-text-secondary);
     margin-bottom: 0.25rem;
   }
   
   .employee-email {
-    color: var(--vz-gray-600);
+    color: var(--legience-text-subtle);
     font-size: 0.875rem;
   }
 }
@@ -1566,7 +1566,7 @@
 
 /* === PROFESSIONAL AMOUNTS AND NUMBERS === */
 .amount-display {
-  font-family: var(--vz-font-monospace);
+  font-family: var(--legience-font-monospace);
   font-weight: 800;
   font-size: 1.25rem;
   color: var(--legience-success);
@@ -1574,14 +1574,14 @@
 }
 
 .duration-display {
-  font-family: var(--vz-font-monospace);
+  font-family: var(--legience-font-monospace);
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--legience-info);
 }
 
 .rate-display {
-  color: var(--vz-gray-600);
+  color: var(--legience-text-subtle);
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -1622,11 +1622,11 @@
       }
       
       &.btn-outline-secondary {
-        border: 2px solid var(--vz-gray-400);
-        color: var(--vz-gray-600);
+        border: 2px solid var(--legience-text-muted);
+        color: var(--legience-text-subtle);
         
         &:hover {
-          background: var(--vz-gray-500);
+          background: var(--legience-text-muted);
           color: white;
           transform: translateY(-2px);
         }
@@ -1636,7 +1636,7 @@
   
   .status-indicator {
     font-style: italic;
-    color: var(--vz-gray-500);
+    color: var(--legience-text-muted);
     font-size: 0.875rem;
     padding: 0.5rem;
   }
@@ -1649,19 +1649,19 @@
   
   .empty-icon {
     font-size: 5rem;
-    color: var(--vz-gray-300);
+    color: var(--legience-border-emphasis);
     margin-bottom: 2rem;
     animation: bounce 2s infinite;
   }
   
   .empty-title {
     font-weight: 700;
-    color: var(--vz-gray-600);
+    color: var(--legience-text-subtle);
     margin-bottom: 1rem;
   }
   
   .empty-message {
-    color: var(--vz-gray-500);
+    color: var(--legience-text-muted);
     margin-bottom: 2rem;
     line-height: 1.6;
     
@@ -1688,7 +1688,7 @@
 
 /* === PROFESSIONAL FOOTER === */
 .table-footer {
-  background: linear-gradient(135deg, var(--vz-gray-50), white);
+  background: linear-gradient(135deg, var(--legience-bg-page), white);
   border-top: 2px solid var(--legience-border-hairline);
   padding: 1.5rem;
   
@@ -1711,7 +1711,7 @@
         font-weight: 700;
       }
       
-      &.text-muted { color: var(--vz-gray-600) !important; }
+      &.text-muted { color: var(--legience-text-subtle) !important; }
       &.text-info { color: var(--legience-info) !important; }
       &.text-warning { color: var(--legience-warning) !important; }
       &.text-success { color: var(--legience-success) !important; }
@@ -1719,11 +1719,11 @@
   }
   
   .last-updated {
-    color: var(--vz-gray-500);
+    color: var(--legience-text-muted);
     font-size: 0.875rem;
     
     strong {
-      color: var(--vz-gray-700);
+      color: var(--legience-text-secondary);
     }
   }
 }
@@ -1769,7 +1769,7 @@
 [data-bs-theme="dark"] {
   .stats-card {
     background: var(--legience-dark);
-    border-color: var(--vz-border-color-dark);
+    border-color: var(--legience-border-emphasis);
     
     &:hover {
       border-color: var(--legience-accent);
@@ -1778,32 +1778,32 @@
   
   .filters-bar {
     background: var(--legience-dark);
-    border-color: var(--vz-border-color-dark);
+    border-color: var(--legience-border-emphasis);
   }
   
   .data-table {
     .table-header {
-      background: linear-gradient(135deg, var(--vz-gray-800), var(--vz-gray-700));
+      background: linear-gradient(135deg, var(--legience-text-secondary), var(--legience-text-secondary));
       
       .table-title {
-        color: var(--vz-gray-100);
+        color: var(--legience-bg-page);
       }
     }
     
     .table thead th {
-      background-color: var(--vz-gray-800);
-      color: var(--vz-gray-100);
+      background-color: var(--legience-text-secondary);
+      color: var(--legience-bg-page);
     }
   }
   
   .employee-avatar {
     .employee-name {
-      color: var(--vz-gray-100);
+      color: var(--legience-bg-page);
     }
   }
   
   .table-footer {
-    background: linear-gradient(135deg, var(--vz-gray-800), var(--legience-dark));
+    background: linear-gradient(135deg, var(--legience-text-secondary), var(--legience-dark));
   }
 }
 

@@ -4,35 +4,35 @@
 .card {
   border: none;
   border-radius: 0.5rem;
-  box-shadow: var(--vz-box-shadow);
+  box-shadow: var(--legience-shadow);
   margin-bottom: 1.5rem;
   transition: all 0.3s ease;
 }
 
 .card:hover {
-  box-shadow: var(--vz-box-shadow-lg);
+  box-shadow: var(--legience-shadow-lg);
 }
 
 .card-header {
-  border-bottom: 1px dashed var(--vz-border-color);
-  background-color: var(--vz-card-bg);
+  border-bottom: 1px dashed var(--legience-border-hairline);
+  background-color: var(--legience-bg-card);
   padding: 1rem 1.5rem;
 }
 
 .card-title {
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
   font-weight: 600;
   margin-bottom: 0;
   font-size: 1rem;
 }
 
 .bg-light-subtle {
-  background-color: var(--vz-light-subtle);
+  background-color: var(--legience-bg-card-hover);
 }
 
 .bg-soft-info {
-  background-color: var(--vz-info-subtle);
-  color: var(--vz-info);
+  background-color: var(--legience-info-bg-subtle);
+  color: var(--legience-info);
 }
 
 /* Table styling */
@@ -48,22 +48,22 @@
 
 .table th {
   font-weight: 600;
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
   padding: 0.75rem 1rem;
-  background-color: var(--vz-light-subtle);
-  border-bottom: 1px solid var(--vz-border-color);
+  background-color: var(--legience-bg-card-hover);
+  border-bottom: 1px solid var(--legience-border-hairline);
   white-space: nowrap;
 }
 
 .table td {
   padding: 0.75rem 1rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
   vertical-align: middle;
-  border-top: 1px solid var(--vz-border-color);
+  border-top: 1px solid var(--legience-border-hairline);
 }
 
 .table tbody tr:hover {
-  background-color: var(--vz-light-subtle);
+  background-color: var(--legience-bg-card-hover);
 }
 
 /* Color indicator */
@@ -72,7 +72,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 1px solid var(--vz-border-color);
+  border: 1px solid var(--legience-border-hairline);
   vertical-align: middle;
 }
 
@@ -90,31 +90,31 @@
 
 /* Form controls */
 .form-control, .form-select {
-  border-color: var(--vz-border-color);
-  color: var(--vz-body-color);
-  background-color: var(--vz-input-bg);
+  border-color: var(--legience-border-hairline);
+  color: var(--legience-text-primary);
+  background-color: var(--legience-bg-input);
   padding: 0.5rem 0.75rem;
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: var(--vz-primary);
-  box-shadow: 0 0 0 0.15rem rgba(var(--vz-primary-rgb), 0.25);
+  border-color: var(--legience-accent);
+  box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
 }
 
 .form-label {
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
   font-weight: 500;
   margin-bottom: 0.5rem;
 }
 
 .input-group-text {
-  background-color: var(--vz-light-subtle);
-  border-color: var(--vz-border-color);
-  color: var(--vz-gray-600);
+  background-color: var(--legience-bg-card-hover);
+  border-color: var(--legience-border-hairline);
+  color: var(--legience-text-subtle);
 }
 
 .form-text {
-  color: var(--vz-gray-600);
+  color: var(--legience-text-subtle);
   font-size: 0.8125rem;
 }
 
@@ -126,21 +126,21 @@
 }
 
 .alert-info {
-  background-color: var(--vz-info-subtle);
-  color: var(--vz-info);
-  border-color: var(--vz-info-border-subtle);
+  background-color: var(--legience-info-bg-subtle);
+  color: var(--legience-info);
+  border-color: var(--legience-info-bg-subtle);
 }
 
 .alert-warning {
-  background-color: var(--vz-warning-subtle);
-  color: var(--vz-warning);
-  border-color: var(--vz-warning-border-subtle);
+  background-color: var(--legience-warning-bg-subtle);
+  color: var(--legience-warning);
+  border-color: var(--legience-warning-bg-subtle);
 }
 
 .alert-danger {
-  background-color: var(--vz-danger-subtle);
-  color: var(--vz-danger);
-  border-color: var(--vz-danger-border-subtle);
+  background-color: var(--legience-danger-bg-subtle);
+  color: var(--legience-danger);
+  border-color: var(--legience-danger-bg-subtle);
 }
 
 .alert-heading {
@@ -157,12 +157,12 @@
 }
 
 .breadcrumb-item a {
-  color: var(--vz-primary);
+  color: var(--legience-accent);
   text-decoration: none;
 }
 
 .breadcrumb-item.active {
-  color: var(--vz-gray-600);
+  color: var(--legience-text-subtle);
 }
 
 /* Font utilities */
@@ -183,7 +183,7 @@
 }
 
 .text-muted {
-  color: var(--vz-gray-600) !important;
+  color: var(--legience-text-subtle) !important;
 }
 
 /* Tips Card */
@@ -191,20 +191,20 @@
   position: relative;
   padding-left: 0;
   margin-bottom: 0.5rem;
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
 }
 
 /* Add styles for the cancel edit button */
 .btn-outline-secondary {
-  color: var(--vz-secondary);
+  color: var(--legience-text-subtle);
   background-color: transparent;
-  border: 1px solid var(--vz-secondary);
+  border: 1px solid var(--legience-text-subtle);
 }
 
 .btn-outline-secondary:hover {
   color: #fff;
-  background-color: var(--vz-secondary);
-  border-color: var(--vz-secondary);
+  background-color: var(--legience-text-subtle);
+  border-color: var(--legience-text-subtle);
 }
 
 /* Fix for the hover state on buttons that might cause issues */

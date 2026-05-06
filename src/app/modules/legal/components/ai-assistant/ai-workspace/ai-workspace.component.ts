@@ -6536,7 +6536,7 @@ export class AiWorkspaceComponent implements OnInit, OnDestroy {
       ? `
         <div style="display:flex;gap:0.65rem;align-items:flex-start;padding:0.75rem 0.85rem;margin-bottom:0.85rem;background:rgba(41,156,219,0.08);border:1px solid rgba(41,156,219,0.3);border-radius:8px;">
           <i class="ri-magic-line" style="font-size:1.1rem;color:#299cdb;flex-shrink:0;margin-top:1px;"></i>
-          <div style="font-size:0.82rem;color:var(--vz-heading-color,#212529);line-height:1.4;">
+          <div style="font-size:0.82rem;color:var(--legience-text-primary);line-height:1.4;">
             <strong>${detectedVars.length} variable${detectedVars.length === 1 ? '' : 's'} detected</strong> in the current document — they'll be carried into the template.
             <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.45rem;">
               ${detectedVars.map(v => `<span style="display:inline-block;padding:0.15rem 0.5rem;background:#fff;border:1px solid rgba(41,156,219,0.35);border-radius:999px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.7rem;color:#1566a0;">${this.escapeHtmlAttr(v)}</span>`).join('')}

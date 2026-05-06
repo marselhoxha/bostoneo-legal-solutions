@@ -6,24 +6,24 @@
 .card {
   border: none;
   border-radius: 0.5rem;
-  box-shadow: var(--vz-box-shadow);
+  box-shadow: var(--legience-shadow);
 }
 
 .card-header {
-  border-bottom: 1px dashed var(--vz-border-color);
-  background-color: var(--vz-card-bg);
+  border-bottom: 1px dashed var(--legience-border-hairline);
+  background-color: var(--legience-bg-card);
   padding: 1rem 1.5rem;
 }
 
 .card-title {
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
   font-weight: 600;
   margin-bottom: 0;
 }
 
 .card-body {
   padding: 1.5rem;
-  background-color: var(--vz-card-bg);
+  background-color: var(--legience-bg-card);
 }
 
 /* Table styling */
@@ -39,15 +39,15 @@
 .table th {
   font-weight: 500;
   border-top: none;
-  color: var(--vz-body-color);
-  background-color: var(--vz-light-subtle);
+  color: var(--legience-text-primary);
+  background-color: var(--legience-bg-card-hover);
   padding: 0.75rem 1rem;
 }
 
 .table td {
   padding: 0.75rem 1rem;
   vertical-align: middle;
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
 }
 
 /* Button styling */
@@ -57,33 +57,33 @@
 .btn-soft-info,
 .btn-soft-danger,
 .btn-soft-warning {
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
   border: 1px solid transparent;
 }
 
 .btn-soft-success {
-  background-color: var(--vz-success-subtle);
-  color: var(--vz-success);
+  background-color: var(--legience-success-bg-subtle);
+  color: var(--legience-success);
 }
 
 .btn-soft-primary {
-  background-color: var(--vz-primary-subtle);
-  color: var(--vz-primary);
+  background-color: var(--legience-accent-bg-subtle);
+  color: var(--legience-accent);
 }
 
 .btn-soft-secondary {
-  background-color: var(--vz-secondary-subtle);
-  color: var(--vz-secondary);
+  background-color: var(--legience-bg-subtle);
+  color: var(--legience-text-subtle);
 }
 
 .btn-soft-info {
-  background-color: var(--vz-info-subtle);
-  color: var(--vz-info);
+  background-color: var(--legience-info-bg-subtle);
+  color: var(--legience-info);
 }
 
 .btn-soft-danger {
-  background-color: var(--vz-danger-subtle);
-  color: var(--vz-danger);
+  background-color: var(--legience-danger-bg-subtle);
+  color: var(--legience-danger);
 }
 
 .btn-animation {
@@ -103,35 +103,35 @@
 }
 
 .bg-success-subtle {
-  background-color: var(--vz-success-subtle) !important;
+  background-color: var(--legience-success-bg-subtle) !important;
 }
 
 .text-success {
-  color: var(--vz-success) !important;
+  color: var(--legience-success) !important;
 }
 
 .bg-warning-subtle {
-  background-color: var(--vz-warning-subtle) !important;
+  background-color: var(--legience-warning-bg-subtle) !important;
 }
 
 .text-warning {
-  color: var(--vz-warning) !important;
+  color: var(--legience-warning) !important;
 }
 
 .bg-danger-subtle {
-  background-color: var(--vz-danger-subtle) !important;
+  background-color: var(--legience-danger-bg-subtle) !important;
 }
 
 .text-danger {
-  color: var(--vz-danger) !important;
+  color: var(--legience-danger) !important;
 }
 
 .bg-info-subtle {
-  background-color: var(--vz-info-subtle) !important;
+  background-color: var(--legience-info-bg-subtle) !important;
 }
 
 .text-info {
-  color: var(--vz-info) !important;
+  color: var(--legience-info) !important;
 }
 
 /* Pagination styling */
@@ -140,25 +140,25 @@
 }
 
 .page-link {
-  color: var(--vz-primary);
-  border-color: var(--vz-border-color);
-  background-color: var(--vz-card-bg);
+  color: var(--legience-accent);
+  border-color: var(--legience-border-hairline);
+  background-color: var(--legience-bg-card);
 }
 
 .page-item.active .page-link {
-  background-color: var(--vz-primary);
-  border-color: var(--vz-primary);
+  background-color: var(--legience-accent);
+  border-color: var(--legience-accent);
   color: #fff;
 }
 
 .page-item.disabled .page-link {
-  color: var(--vz-text-muted);
-  background-color: var(--vz-light-subtle);
+  color: var(--legience-text-subtle);
+  background-color: var(--legience-bg-card-hover);
 }
 
 /* Loading spinner */
 .spinner-border.text-primary {
-  color: var(--vz-primary) !important;
+  color: var(--legience-accent) !important;
 }
 
 /* Action buttons styling */
@@ -175,7 +175,7 @@
 
 .d-flex.justify-content-center.gap-2 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: var(--vz-box-shadow-sm);
+  box-shadow: var(--legience-shadow-sm);
 }
 
 .d-flex.justify-content-center.gap-2 .btn i {

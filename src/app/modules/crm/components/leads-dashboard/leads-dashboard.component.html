@@ -424,7 +424,7 @@
             {{ selectedLead.fullName?.charAt(0) || selectedLead.firstName?.charAt(0) || '?' }}
           </div>
           <div class="min-width-0">
-            <h5 class="fw-semibold mb-1" style="font-size: 17px; color: var(--vz-heading-color);">{{ selectedLead.fullName || (selectedLead.firstName + ' ' + selectedLead.lastName) }}</h5>
+            <h5 class="fw-semibold mb-1" style="font-size: 17px; color: var(--legience-text-primary);">{{ selectedLead.fullName || (selectedLead.firstName + ' ' + selectedLead.lastName) }}</h5>
             <div class="d-flex align-items-center gap-2 flex-wrap">
               <span class="lead-detail-meta">
                 <i class="ri-briefcase-line"></i>{{ selectedLead.practiceArea?.replace('_', ' ') || 'Unassigned' }}
@@ -1141,7 +1141,7 @@
                   <div class="mb-3">
                     <label class="form-label">Case Number</label>
                     <input type="text" class="form-control" formControlName="caseNumber" readonly
-                           style="background: rgba(var(--vz-secondary-rgb), 0.06);">
+                           style="background: rgba(var(--legience-text-subtle-rgb), 0.06);">
                   </div>
                 </div>
                 <div class="col-md-8">
@@ -1483,7 +1483,7 @@
               </div>
               <div *ngIf="convertForm.get('caseDescription')?.value" class="mt-2">
                 <p class="mb-1"><strong>Description:</strong></p>
-                <div class="p-2 rounded small" style="background: rgba(var(--vz-secondary-rgb), 0.06);">{{convertForm.get('caseDescription')?.value}}</div>
+                <div class="p-2 rounded small" style="background: rgba(var(--legience-text-subtle-rgb), 0.06);">{{convertForm.get('caseDescription')?.value}}</div>
               </div>
 
               <!-- Practice Area Specific Fields Review -->
@@ -1553,7 +1553,7 @@
   <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
     <div class="modal-content create-lead-modal">
       <!-- Green accent bar -->
-      <div class="lead-detail-accent" style="background: var(--vz-success);"></div>
+      <div class="lead-detail-accent" style="background: var(--legience-success);"></div>
 
       <div class="create-lead-header">
         <div class="d-flex align-items-center gap-3">
@@ -1561,7 +1561,7 @@
             <i class="ri-user-add-line"></i>
           </div>
           <div>
-            <h5 class="fw-semibold mb-0" style="font-size: 16px; color: var(--vz-heading-color);">Add New Lead</h5>
+            <h5 class="fw-semibold mb-0" style="font-size: 16px; color: var(--legience-text-primary);">Add New Lead</h5>
             <span class="text-muted" style="font-size: 12px;">Enter lead contact details to create a new pipeline entry</span>
           </div>
         </div>

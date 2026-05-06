@@ -163,7 +163,7 @@ export class PlatformAnalyticsComponent implements OnInit, OnDestroy {
         y: { formatter: (val: number) => val.toLocaleString() }
       },
       dataLabels: { enabled: false },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3, padding: { bottom: 0 } }
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3, padding: { bottom: 0 } }
     };
   }
 
@@ -200,7 +200,7 @@ export class PlatformAnalyticsComponent implements OnInit, OnDestroy {
         y: { formatter: (val: number) => '$' + val.toLocaleString() }
       },
       dataLabels: { enabled: false },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 }
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3 }
     };
   }
 
@@ -226,7 +226,7 @@ export class PlatformAnalyticsComponent implements OnInit, OnDestroy {
       xaxis: { categories: labels },
       yaxis: { labels: { style: { fontSize: '11px' } } },
       dataLabels: { enabled: true, style: { fontSize: '11px' } },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 },
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3 },
       tooltip: { y: { formatter: (val: number) => val + ' users' } }
     };
   }
@@ -270,7 +270,7 @@ export class PlatformAnalyticsComponent implements OnInit, OnDestroy {
       xaxis: { categories: topOrgs.map(o => o.organizationName) },
       yaxis: { labels: { style: { fontSize: '11px' } } },
       dataLabels: { enabled: true, style: { fontSize: '11px' } },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 },
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3 },
       fill: {
         type: 'gradient',
         gradient: { shade: 'light', type: 'horizontal', opacityFrom: 0.85, opacityTo: 1 }
@@ -300,7 +300,7 @@ export class PlatformAnalyticsComponent implements OnInit, OnDestroy {
         style: { fontSize: '11px' },
         formatter: (val: number) => this.formatCurrencyShort(val)
       },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3 },
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3 },
       fill: {
         type: 'gradient',
         gradient: { shade: 'light', type: 'horizontal', opacityFrom: 0.85, opacityTo: 1 }

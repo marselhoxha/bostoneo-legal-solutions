@@ -1769,7 +1769,7 @@
             </div>
             <!-- Unsupported format -->
             <div *ngIf="!isPdfExhibit(exhibit) && !isImageExhibit(exhibit)" class="exhibit-unsupported-state">
-              <i class="ri-file-text-line" style="font-size: 48px; color: var(--vz-secondary-color);"></i>
+              <i class="ri-file-text-line" style="font-size: 48px; color: var(--legience-text-subtle);"></i>
               <p class="mt-2 text-muted">Preview not available for this file type</p>
               <p class="text-muted small">{{exhibit.fileName}}</p>
               <button class="btn btn-sm btn-soft-primary mt-2" (click)="downloadCurrentExhibit()">

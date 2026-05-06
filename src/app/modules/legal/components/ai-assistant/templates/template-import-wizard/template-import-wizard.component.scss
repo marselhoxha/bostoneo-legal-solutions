@@ -40,7 +40,7 @@
           padding: 1rem;
           text-align: center;
           font-weight: 500;
-          color: var(--vz-gray-600);
+          color: var(--legience-text-subtle);
           background-color: var(--legience-bg-card-hover);
           display: flex;
           align-items: center;
@@ -57,7 +57,7 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background-color: var(--vz-gray-400);
+            background-color: var(--legience-text-muted);
             color: white;
             font-size: 0.75rem;
             font-weight: 600;
@@ -383,11 +383,11 @@
       &.rejected {
         opacity: 0.5;
         text-decoration: line-through;
-        background-color: var(--vz-gray-200);
+        background-color: var(--legience-bg-subtle);
 
         .variable-key {
-          background: var(--vz-gray-300);
-          color: var(--vz-gray-600);
+          background: var(--legience-border-emphasis);
+          color: var(--legience-text-subtle);
         }
       }
     }
@@ -518,7 +518,7 @@
 
     .stat-label {
       font-size: 0.8125rem;
-      color: var(--vz-gray-600);
+      color: var(--legience-text-subtle);
       margin-top: 0.25rem;
     }
   }
@@ -571,7 +571,7 @@
   }
   .modal-body::-webkit-scrollbar-thumb,
   .body-preview::-webkit-scrollbar-thumb {
-    background: var(--vz-gray-400);
+    background: var(--legience-text-muted);
     border-radius: 3px;
   }
 }
@@ -579,31 +579,31 @@
 // Dark mode overrides
 [data-bs-theme="dark"] {
   .template-import-wizard {
-    .dropzone { background-color: var(--vz-gray-800); }
+    .dropzone { background-color: var(--legience-text-secondary); }
 
     .file-list .file-row {
-      background-color: var(--vz-card-bg-custom);
+      background-color: var(--legience-bg-card);
       border-color: var(--legience-border-hairline);
     }
 
     .body-preview,
     .stat-card {
-      background-color: var(--vz-gray-800);
+      background-color: var(--legience-text-secondary);
       border-color: var(--legience-border-hairline);
       color: var(--legience-text-secondary);
     }
 
     .variable-list .variable-chip {
-      background-color: var(--vz-gray-800);
+      background-color: var(--legience-text-secondary);
       border-color: var(--legience-border-hairline);
 
       &.rejected {
-        background-color: var(--vz-gray-700);
+        background-color: var(--legience-text-secondary);
       }
     }
 
     .wizard .stepper-header ol li {
-      background-color: var(--vz-gray-800);
+      background-color: var(--legience-text-secondary);
       border-color: var(--legience-border-hairline);
 
       &.active {

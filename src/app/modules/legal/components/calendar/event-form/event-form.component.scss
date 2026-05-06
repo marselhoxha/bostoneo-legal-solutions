@@ -121,7 +121,7 @@
       top: 0;
       left: 0;
       padding: 0.75rem 0.75rem 0;
-      color: var(--vz-gray-600);
+      color: var(--legience-text-subtle);
       font-size: 0.8125rem;
       font-weight: 500;
       letter-spacing: 0.01em;
@@ -151,7 +151,7 @@
   }
   
   .form-label {
-    color: var(--vz-gray-600);
+    color: var(--legience-text-subtle);
     font-weight: 500;
     margin-bottom: 0.5rem;
   }
@@ -178,7 +178,7 @@
     background-color: var(--legience-bg-input);
     
     &::placeholder {
-      color: var(--vz-gray-500);
+      color: var(--legience-text-muted);
       opacity: 0.7;
     }
   }
@@ -194,7 +194,7 @@
     .input-group-text {
       background-color: var(--legience-bg-card-hover);
       border-color: var(--legience-border-hairline);
-      color: var(--vz-gray-600);
+      color: var(--legience-text-subtle);
       transition: color 0.2s ease, background-color 0.2s ease;
       border-top-left-radius: 0.25rem;
       border-bottom-left-radius: 0.25rem;
@@ -259,7 +259,7 @@
     .color-preview {
       flex-grow: 1;
       padding: 0 0.75rem 0 0.75rem;
-      color: var(--vz-gray-600);
+      color: var(--legience-text-subtle);
       font-size: 0.8125rem;
       border-left: 1px solid var(--legience-border-hairline);
       line-height: 36px;
@@ -572,9 +572,9 @@
     
     .input-group-dynamic {
       .input-group-text {
-        background-color: var(--vz-gray-700);
+        background-color: var(--legience-text-secondary);
         border-color: var(--legience-border-hairline);
-        color: var(--vz-gray-300);
+        color: var(--legience-border-emphasis);
       }
       
       &:focus-within .input-group-text {
@@ -590,7 +590,7 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
       
       .color-preview {
-        color: var(--vz-gray-400);
+        color: var(--legience-text-muted);
         border-left: 1px solid rgba(255, 255, 255, 0.1);
         
         &::before {
@@ -603,12 +603,12 @@
     .toggle-switch-container {
       .toggle-switch {
         .toggle-label {
-          background: var(--vz-gray-700);
+          background: var(--legience-text-secondary);
           border-color: var(--legience-border-hairline);
           box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
           
           .toggle-inner {
-            background: var(--vz-gray-300);
+            background: var(--legience-border-emphasis);
           }
         }
         
@@ -649,8 +649,8 @@
     /* Dark mode selected reminders */
     .selected-reminders {
       .badge {
-        background-color: var(--vz-gray-700) !important;
-        color: var(--vz-gray-300) !important;
+        background-color: var(--legience-text-secondary) !important;
+        color: var(--legience-border-emphasis) !important;
         border-color: var(--legience-border-hairline) !important;
         
         .btn:hover {
@@ -672,8 +672,8 @@
     
     /* Dark mode form switch */
     .form-check.form-switch .form-check-input {
-      background-color: var(--vz-gray-600);
-      border-color: var(--vz-gray-500);
+      background-color: var(--legience-text-subtle);
+      border-color: var(--legience-text-muted);
       
       &:checked {
         background-color: var(--legience-success);
@@ -771,7 +771,7 @@ select[multiple] {
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: var(--vz-gray-400);
+      background-color: var(--legience-text-muted);
       transition: .4s;
       border-radius: 24px;
       
@@ -823,7 +823,7 @@ select[multiple] {
 /* Small text styling */
 .text-muted {
   font-size: 0.75rem;
-  color: var(--vz-gray-600) !important;
+  color: var(--legience-text-subtle) !important;
 }
 
 /* Enhanced Reminder and Deadline Cards */
@@ -1064,7 +1064,7 @@ select[multiple] {
     }
     
     &.btn-outline-secondary:hover {
-      background-color: var(--vz-gray-200);
+      background-color: var(--legience-bg-subtle);
     }
   }
 }

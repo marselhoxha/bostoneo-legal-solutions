@@ -110,9 +110,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           // Case pipeline
           if (metrics.cases) {
             this.casesPipeline = [
-              { stage: 'Active', count: metrics.cases.activeCases || 0, color: 'var(--vz-primary)' },
-              { stage: 'Closed', count: metrics.cases.closedCases || 0, color: 'var(--vz-success)' },
-              { stage: 'Pending', count: (metrics.cases.casesByStatus?.['On Hold'] || 0), color: 'var(--vz-warning)' }
+              { stage: 'Active', count: metrics.cases.activeCases || 0, color: 'var(--legience-accent)' },
+              { stage: 'Closed', count: metrics.cases.closedCases || 0, color: 'var(--legience-success)' },
+              { stage: 'Pending', count: (metrics.cases.casesByStatus?.['On Hold'] || 0), color: 'var(--legience-warning)' }
             ];
           }
 
@@ -203,7 +203,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         }
       },
       grid: {
-        borderColor: 'var(--vz-border-color, #e9ebec)',
+        borderColor: 'var(--legience-border-hairline)',
         strokeDashArray: 3,
         xaxis: { lines: { show: false } }
       },
@@ -231,7 +231,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       dataLabels: { enabled: true, style: { fontSize: '12px', fontWeight: 600 } },
       xaxis: { categories: stages },
       yaxis: { labels: { style: { fontSize: '12px', colors: '#878a99' } } },
-      grid: { borderColor: 'var(--vz-border-color)', strokeDashArray: 3, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+      grid: { borderColor: 'var(--legience-border-hairline)', strokeDashArray: 3, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
       legend: { show: false }
     };
   }
@@ -254,7 +254,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             background: 'transparent'
           },
           track: {
-            background: 'var(--vz-light, #f3f6f9)',
+            background: 'var(--legience-bg-card-hover)',
             strokeWidth: '100%',
             dropShadow: {
               enabled: true,

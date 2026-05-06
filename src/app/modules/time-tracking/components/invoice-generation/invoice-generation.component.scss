@@ -195,7 +195,7 @@
 }
 
 .form-control {
-  border: 1px solid var(--vz-input-border-color);
+  border: 1px solid var(--legience-border-hairline);
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
@@ -215,7 +215,7 @@
 .input-group {
   .input-group-text {
     background-color: var(--legience-bg-card-hover);
-    border: 1px solid var(--vz-input-border-color);
+    border: 1px solid var(--legience-border-hairline);
     color: var(--legience-secondary);
     font-weight: 500;
   }
@@ -238,7 +238,7 @@
   .custom-ng-select {
     .ng-select-container {
       background-color: var(--legience-bg-page);
-      border: 1px solid var(--vz-input-border-color);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 0.5rem;
       min-height: 45px;
       transition: all 0.2s ease;

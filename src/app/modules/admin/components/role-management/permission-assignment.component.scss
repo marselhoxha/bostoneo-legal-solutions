@@ -65,16 +65,16 @@
   }
   
   &::-webkit-scrollbar-track {
-    background: var(--vz-gray-100);
+    background: var(--legience-bg-page);
   }
   
   &::-webkit-scrollbar-thumb {
-    background: var(--vz-gray-400);
+    background: var(--legience-text-muted);
     border-radius: 3px;
   }
   
   &::-webkit-scrollbar-thumb:hover {
-    background: var(--vz-gray-500);
+    background: var(--legience-text-muted);
   }
 }
 
@@ -82,7 +82,7 @@
 .dialog-footer {
   flex-shrink: 0;
   border-radius: 0 0 0.75rem 0.75rem;
-  background-color: var(--vz-card-cap-bg);
+  background-color: var(--legience-bg-card-hover);
   border-top: 1px solid var(--legience-border-hairline);
 }
 
@@ -112,11 +112,11 @@
       border-color: var(--legience-accent);
       box-shadow: 0 0 0 0.2rem rgba(var(--legience-accent-rgb), 0.25);
       outline: none;
-      background-color: var(--vz-input-focus-bg);
+      background-color: var(--legience-bg-input);
     }
     
     &::placeholder {
-      color: var(--vz-input-placeholder-color);
+      color: var(--legience-text-muted);
     }
   }
 }
@@ -153,7 +153,7 @@
   }
   
   &.border-success {
-    background: linear-gradient(135deg, var(--vz-success-bg-subtle), rgba(var(--legience-success-rgb), 0.1));
+    background: linear-gradient(135deg, var(--legience-success-bg-subtle), rgba(var(--legience-success-rgb), 0.1));
     border-color: var(--legience-success) !important;
     
     &::after {
@@ -231,7 +231,7 @@
     
     .accordion-header {
       .accordion-button {
-        background: linear-gradient(135deg, var(--legience-bg-card), var(--vz-gray-50));
+        background: linear-gradient(135deg, var(--legience-bg-card), var(--legience-bg-page));
         border: none;
         padding: 1rem 1.25rem;
         font-weight: 600;
@@ -273,7 +273,7 @@
 /* Progress Bar Enhancements */
 .progress {
   height: 6px;
-  background-color: var(--vz-gray-200);
+  background-color: var(--legience-bg-subtle);
   border-radius: 3px;
   overflow: hidden;
   
@@ -349,19 +349,19 @@
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
   .permission-dialog-container {
-    background-color: var(--vz-dark-bg, #1a1a1a);
-    color: var(--vz-dark-color, #ffffff);
+    background-color: var(--legience-bg-page);
+    color: var(--legience-text-primary);
   }
   
   .card {
-    background-color: var(--vz-dark-card-bg, #2a2a2a);
-    border-color: var(--vz-dark-border, #404040);
+    background-color: var(--legience-bg-card);
+    border-color: var(--legience-border-hairline);
   }
   
   .form-control {
-    background-color: var(--vz-dark-input-bg, #2a2a2a);
-    border-color: var(--vz-dark-border, #404040);
-    color: var(--vz-dark-color, #ffffff);
+    background-color: var(--legience-bg-input);
+    border-color: var(--legience-border-hairline);
+    color: var(--legience-text-primary);
   }
 }
 

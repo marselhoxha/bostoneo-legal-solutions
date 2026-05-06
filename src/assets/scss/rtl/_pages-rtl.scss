@@ -81,7 +81,7 @@
 
 .email-detail-content {
     transform: translateX(-200%);
-    border-right: 2px solid var(--vz-body-bg)
+    border-right: 2px solid var(--legience-bg-page)
 }
 
 .email-detail-show {
@@ -260,7 +260,7 @@
                 &::before {
                     right: 110px;
                     left: auto;
-                    border-color: transparent var(--vz-border-color) transparent transparent;
+                    border-color: transparent var(--legience-border-hairline) transparent transparent;
                 }
 
                 .date {
@@ -296,7 +296,7 @@
         &::after {
             left: 100%;
             right: auto;
-            border-color: transparent transparent transparent var(--vz-card-bg);
+            border-color: transparent transparent transparent var(--legience-bg-card);
         }
 
         &::before {
@@ -320,14 +320,14 @@
                 right: 30px;
                 left: auto;
                 margin-right: 0;
-                border-color: transparent transparent var(--vz-border-color) transparent;
+                border-color: transparent transparent var(--legience-border-hairline) transparent;
             }
 
             &::before {
                 right: 30px;
                 left: auto;
                 margin-right: 0;
-                border-color: transparent transparent var(--vz-card-bg) transparent;
+                border-color: transparent transparent var(--legience-bg-card) transparent;
             }
         }
     }

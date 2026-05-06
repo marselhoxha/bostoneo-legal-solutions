@@ -88,7 +88,7 @@
 .wizard-card {
   border: 1px solid var(--legience-border-hairline);
   border-radius: 12px;
-  box-shadow: var(--vz-card-box-shadow, 0 2px 8px rgba(0, 0, 0, 0.06));
+  box-shadow: var(--legience-shadow-sm);
   overflow: hidden;
   background: var(--legience-bg-card);
 
@@ -97,7 +97,7 @@
   }
 
   .card-footer {
-    background: var(--vz-card-cap-bg);
+    background: var(--legience-bg-card-hover);
     border-top: 1px solid var(--legience-border-hairline);
     padding: 1rem 2.5rem;
   }

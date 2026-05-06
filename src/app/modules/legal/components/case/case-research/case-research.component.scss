@@ -1220,20 +1220,20 @@
                 margin-right: 0.25rem;
 
                 &.verified {
-                  color: var(--bs-success, #0ab39c);
+                  color: var(--legience-success);
                 }
 
                 &.unverified {
-                  color: var(--bs-warning, #f7b84b);
+                  color: var(--legience-warning);
                 }
               }
 
               &.source-verified {
-                border-color: rgba(var(--bs-success-rgb, 10, 179, 156), 0.25);
+                border-color: rgba(var(--legience-success-rgb), 0.25);
 
                 &:hover {
-                  background: rgba(var(--bs-success-rgb, 10, 179, 156), 0.1);
-                  border-color: rgba(var(--bs-success-rgb, 10, 179, 156), 0.4);
+                  background: rgba(var(--legience-success-rgb), 0.1);
+                  border-color: rgba(var(--legience-success-rgb), 0.4);
                 }
               }
 
@@ -1243,7 +1243,7 @@
 
               &.no-link {
                 background: rgba(var(--legience-secondary-rgb), 0.08);
-                border-color: rgba(var(--bs-warning-rgb, 247, 184, 75), 0.2);
+                border-color: rgba(var(--legience-warning-rgb), 0.2);
                 color: var(--legience-text-secondary);
               }
 

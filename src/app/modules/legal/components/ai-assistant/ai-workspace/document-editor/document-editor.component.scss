@@ -26,7 +26,7 @@
   flex: 1;
   border: 1px solid var(--legience-border-hairline) !important;
   border-radius: 0 0 0.5rem 0.5rem !important;
-  font-family: var(--vz-body-font-family);
+  font-family: var(--legience-font-sans);
   font-size: 14px;
   min-height: 500px;
   padding: 1.5rem !important;
@@ -117,7 +117,7 @@
     text-decoration: underline;
 
     &:hover {
-      color: var(--vz-primary-darker, #2c3a6b);
+      color: var(--legience-accent-hover);
     }
   }
 
@@ -221,12 +221,12 @@
 [data-layout-mode="dark"] {
   .ck.ck-toolbar {
     background: var(--legience-bg-input) !important;
-    border-color: var(--vz-input-border) !important;
+    border-color: var(--legience-border-hairline) !important;
   }
 
   .ck.ck-editor__editable_inline {
     background: var(--legience-bg-input) !important;
-    border-color: var(--vz-input-border) !important;
+    border-color: var(--legience-border-hairline) !important;
     color: var(--legience-text-secondary) !important;
 
     &.ck-focused {

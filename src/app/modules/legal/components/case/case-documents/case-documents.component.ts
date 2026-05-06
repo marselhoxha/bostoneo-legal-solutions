@@ -306,7 +306,7 @@ export class SafePipe implements PipeTransform {
                   </div>
                   <div class="col-md-6">
                     <div class="position-relative">
-                      <i class="ri-search-line position-absolute" style="left: 10px; top: 50%; transform: translateY(-50%); color: var(--vz-secondary-color);"></i>
+                      <i class="ri-search-line position-absolute" style="left: 10px; top: 50%; transform: translateY(-50%); color: var(--legience-text-subtle);"></i>
                       <input type="text" class="form-control form-control-sm" style="padding-left: 30px;"
                              placeholder="Search documents..."
                              [(ngModel)]="searchTerm" (input)="filterDocuments()">
@@ -844,59 +844,59 @@ export class SafePipe implements PipeTransform {
 
     /* Dropzone Styles - Light Mode */
     .dropzone-wrapper {
-      border: 2px dashed var(--vz-border-color, #e9ebec);
+      border: 2px dashed var(--legience-border-hairline);
       border-radius: 8px;
       padding: 60px 40px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
-      background: var(--vz-card-bg, #fff);
+      background: var(--legience-bg-card);
     }
 
     .dropzone-wrapper:hover {
-      border-color: var(--vz-primary, #405189);
-      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+      border-color: var(--legience-accent);
+      background: var(--legience-accent-bg-subtle));
     }
 
     .dropzone-wrapper.dropzone-dragging {
-      border-color: var(--vz-primary, #405189);
-      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.1));
+      border-color: var(--legience-accent);
+      background: var(--legience-accent-bg-subtle));
       border-style: solid;
     }
 
     .dropzone-icon {
       font-size: 48px;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-subtle);
       margin-bottom: 16px;
       line-height: 1;
     }
 
     .dropzone-wrapper:hover .dropzone-icon,
     .dropzone-wrapper.dropzone-dragging .dropzone-icon {
-      color: var(--vz-primary, #405189);
+      color: var(--legience-accent);
     }
 
     .dropzone-title {
       font-size: 16px;
       font-weight: 500;
-      color: var(--vz-heading-color, #495057);
+      color: var(--legience-text-primary);
       margin-bottom: 8px;
     }
 
     .dropzone-subtitle {
       font-size: 13px;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-subtle);
       margin: 0;
     }
 
     /* Dark Mode Support */
     [data-layout-mode="dark"] .dropzone-wrapper {
-      border-color: var(--vz-border-color, #32383e);
-      background: var(--vz-card-bg, #212529);
+      border-color: var(--legience-border-hairline);
+      background: var(--legience-bg-card);
     }
 
     [data-layout-mode="dark"] .dropzone-wrapper:hover {
-      border-color: var(--vz-primary, #405189);
+      border-color: var(--legience-accent);
       background: rgba(64, 81, 137, 0.15);
     }
 
@@ -905,20 +905,20 @@ export class SafePipe implements PipeTransform {
     }
 
     [data-layout-mode="dark"] .dropzone-icon {
-      color: var(--vz-secondary-color, #ced4da);
+      color: var(--legience-text-subtle);
     }
 
     [data-layout-mode="dark"] .dropzone-title {
-      color: var(--vz-heading-color, #ced4da);
+      color: var(--legience-text-primary);
     }
 
     [data-layout-mode="dark"] .dropzone-subtitle {
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-subtle);
     }
 
     /* File Upload Box in Modal */
     .file-upload-box {
-      border: 2px dashed var(--vz-border-color, #e9ebec);
+      border: 2px dashed var(--legience-border-hairline);
       border-radius: 6px;
       padding: 24px;
       text-align: center;
@@ -931,24 +931,24 @@ export class SafePipe implements PipeTransform {
     }
 
     .file-upload-box:hover {
-      border-color: var(--vz-primary, #405189);
-      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+      border-color: var(--legience-accent);
+      background: var(--legience-accent-bg-subtle));
     }
 
     .selected-file-display {
-      border: 1px solid var(--vz-border-color, #e9ebec);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 6px;
       padding: 12px;
-      background: var(--vz-light, #f3f6f9);
+      background: var(--legience-bg-card-hover);
     }
 
     [data-layout-mode="dark"] .file-upload-box {
-      border-color: var(--vz-border-color, #32383e);
+      border-color: var(--legience-border-hairline);
     }
 
     [data-layout-mode="dark"] .selected-file-display {
-      background: var(--vz-light, #2a2f34);
-      border-color: var(--vz-border-color, #32383e);
+      background: var(--legience-bg-card-hover);
+      border-color: var(--legience-border-hairline);
     }
 
     .btn-ghost-danger {
@@ -970,7 +970,7 @@ export class SafePipe implements PipeTransform {
     .folder-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      border-color: var(--vz-primary, #405189) !important;
+      border-color: var(--legience-accent) !important;
     }
 
     /* === Split-Panel Layout === */
@@ -980,8 +980,8 @@ export class SafePipe implements PipeTransform {
 
     /* === Folder Tree === */
     .folder-tree-sidebar {
-      background: var(--vz-card-bg, #fff);
-      border: 1px solid var(--vz-border-color, #e9ebec);
+      background: var(--legience-bg-card);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 0.375rem;
       padding: 0;
       overflow-y: auto;
@@ -1007,16 +1007,16 @@ export class SafePipe implements PipeTransform {
     }
 
     .tree-item:hover {
-      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+      background: var(--legience-accent-bg-subtle));
     }
 
     .tree-item.active {
-      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.1));
-      border-left-color: var(--vz-primary, #405189);
+      background: var(--legience-accent-bg-subtle));
+      border-left-color: var(--legience-accent);
     }
 
     .tree-item.active .tree-item-name {
-      color: var(--vz-primary, #405189);
+      color: var(--legience-accent);
       font-weight: 600;
     }
 
@@ -1027,7 +1027,7 @@ export class SafePipe implements PipeTransform {
 
     .tree-item-name {
       font-size: 13px;
-      color: var(--vz-heading-color, #495057);
+      color: var(--legience-text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1047,7 +1047,7 @@ export class SafePipe implements PipeTransform {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-subtle);
       background: none;
       border: none;
       border-radius: 3px;
@@ -1055,8 +1055,8 @@ export class SafePipe implements PipeTransform {
     }
 
     .tree-expand-btn:hover {
-      background: var(--vz-light, #f3f6f9);
-      color: var(--vz-primary, #405189);
+      background: var(--legience-bg-card-hover);
+      color: var(--legience-accent);
     }
 
     .tree-expand-spacer {
@@ -1070,7 +1070,7 @@ export class SafePipe implements PipeTransform {
       display: none;
       align-items: center;
       justify-content: center;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-subtle);
       background: none;
       border: none;
       border-radius: 3px;
@@ -1112,7 +1112,7 @@ export class SafePipe implements PipeTransform {
 
     /* Upload drop hint */
     .upload-drop-hint {
-      border: 1px dashed var(--vz-border-color, #e9ebec);
+      border: 1px dashed var(--legience-border-hairline);
       border-radius: 6px;
       padding: 0.5rem 1rem;
       text-align: center;
@@ -1120,8 +1120,8 @@ export class SafePipe implements PipeTransform {
     }
 
     .upload-drop-hint.dropzone-dragging {
-      border-color: var(--vz-primary, #405189);
-      background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, 0.06));
+      border-color: var(--legience-accent);
+      background: var(--legience-accent-bg-subtle));
     }
 
     /* Document summary stat chips */
@@ -1137,8 +1137,8 @@ export class SafePipe implements PipeTransform {
       align-items: center;
       gap: 10px;
       padding: 10px 16px;
-      background: var(--vz-card-bg, #fff);
-      border: 1px solid var(--vz-border-color, #e9ebec);
+      background: var(--legience-bg-card);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 8px;
       flex: 1;
       min-width: 120px;
@@ -1161,13 +1161,13 @@ export class SafePipe implements PipeTransform {
     .stat-chip-val {
       font-size: 16px;
       font-weight: 700;
-      color: var(--vz-heading-color, #495057);
+      color: var(--legience-text-primary);
       line-height: 1.2;
     }
 
     .stat-chip-label {
       font-size: 11px;
-      color: var(--vz-secondary-color, #878a99);
+      color: var(--legience-text-subtle);
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
@@ -1195,8 +1195,8 @@ export class SafePipe implements PipeTransform {
     .drop-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(var(--vz-primary-rgb, 64,81,137), 0.05);
-      border: 2px dashed var(--vz-primary, #405189);
+      background: rgba(var(--legience-accent-rgb), 0.05);
+      border: 2px dashed var(--legience-accent);
       border-radius: 8px;
       display: flex;
       flex-direction: column;
@@ -1204,7 +1204,7 @@ export class SafePipe implements PipeTransform {
       justify-content: center;
       gap: 6px;
       z-index: 10;
-      color: var(--vz-primary, #405189);
+      color: var(--legience-accent);
       font-weight: 600;
       font-size: 14px;
       pointer-events: none;
@@ -1217,45 +1217,45 @@ export class SafePipe implements PipeTransform {
 
     /* Inline upload queue */
     .upload-queue-inline {
-      border: 1px solid var(--vz-border-color, #e9ebec);
-      border-left: 3px solid var(--vz-primary, #405189);
+      border: 1px solid var(--legience-border-hairline);
+      border-left: 3px solid var(--legience-accent);
       border-radius: 0 8px 8px 0;
       padding: 14px 16px;
-      background: var(--vz-card-bg, #fff);
+      background: var(--legience-bg-card);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
     .queue-item {
       padding: 10px 12px;
-      border: 1px solid var(--vz-border-color, #e9ebec);
+      border: 1px solid var(--legience-border-hairline);
       border-radius: 8px;
       margin-bottom: 6px;
-      background: var(--vz-light, #f3f6f9);
+      background: var(--legience-bg-card-hover);
       transition: all 0.15s;
     }
 
     .queue-item.queue-active {
-      border-color: var(--vz-primary, #405189);
-      background: rgba(var(--vz-primary-rgb, 64,81,137), 0.04);
-      box-shadow: 0 0 0 1px rgba(var(--vz-primary-rgb, 64,81,137), 0.1);
+      border-color: var(--legience-accent);
+      background: rgba(var(--legience-accent-rgb), 0.04);
+      box-shadow: 0 0 0 1px rgba(var(--legience-accent-rgb), 0.1);
     }
 
     .queue-item.queue-done {
-      border-color: rgba(var(--vz-success-rgb, 10,179,156), 0.3);
-      background: rgba(var(--vz-success-rgb, 10,179,156), 0.04);
+      border-color: rgba(var(--legience-success-rgb), 0.3);
+      background: rgba(var(--legience-success-rgb), 0.04);
     }
 
     .queue-item.queue-error {
-      border-color: rgba(var(--vz-danger-rgb, 240,101,72), 0.3);
-      background: rgba(var(--vz-danger-rgb, 240,101,72), 0.04);
+      border-color: rgba(var(--legience-danger-rgb), 0.3);
+      background: rgba(var(--legience-danger-rgb), 0.04);
     }
 
     .min-width-0 { min-width: 0; }
 
     /* Dark mode support for folder tree */
     [data-layout-mode="dark"] .folder-tree-sidebar {
-      background: var(--vz-card-bg, #212529);
-      border-color: var(--vz-border-color, #32383e);
+      background: var(--legience-bg-card);
+      border-color: var(--legience-border-hairline);
     }
 
     [data-layout-mode="dark"] .tree-item:hover {
@@ -1276,7 +1276,7 @@ export class SafePipe implements PipeTransform {
     }
 
     .folder-tree-sidebar::-webkit-scrollbar-thumb {
-      background: var(--vz-border-color, #e9ebec);
+      background: var(--legience-border-hairline);
       border-radius: 4px;
     }
   `]

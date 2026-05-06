@@ -18,7 +18,7 @@
       height: 56px;
       border-radius: 50%;
       background: var(--legience-bg-card-hover, #f3f3f9);
-      color: var(--vz-gray-500, #adb5bd);
+      color: var(--legience-text-muted);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -163,7 +163,7 @@
   transition: color 0.15s;
 
   &:hover {
-    color: var(--vz-primary-dark, #364971);
+    color: var(--legience-accent-hover);
     text-decoration: underline;
 
     i { transform: translateX(2px); }

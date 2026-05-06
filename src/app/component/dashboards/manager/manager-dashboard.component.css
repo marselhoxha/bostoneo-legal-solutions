@@ -36,8 +36,8 @@
 }
 
 .list-group-item:hover {
-  border-left-color: var(--bs-primary);
-  background-color: var(--bs-light);
+  border-left-color: var(--legience-accent);
+  background-color: var(--legience-bg-card-hover);
 }
 
 /* Progress Bars */
@@ -55,7 +55,7 @@
 }
 
 .border.rounded:hover {
-  border-color: var(--bs-primary) !important;
+  border-color: var(--legience-accent) !important;
   background-color: rgba(102, 88, 221, 0.05);
 }
 

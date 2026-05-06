@@ -60,10 +60,10 @@ const VISUAL: Record<ProvenanceSource, SourceVisual> = {
        Case File mock data (pi-case-detail.component.scss line 6912) and
        auto-adapts to Bootstrap dark mode. The mockup hex codes were just
        one snapshot of the same intent. */
-    .prov.intake { background: var(--vz-info); }
-    .prov.client { background: var(--vz-success); }
+    .prov.intake { background: var(--legience-info); }
+    .prov.client { background: var(--legience-success); }
     .prov.ai     { background: #6d28d9; } /* no Velzon purple token; same hex as the inline markers */
-    .prov.manual { background: var(--vz-secondary-color); }
+    .prov.manual { background: var(--legience-text-subtle); }
   `],
 })
 export class ProvenanceMarkerComponent {

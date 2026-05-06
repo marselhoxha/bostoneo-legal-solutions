@@ -58,8 +58,8 @@
   }
 
   .card-header {
-    background-color: var(--vz-card-cap-bg);
-    border-bottom: 1px solid var(--vz-card-border-color);
+    background-color: var(--legience-bg-card-hover);
+    border-bottom: 1px solid var(--legience-border-hairline);
     padding: 1.5rem;
     
     .card-title {
@@ -214,7 +214,7 @@
   }
   
   tbody tr:hover {
-    background-color: var(--vz-light-bg-subtle);
+    background-color: var(--legience-bg-page);
   }
 }
 
@@ -239,7 +239,7 @@
   color: var(--legience-text-muted);
   
   &:hover {
-    background-color: var(--vz-light-bg-subtle);
+    background-color: var(--legience-bg-page);
     border-color: var(--legience-border-hairline);
     color: var(--legience-text-secondary);
   }

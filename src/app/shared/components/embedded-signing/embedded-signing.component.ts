@@ -65,7 +65,7 @@ import { SignatureService } from '../../../core/services/signature.service';
       width: 100%;
       height: 100%;
       min-height: 600px;
-      background: var(--vz-body-bg);
+      background: var(--legience-bg-page);
       border-radius: 0.5rem;
       overflow: hidden;
     }
@@ -80,7 +80,7 @@ import { SignatureService } from '../../../core/services/signature.service';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: var(--vz-body-bg);
+      background: var(--legience-bg-page);
       z-index: 10;
     }
 
@@ -96,8 +96,8 @@ import { SignatureService } from '../../../core/services/signature.service';
 
     .iframe-header {
       padding: 1rem;
-      background: var(--vz-light);
-      border-bottom: 1px solid var(--vz-border-color);
+      background: var(--legience-bg-card-hover);
+      border-bottom: 1px solid var(--legience-border-hairline);
     }
 
     .signing-iframe {

@@ -831,7 +831,7 @@
 
           &.assistant-message {
             .message-avatar {
-              background: var(--vz-success-bg-subtle);
+              background: var(--legience-success-bg-subtle);
               color: var(--legience-success);
             }
           }
@@ -901,7 +901,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.75rem 1rem;
-      background: var(--vz-info-bg-subtle);
+      background: var(--legience-info-bg-subtle);
       border: 1px solid var(--legience-info);
       border-radius: 0.5rem;
       margin-bottom: 1rem;

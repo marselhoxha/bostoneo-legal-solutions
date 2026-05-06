@@ -17,26 +17,26 @@
 /* Ensure theme variables are applied correctly, overriding potential global styles */
 .expense-details-table th {
   /* Use the theme variable for darker text in light/dark mode */
-  color: var(--vz-body-color); 
-  /* If you specifically want the darker text: color: var(--vz-text-white-dark); */ 
-  font-weight: 600; /* or var(--vz-font-weight-semibold) */
+  color: var(--legience-text-primary); 
+  /* If you specifically want the darker text: color: var(--legience-text-primary); */ 
+  font-weight: 600; /* or var(--legience-font-weight-semibold) */
 }
 
 .expense-details-table td {
   /* Use the theme variable for body text color */
-  color: var(--vz-body-color);
+  color: var(--legience-text-primary);
 }
 
 /* Optional: If rows need a subtle background like the list component */
 /* 
 .expense-details-table tr {
-  background-color: var(--vz-light-subtle); 
+  background-color: var(--legience-bg-card-hover); 
 }
 */
 
 /* Optional: Style specific cells like the amount */
 .expense-details-table .amount-cell {
-  font-weight: 600; /* or var(--vz-font-weight-semibold) */
+  font-weight: 600; /* or var(--legience-font-weight-semibold) */
   font-size: 1.1rem; /* Example */
 }
 
@@ -62,31 +62,31 @@
 
 /* Background colors */
 .bg-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.18) !important;
+  background-color: rgba(var(--legience-accent-rgb), 0.18) !important;
 }
 
 .bg-soft-light {
-  background-color: rgba(var(--vz-light-rgb), 0.25) !important;
+  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.25) !important;
 }
 
 .badge-soft-success {
-  color: var(--vz-success);
-  background-color: rgba(var(--vz-success-rgb), 0.18);
+  color: var(--legience-success);
+  background-color: rgba(var(--legience-success-rgb), 0.18);
 }
 
 .badge-soft-info {
-  color: var(--vz-info);
-  background-color: rgba(var(--vz-info-rgb), 0.18);
+  color: var(--legience-info);
+  background-color: rgba(var(--legience-info-rgb), 0.18);
 }
 
 .badge-soft-dark {
-  color: var(--vz-dark);
-  background-color: rgba(var(--vz-dark-rgb), 0.18);
+  color: var(--legience-text-primary);
+  background-color: rgba(var(--legience-text-primary-rgb), 0.18);
 }
 
 /* Text colors */
 .text-primary {
-  color: var(--vz-primary) !important;
+  color: var(--legience-accent) !important;
 }
 
 /* Font sizes */
@@ -143,7 +143,7 @@
   border-top: 0;
   border-right: 0;
   border-left: 0;
-  border-bottom: 1px solid var(--vz-border-color);
+  border-bottom: 1px solid var(--legience-border-hairline);
 }
 
 .list-group-flush > .list-group-item:last-child {
@@ -152,45 +152,45 @@
 
 /* Button styling */
 .btn-primary {
-  background-color: var(--vz-primary);
-  border-color: var(--vz-primary);
+  background-color: var(--legience-accent);
+  border-color: var(--legience-accent);
 }
 
 .btn-primary:hover {
-  background-color: rgba(var(--vz-primary-rgb), 0.9);
-  border-color: rgba(var(--vz-primary-rgb), 0.9);
+  background-color: rgba(var(--legience-accent-rgb), 0.9);
+  border-color: rgba(var(--legience-accent-rgb), 0.9);
 }
 
 .btn-soft-primary {
-  background-color: rgba(var(--vz-primary-rgb), 0.1);
-  color: var(--vz-primary);
+  background-color: rgba(var(--legience-accent-rgb), 0.1);
+  color: var(--legience-accent);
   border-color: transparent;
 }
 
 .btn-soft-primary:hover {
-  background-color: var(--vz-primary);
+  background-color: var(--legience-accent);
   color: #fff;
 }
 
 .btn-soft-secondary {
-  background-color: rgba(var(--vz-secondary-rgb), 0.1);
-  color: var(--vz-secondary);
+  background-color: rgba(var(--legience-text-subtle-rgb), 0.1);
+  color: var(--legience-text-subtle);
   border-color: transparent;
 }
 
 .btn-soft-secondary:hover {
-  background-color: var(--vz-secondary);
+  background-color: var(--legience-text-subtle);
   color: #fff;
 }
 
 .btn-soft-success {
-  background-color: rgba(var(--vz-success-rgb), 0.1);
-  color: var(--vz-success);
+  background-color: rgba(var(--legience-success-rgb), 0.1);
+  color: var(--legience-success);
   border-color: transparent;
 }
 
 .btn-soft-success:hover {
-  background-color: var(--vz-success);
+  background-color: var(--legience-success);
   color: #fff;
 }
 
@@ -229,40 +229,40 @@
   position: absolute;
   border-width: 0.5rem 0 0.5rem 0.5rem;
   border-style: solid;
-  border-color: transparent transparent transparent var(--vz-primary-bg-subtle);
+  border-color: transparent transparent transparent var(--legience-accent-bg-subtle);
   left: 2.45rem;
   top: 50%;
   transform: translateY(-50%);
 }
 
 .alert-danger {
-  background-color: var(--vz-danger-bg-subtle);
-  border-color: var(--vz-danger-border-subtle);
-  color: var(--vz-danger-text-emphasis);
+  background-color: var(--legience-danger-bg-subtle);
+  border-color: var(--legience-danger-bg-subtle);
+  color: var(--legience-danger);
 }
 
 .alert-danger.label-arrow:after {
-  border-color: transparent transparent transparent var(--vz-danger-bg-subtle);
+  border-color: transparent transparent transparent var(--legience-danger-bg-subtle);
 }
 
 .alert-warning {
-  background-color: var(--vz-warning-bg-subtle);
-  border-color: var(--vz-warning-border-subtle);
-  color: var(--vz-warning-text-emphasis);
+  background-color: var(--legience-warning-bg-subtle);
+  border-color: var(--legience-warning-bg-subtle);
+  color: var(--legience-warning);
 }
 
 .alert-warning.label-arrow:after {
-  border-color: transparent transparent transparent var(--vz-warning-bg-subtle);
+  border-color: transparent transparent transparent var(--legience-warning-bg-subtle);
 }
 
 .alert-info {
-  background-color: var(--vz-info-bg-subtle);
-  border-color: var(--vz-info-border-subtle);
-  color: var(--vz-info-text-emphasis);
+  background-color: var(--legience-info-bg-subtle);
+  border-color: var(--legience-info-bg-subtle);
+  color: var(--legience-info);
 }
 
 .alert-info.label-arrow:after {
-  border-color: transparent transparent transparent var(--vz-info-bg-subtle);
+  border-color: transparent transparent transparent var(--legience-info-bg-subtle);
 }
 
 /* Table styling */

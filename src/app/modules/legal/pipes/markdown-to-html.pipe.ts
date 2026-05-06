@@ -575,7 +575,7 @@ export class MarkdownToHtmlPipe implements PipeTransform {
     // top: 18px (half of 36px icon), height: calculated based on number of items
     // Each item has mb-4 spacing (24px in Bootstrap default), so: (items - 1) * 24px
     const lineHeight = items.length > 1 ? `calc(100% - 90px)` : '0';
-    html += `<div class="position-absolute" style="left: 18px; top: 30px; height: ${lineHeight}; width: 2px; background: var(--vz-border-color); opacity: 0.3; z-index: 0;"></div>`;
+    html += `<div class="position-absolute" style="left: 18px; top: 30px; height: ${lineHeight}; width: 2px; background: var(--legience-border-hairline); opacity: 0.3; z-index: 0;"></div>`;
 
     items.forEach((item, index) => {
       const icon = this.getTimelineIcon(item.description);

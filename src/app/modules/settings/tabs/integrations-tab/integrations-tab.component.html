@@ -8,14 +8,14 @@
       <!-- Twilio -->
       <div class="col-md-6">
         <div class="p-3 rounded-3 border position-relative overflow-hidden"
-             [style.border-left]="organization?.twilioConfigured ? '3px solid var(--vz-success)' : '3px solid var(--vz-border-color)'"
-             [style.background]="organization?.twilioConfigured ? 'rgba(var(--vz-success-rgb), 0.03)' : ''">
+             [style.border-left]="organization?.twilioConfigured ? '3px solid var(--legience-success)' : '3px solid var(--legience-border-hairline)'"
+             [style.background]="organization?.twilioConfigured ? 'rgba(var(--legience-success-rgb), 0.03)' : ''">
           <div class="d-flex align-items-start justify-content-between mb-2">
             <div class="d-flex align-items-center gap-2">
               <div class="d-flex align-items-center justify-content-center rounded-2"
                    [style.width.px]="38" [style.height.px]="38"
-                   [style.background]="organization?.twilioConfigured ? 'rgba(var(--vz-success-rgb), 0.1)' : 'var(--vz-light)'"
-                   [style.color]="organization?.twilioConfigured ? 'var(--vz-success)' : 'var(--vz-secondary-color)'">
+                   [style.background]="organization?.twilioConfigured ? 'rgba(var(--legience-success-rgb), 0.1)' : 'var(--legience-bg-card-hover)'"
+                   [style.color]="organization?.twilioConfigured ? 'var(--legience-success)' : 'var(--legience-text-subtle)'">
                 <i class="ri-phone-line" style="font-size:1.125rem"></i>
               </div>
               <div>
@@ -31,10 +31,10 @@
           </div>
           <p class="text-muted mb-0" style="font-size:0.8125rem">SMS, WhatsApp, and voice communications</p>
           <div *ngIf="organization?.twilioConfigured && organization?.twilioPhoneNumber" class="mt-2"
-               style="font-size:0.8125rem; font-weight:500; color:var(--vz-heading-color)">
+               style="font-size:0.8125rem; font-weight:500; color:var(--legience-text-primary)">
             <i class="ri-phone-fill me-1 text-success"></i>{{ organization.twilioPhoneNumber }}
           </div>
-          <div *ngIf="!organization?.twilioConfigured" class="mt-2" style="font-size:0.75rem; color:var(--vz-secondary-color)">
+          <div *ngIf="!organization?.twilioConfigured" class="mt-2" style="font-size:0.75rem; color:var(--legience-text-subtle)">
             <i class="ri-information-line me-1"></i>Contact support to configure
           </div>
         </div>
@@ -43,14 +43,14 @@
       <!-- BoldSign -->
       <div class="col-md-6">
         <div class="p-3 rounded-3 border position-relative overflow-hidden"
-             [style.border-left]="organization?.boldsignConfigured ? '3px solid var(--vz-success)' : '3px solid var(--vz-border-color)'"
-             [style.background]="organization?.boldsignConfigured ? 'rgba(var(--vz-success-rgb), 0.03)' : ''">
+             [style.border-left]="organization?.boldsignConfigured ? '3px solid var(--legience-success)' : '3px solid var(--legience-border-hairline)'"
+             [style.background]="organization?.boldsignConfigured ? 'rgba(var(--legience-success-rgb), 0.03)' : ''">
           <div class="d-flex align-items-start justify-content-between mb-2">
             <div class="d-flex align-items-center gap-2">
               <div class="d-flex align-items-center justify-content-center rounded-2"
                    [style.width.px]="38" [style.height.px]="38"
-                   [style.background]="organization?.boldsignConfigured ? 'rgba(var(--vz-success-rgb), 0.1)' : 'var(--vz-light)'"
-                   [style.color]="organization?.boldsignConfigured ? 'var(--vz-success)' : 'var(--vz-secondary-color)'">
+                   [style.background]="organization?.boldsignConfigured ? 'rgba(var(--legience-success-rgb), 0.1)' : 'var(--legience-bg-card-hover)'"
+                   [style.color]="organization?.boldsignConfigured ? 'var(--legience-success)' : 'var(--legience-text-subtle)'">
                 <i class="ri-quill-pen-line" style="font-size:1.125rem"></i>
               </div>
               <div>
@@ -77,7 +77,7 @@
             </button>
           </div>
           <!-- Connect form -->
-          <div *ngIf="showBoldsignSetup" class="mt-3 pt-3" style="border-top:1px dashed var(--vz-border-color)">
+          <div *ngIf="showBoldsignSetup" class="mt-3 pt-3" style="border-top:1px dashed var(--legience-border-hairline)">
             <label class="form-label fw-medium" style="font-size:0.8125rem">BoldSign API Key</label>
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light"><i class="ri-key-2-line"></i></span>
@@ -111,7 +111,7 @@
   </div>
   <div class="card-body p-0">
     <!-- Email -->
-    <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--vz-border-color)">
+    <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--legience-border-hairline)">
       <div class="d-flex align-items-center gap-3">
         <div class="d-flex align-items-center justify-content-center rounded-2 bg-primary-subtle text-primary"
              style="width:36px; height:36px; flex-shrink:0">
@@ -128,7 +128,7 @@
       </div>
     </div>
     <!-- SMS -->
-    <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--vz-border-color)">
+    <div class="d-flex align-items-center justify-content-between px-4 py-3" style="border-bottom:1px solid var(--legience-border-hairline)">
       <div class="d-flex align-items-center gap-3">
         <div class="d-flex align-items-center justify-content-center rounded-2 bg-success-subtle text-success"
              style="width:36px; height:36px; flex-shrink:0">
@@ -184,10 +184,10 @@
     <div class="row g-3 mb-4">
       <div class="col-md-4">
         <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
-             [style.border]="notificationSettings.signatureReminderEmail ? '1px solid rgba(var(--vz-primary-rgb), 0.3)' : '1px solid var(--vz-border-color)'"
-             [style.background]="notificationSettings.signatureReminderEmail ? 'rgba(var(--vz-primary-rgb), 0.03)' : ''">
+             [style.border]="notificationSettings.signatureReminderEmail ? '1px solid rgba(var(--legience-accent-rgb), 0.3)' : '1px solid var(--legience-border-hairline)'"
+             [style.background]="notificationSettings.signatureReminderEmail ? 'rgba(var(--legience-accent-rgb), 0.03)' : ''">
           <div class="d-flex align-items-center gap-2">
-            <i class="ri-mail-line" [style.color]="notificationSettings.signatureReminderEmail ? 'var(--vz-primary)' : 'var(--vz-secondary-color)'"></i>
+            <i class="ri-mail-line" [style.color]="notificationSettings.signatureReminderEmail ? 'var(--legience-accent)' : 'var(--legience-text-subtle)'"></i>
             <span class="fw-medium" style="font-size:0.875rem">Email</span>
           </div>
           <div class="form-check form-switch mb-0">
@@ -198,11 +198,11 @@
       </div>
       <div class="col-md-4">
         <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
-             [style.border]="notificationSettings.signatureReminderSms ? '1px solid rgba(var(--vz-primary-rgb), 0.3)' : '1px solid var(--vz-border-color)'"
-             [style.background]="notificationSettings.signatureReminderSms ? 'rgba(var(--vz-primary-rgb), 0.03)' : ''"
+             [style.border]="notificationSettings.signatureReminderSms ? '1px solid rgba(var(--legience-accent-rgb), 0.3)' : '1px solid var(--legience-border-hairline)'"
+             [style.background]="notificationSettings.signatureReminderSms ? 'rgba(var(--legience-accent-rgb), 0.03)' : ''"
              [style.opacity]="organization?.twilioConfigured ? '1' : '0.5'">
           <div class="d-flex align-items-center gap-2">
-            <i class="ri-chat-3-line" style="color:var(--vz-secondary-color)"></i>
+            <i class="ri-chat-3-line" style="color:var(--legience-text-subtle)"></i>
             <span class="fw-medium" style="font-size:0.875rem">SMS</span>
           </div>
           <div class="form-check form-switch mb-0">
@@ -214,11 +214,11 @@
       </div>
       <div class="col-md-4">
         <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
-             [style.border]="notificationSettings.signatureReminderWhatsapp ? '1px solid rgba(var(--vz-primary-rgb), 0.3)' : '1px solid var(--vz-border-color)'"
-             [style.background]="notificationSettings.signatureReminderWhatsapp ? 'rgba(var(--vz-primary-rgb), 0.03)' : ''"
+             [style.border]="notificationSettings.signatureReminderWhatsapp ? '1px solid rgba(var(--legience-accent-rgb), 0.3)' : '1px solid var(--legience-border-hairline)'"
+             [style.background]="notificationSettings.signatureReminderWhatsapp ? 'rgba(var(--legience-accent-rgb), 0.03)' : ''"
              [style.opacity]="organization?.twilioConfigured ? '1' : '0.5'">
           <div class="d-flex align-items-center gap-2">
-            <i class="ri-whatsapp-line" style="color:var(--vz-secondary-color)"></i>
+            <i class="ri-whatsapp-line" style="color:var(--legience-text-subtle)"></i>
             <span class="fw-medium" style="font-size:0.875rem">WhatsApp</span>
           </div>
           <div class="form-check form-switch mb-0">
@@ -237,7 +237,7 @@
     <input type="text" class="form-control" [(ngModel)]="notificationSettings.signatureReminderDays" placeholder="7,3,1">
 
     <!-- Visual preview -->
-    <div *ngIf="getReminderDaysArray().length > 0" class="mt-3 p-3 rounded-3" style="background:var(--vz-light)">
+    <div *ngIf="getReminderDaysArray().length > 0" class="mt-3 p-3 rounded-3" style="background:var(--legience-bg-card-hover)">
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <span *ngFor="let day of getReminderDaysArray()" class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2"
               style="font-size:0.8125rem; font-weight:600">

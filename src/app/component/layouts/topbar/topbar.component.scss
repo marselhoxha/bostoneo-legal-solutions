@@ -818,7 +818,7 @@
 :host ::ng-deep {
   .notification-item {
     transition: all 0.25s ease;
-    border-bottom: 1px solid var(--vz-border-color);
+    border-bottom: 1px solid var(--legience-border-hairline);
     position: relative;
     overflow: hidden;
     transform-origin: center;
@@ -827,7 +827,7 @@
     opacity: 0;
 
     &:hover {
-      background-color: var(--vz-light);
+      background-color: var(--legience-bg-card-hover);
       cursor: pointer;
       transform: translateX(3px);
 
@@ -839,7 +839,7 @@
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 3px;
-      background-color: var(--vz-primary);
+      background-color: var(--legience-accent);
       opacity: 0;
       transition: opacity 0.25s ease;
     }
@@ -857,17 +857,17 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background-color: var(--vz-primary);
+        background-color: var(--legience-accent);
       }
     }
 
-    .notification-title { color: var(--vz-body-color) !important; }
+    .notification-title { color: var(--legience-text-primary) !important; }
     .notification-text {
-      color: var(--vz-body-color);
-      p { color: var(--vz-body-color); }
+      color: var(--legience-text-primary);
+      p { color: var(--legience-text-primary); }
     }
     .notification-text-unread {
-      color: var(--vz-body-color) !important;
+      color: var(--legience-text-primary) !important;
       font-weight: 600;
     }
   }
@@ -878,7 +878,7 @@
     scrollbar-width: thin;
 
     &::-webkit-scrollbar { width: 5px; }
-    &::-webkit-scrollbar-thumb { background-color: rgba(var(--vz-dark-rgb), 0.2); border-radius: 5px; }
+    &::-webkit-scrollbar-thumb { background-color: rgba(var(--legience-text-primary-rgb), 0.2); border-radius: 5px; }
     &::-webkit-scrollbar-track { background-color: transparent; }
   }
 
@@ -888,7 +888,7 @@
     position: relative;
 
     &:hover {
-      background-color: rgba(var(--vz-primary-rgb), 0.06) !important;
+      background-color: rgba(var(--legience-accent-rgb), 0.06) !important;
       &::before { opacity: 1; }
     }
 
@@ -897,7 +897,7 @@
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 3px;
-      background-color: var(--vz-primary);
+      background-color: var(--legience-accent);
       opacity: 0;
       transition: opacity 0.25s ease;
     }
@@ -905,7 +905,7 @@
     &:last-child { border-bottom: none !important; }
 
     &.bg-light-subtle {
-      background-color: rgba(var(--vz-primary-rgb), 0.04);
+      background-color: rgba(var(--legience-accent-rgb), 0.04);
 
       &::after {
         content: '';
@@ -913,7 +913,7 @@
         right: 12px; top: 12px;
         width: 8px; height: 8px;
         border-radius: 50%;
-        background-color: var(--vz-primary);
+        background-color: var(--legience-accent);
       }
     }
 
@@ -932,12 +932,12 @@
 
   .empty-notification {
     padding: 1.5rem;
-    color: var(--vz-gray-600);
+    color: var(--legience-text-subtle);
   }
 
   .badge-soft-danger {
-    color: var(--vz-danger);
-    background-color: rgba(var(--vz-danger-rgb), 0.18);
+    color: var(--legience-danger);
+    background-color: rgba(var(--legience-danger-rgb), 0.18);
     font-weight: 500;
   }
 
