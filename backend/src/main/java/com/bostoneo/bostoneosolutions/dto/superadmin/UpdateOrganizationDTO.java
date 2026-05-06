@@ -31,4 +31,8 @@ public class UpdateOrganizationDTO {
     private Integer maxUsers;
     private Integer maxCases;
     private Long maxStorageBytes;
+
+    // Comma-delimited PracticeArea enum names the firm has enabled. Validated
+    // against the PracticeArea enum on update.
+    private String enabledPracticeAreas;
 }

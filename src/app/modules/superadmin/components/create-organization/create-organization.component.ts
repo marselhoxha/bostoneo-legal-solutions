@@ -5,6 +5,7 @@ import { Subject, takeUntil } from 'rxjs';
 import Swal from 'sweetalert2';
 import { SuperAdminService } from '../../services/superadmin.service';
 import { CreateOrganization } from '../../models/superadmin.models';
+import { PRACTICE_AREA_OPTIONS, PracticeAreaOption, labelFor as practiceAreaLabelFor } from '@app/shared/constants/practice-area-options';
 
 interface PlanOption {
   value: string;
@@ -83,6 +84,8 @@ export class CreateOrganizationComponent implements OnDestroy {
     { control: 'boldsignEnabled', label: 'BoldSign e-Signatures', description: 'Enable electronic document signing via BoldSign', icon: 'ri-quill-pen-line' }
   ];
 
+  practiceAreaOptions: ReadonlyArray<PracticeAreaOption> = PRACTICE_AREA_OPTIONS;
+
   timezones: string[] = [
     'America/New_York',
     'America/Chicago',
@@ -108,7 +111,8 @@ export class CreateOrganizationComponent implements OnDestroy {
       phone: [''],
       address: [''],
       website: [''],
-      timezone: ['America/New_York']
+      timezone: ['America/New_York'],
+      enabledPracticeAreas: [[] as string[], [Validators.required, Validators.minLength(1)]]
     });
 
     this.planForm = this.fb.group({
@@ -234,6 +238,11 @@ export class CreateOrganizationComponent implements OnDestroy {
     return plan ? plan.label : '';
   }
 
+  /** Resolve a PracticeArea enum value to its human-readable label */
+  getPracticeAreaLabel(value: string): string {
+    return practiceAreaLabelFor(value);
+  }
+
   /** Get enabled features as comma-separated string */
   getEnabledFeatures(): string {
     const enabled: string[] = [];
@@ -253,6 +262,7 @@ export class CreateOrganizationComponent implements OnDestroy {
 
     const skipEmail = this.adminForm.get('skipEmail')?.value || false;
     const tempPwd = this.adminForm.get('temporaryPassword')?.value || undefined;
+    const selectedAreas: string[] = this.firmInfoForm.get('enabledPracticeAreas')?.value || [];
     const data: CreateOrganization = {
       name: this.firmInfoForm.get('name')?.value,
       slug: this.firmInfoForm.get('slug')?.value,
@@ -268,7 +278,8 @@ export class CreateOrganizationComponent implements OnDestroy {
       adminLastName: this.adminForm.get('adminLastName')?.value,
       adminEmail: this.adminForm.get('adminEmail')?.value,
       skipEmail: skipEmail || undefined,
-      temporaryPassword: skipEmail ? tempPwd : undefined
+      temporaryPassword: skipEmail ? tempPwd : undefined,
+      enabledPracticeAreas: selectedAreas.length > 0 ? selectedAreas.join(',') : undefined
     };
 
     this.superAdminService.createOrganization(data)
@@ -296,7 +307,7 @@ export class CreateOrganizationComponent implements OnDestroy {
               this.router.navigate(['/superadmin/organizations']);
             } else {
               this.currentStep = 1;
-              this.firmInfoForm.reset();
+              this.firmInfoForm.reset({ timezone: 'America/New_York', enabledPracticeAreas: [] });
               this.planForm.reset({ planType: 'STARTER', maxUsers: 5, maxCases: 100, maxStorageBytes: 5368709120 });
               this.adminForm.reset();
               this.featuresForm.reset({ emailNotifications: true, smsNotifications: false, whatsapp: false, twilio: false, boldSign: false });

@@ -164,6 +164,29 @@
         </div>
       </div>
     </div>
+
+    <div class="mb-3" *ngIf="inviteRole === 'ROLE_ATTORNEY'">
+      <label class="form-label">
+        Practice areas <span class="text-danger">*</span>
+      </label>
+      <ng-select
+        [items]="orgEnabledOptions"
+        bindLabel="label"
+        bindValue="value"
+        [multiple]="true"
+        [closeOnSelect]="false"
+        [(ngModel)]="selectedPracticeAreas"
+        name="selectedPracticeAreas"
+        placeholder="Select practice areas this attorney handles"
+        [disabled]="isSubmitting || orgEnabledOptions.length === 0">
+      </ng-select>
+      <small class="form-text text-muted" *ngIf="orgEnabledOptions.length > 0">
+        Choose from this firm's enabled practice areas.
+      </small>
+      <small class="form-text text-danger" *ngIf="orgEnabledOptions.length === 0">
+        No practice areas available - verify this organization has practice areas enabled.
+      </small>
+    </div>
   </div>
   <div class="modal-footer border-0 pt-0">
     <button type="button" class="btn btn-light" (click)="modal.dismiss()" [disabled]="isSubmitting">Cancel</button>

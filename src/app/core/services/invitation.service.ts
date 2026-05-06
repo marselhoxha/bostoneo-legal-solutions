@@ -43,10 +43,20 @@ export class InvitationService {
   }
 
   /**
-   * Send a new invitation
+   * Send a new invitation.
+   * For ATTORNEY-role invites, callers must pass a non-empty `practiceAreas` array;
+   * the values are PracticeArea enum names (e.g. "PERSONAL_INJURY") that the backend
+   * persists as a comma-delimited string on the OrganizationInvitation row.
+   * For other roles, leave `practiceAreas` empty - the backend ignores it.
    */
-  sendInvitation(orgId: number, email: string, role: string): Observable<OrganizationInvitation> {
-    return this.http.post<any>(`${this.apiUrl}/invitations`, { email, role }).pipe(
+  sendInvitation(
+    orgId: number,
+    email: string,
+    role: string,
+    practiceAreas: string[] = []
+  ): Observable<OrganizationInvitation> {
+    const body = { email, role, practiceAreas: practiceAreas.join(',') };
+    return this.http.post<any>(`${this.apiUrl}/invitations`, body).pipe(
       map(response => response.data?.invitation)
     );
   }

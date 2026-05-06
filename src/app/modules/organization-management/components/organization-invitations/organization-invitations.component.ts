@@ -4,8 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { InvitationService } from '../../../../core/services/invitation.service';
+import { OrganizationService } from '../../../../core/services/organization.service';
 import { OrganizationInvitation, ROLE_OPTIONS } from '../../models/organization.model';
+import { PRACTICE_AREA_OPTIONS, PracticeAreaOption } from '@app/shared/constants/practice-area-options';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -14,7 +17,7 @@ import Swal from 'sweetalert2';
   styleUrls: ['./organization-invitations.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, NgSelectModule]
 })
 export class OrganizationInvitationsComponent implements OnInit, OnDestroy {
   @Input() organizationId!: number;
@@ -31,14 +34,42 @@ export class OrganizationInvitationsComponent implements OnInit, OnDestroy {
   inviteRole = 'ROLE_ATTORNEY';
   isSubmitting = false;
 
+  // Practice areas for the attorney-only multi-select.
+  // orgEnabledOptions is the intersection of the global options with the org's enabled CSV.
+  selectedPracticeAreas: string[] = [];
+  orgEnabledOptions: PracticeAreaOption[] = [];
+
   constructor(
     private invitationService: InvitationService,
+    private organizationService: OrganizationService,
     private modalService: NgbModal,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadInvitations();
+    this.loadOrgEnabledPracticeAreas();
+  }
+
+  private loadOrgEnabledPracticeAreas(): void {
+    if (!this.organizationId) {
+      this.orgEnabledOptions = [];
+      return;
+    }
+
+    this.organizationService.getOrganizationById(this.organizationId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(org => {
+        const csv = org?.enabledPracticeAreas ?? '';
+        if (!csv.trim()) {
+          this.orgEnabledOptions = [];
+          this.cdr.markForCheck();
+          return;
+        }
+        const enabled = new Set(csv.split(',').map(s => s.trim()).filter(Boolean));
+        this.orgEnabledOptions = PRACTICE_AREA_OPTIONS.filter(o => enabled.has(o.value));
+        this.cdr.markForCheck();
+      });
   }
 
   ngOnDestroy(): void {
@@ -79,14 +110,29 @@ export class OrganizationInvitationsComponent implements OnInit, OnDestroy {
   openInviteModal(content: any): void {
     this.inviteEmail = '';
     this.inviteRole = 'USER';
+    this.selectedPracticeAreas = [];
     this.modalService.open(content, { centered: true, size: 'md' });
   }
 
   sendInvitation(modal: any): void {
     if (!this.inviteEmail || !this.inviteRole) return;
 
+    if (this.inviteRole === 'ROLE_ATTORNEY' && this.selectedPracticeAreas.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Please select at least one practice area',
+        text: 'Attorney invitations must be scoped to one or more practice areas the firm handles.'
+      });
+      return;
+    }
+
     this.isSubmitting = true;
-    this.invitationService.sendInvitation(this.organizationId, this.inviteEmail, this.inviteRole)
+    this.invitationService.sendInvitation(
+      this.organizationId,
+      this.inviteEmail,
+      this.inviteRole,
+      this.selectedPracticeAreas
+    )
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {

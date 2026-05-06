@@ -143,6 +143,27 @@
                   placeholder="https://www.example.com"
                 >
               </div>
+
+              <div class="mb-3">
+                <label for="enabledPracticeAreas" class="form-label">
+                  Practice areas this firm handles <span class="text-danger">*</span>
+                </label>
+                <ng-select
+                  [items]="practiceAreaOptions"
+                  bindLabel="label"
+                  bindValue="value"
+                  [multiple]="true"
+                  [closeOnSelect]="false"
+                  formControlName="enabledPracticeAreas"
+                  labelForId="enabledPracticeAreas"
+                  placeholder="Select one or more practice areas"
+                  [class.is-invalid]="hasError(firmInfoForm, 'enabledPracticeAreas')">
+                </ng-select>
+                <small class="form-text text-muted">You can change this later by editing the organization.</small>
+                <div class="invalid-feedback d-block" *ngIf="hasError(firmInfoForm, 'enabledPracticeAreas')">
+                  Please select at least one practice area.
+                </div>
+              </div>
             </form>
           </div>
 
@@ -371,6 +392,18 @@
                     <tr>
                       <td class="text-muted ps-0">Timezone</td>
                       <td class="fw-medium">{{ firmInfoForm.get('timezone')?.value }}</td>
+                    </tr>
+                    <tr>
+                      <td class="text-muted ps-0">Practice Areas</td>
+                      <td class="fw-medium">
+                        <ng-container *ngIf="firmInfoForm.get('enabledPracticeAreas')?.value?.length; else noAreas">
+                          <span class="badge bg-primary-subtle text-primary me-1 mb-1"
+                                *ngFor="let v of firmInfoForm.get('enabledPracticeAreas')?.value">
+                            {{ getPracticeAreaLabel(v) }}
+                          </span>
+                        </ng-container>
+                        <ng-template #noAreas><span class="text-muted">None selected</span></ng-template>
+                      </td>
                     </tr>
                   </tbody>
                 </table>

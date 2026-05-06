@@ -124,6 +124,26 @@
                   </div>
                 </div>
 
+                <div class="col-12">
+                  <label class="form-label" for="enabledPracticeAreas">
+                    Practice areas this firm handles <span class="text-danger">*</span>
+                  </label>
+                  <ng-select
+                    [items]="practiceAreaOptions"
+                    bindLabel="label"
+                    bindValue="value"
+                    [multiple]="true"
+                    [closeOnSelect]="false"
+                    formControlName="enabledPracticeAreas"
+                    placeholder="Select one or more practice areas"
+                    [ngClass]="{'is-invalid': isFieldInvalid('enabledPracticeAreas')}">
+                  </ng-select>
+                  <div class="form-text">Determines which attorneys can be assigned and which case templates are available.</div>
+                  <div class="invalid-feedback d-block" *ngIf="isFieldInvalid('enabledPracticeAreas')">
+                    Please select at least one practice area.
+                  </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="col-12 mt-4">
                   <div class="d-flex justify-content-end gap-2">

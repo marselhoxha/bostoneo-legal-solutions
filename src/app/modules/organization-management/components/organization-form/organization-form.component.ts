@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { OrganizationService, Organization } from '../../../../core/services/organization.service';
 import { RbacService } from '../../../../core/services/rbac.service';
+import { PRACTICE_AREA_OPTIONS, PracticeAreaOption } from '@app/shared/constants/practice-area-options';
 import Swal from 'sweetalert2';
 
 declare var flatpickr: any;
@@ -42,6 +43,8 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
     { value: 'MIDSIZE_FIRM', label: 'Mid-size Firm' },
     { value: 'LARGE_FIRM', label: 'Large Firm' }
   ];
+
+  practiceAreaOptions: ReadonlyArray<PracticeAreaOption> = PRACTICE_AREA_OPTIONS;
 
   // For read-only plan display
   currentPlanLabel = '';
@@ -162,7 +165,10 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
       signatureReminderEmail: [true],
       signatureReminderSms: [true],
       signatureReminderWhatsapp: [false],
-      signatureReminderDays: ['7,3,1']
+      signatureReminderDays: ['7,3,1'],
+
+      // Practice Areas (held as string[]; serialized to CSV on submit)
+      enabledPracticeAreas: [[] as string[], [Validators.required, Validators.minLength(1)]]
     });
 
     // Auto-generate slug from name (only in create mode)
@@ -215,6 +221,11 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
             // Store original slug for edit mode validation
             this.originalSlug = org.slug || '';
 
+            const enabledAreas: string[] = (org.enabledPracticeAreas ?? '')
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean);
+
             this.organizationForm.patchValue({
               name: org.name,
               slug: org.slug,
@@ -232,7 +243,8 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
               signatureReminderEmail: org.signatureReminderEmail,
               signatureReminderSms: org.signatureReminderSms,
               signatureReminderWhatsapp: org.signatureReminderWhatsapp,
-              signatureReminderDays: org.signatureReminderDays
+              signatureReminderDays: org.signatureReminderDays,
+              enabledPracticeAreas: enabledAreas
             });
 
             // Set read-only display values for non-SUPERADMIN
@@ -322,10 +334,16 @@ export class OrganizationFormComponent implements OnInit, OnDestroy {
 
     this.isSaving = true;
     const formValue = this.organizationForm.value;
+    // Backend expects enabledPracticeAreas as a comma-delimited string of PracticeArea enum names.
+    const selectedAreas: string[] = formValue.enabledPracticeAreas ?? [];
+    const payload = {
+      ...formValue,
+      enabledPracticeAreas: selectedAreas.join(',')
+    };
 
     const saveOperation = this.isEditMode
-      ? this.organizationService.updateOrganization(this.organizationId!, formValue)
-      : this.organizationService.createOrganization(formValue);
+      ? this.organizationService.updateOrganization(this.organizationId!, payload)
+      : this.organizationService.createOrganization(payload);
 
     saveOperation.pipe(takeUntil(this.destroy$)).subscribe({
       next: (org) => {

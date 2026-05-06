@@ -32,6 +32,7 @@ export interface Organization {
   signatureReminderSms?: boolean;
   signatureReminderWhatsapp?: boolean;
   signatureReminderDays?: string;
+  enabledPracticeAreas?: string;
   createdAt?: string;
   updatedAt?: string;
   isActive?: boolean;

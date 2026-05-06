@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgbDropdownModule, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 import { OrganizationManagementRoutingModule } from './organization-management-routing.module';
 import { OrganizationListComponent } from './components/organization-list/organization-list.component';
@@ -30,6 +31,7 @@ import { OrganizationPlanComponent } from './components/organization-plan/organi
     RouterModule,
     NgbDropdownModule,
     NgbModalModule,
+    NgSelectModule,
     OrganizationManagementRoutingModule,
     OrganizationTeamComponent,
     OrganizationInvitationsComponent

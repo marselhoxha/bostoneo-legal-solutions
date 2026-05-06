@@ -46,6 +46,11 @@ public class CreateOrganizationDTO {
     private Integer maxCases;
     private Long maxStorageBytes;
 
+    // Comma-delimited PracticeArea enum names the firm has enabled. Optional —
+    // when null/blank the service falls back to PERSONAL_INJURY so v1 always has
+    // at least one practice area to drive dashboards/navigation.
+    private String enabledPracticeAreas;
+
     // Skip email invitation (superadmin sets up password manually)
     private Boolean skipEmail;
     private String temporaryPassword;

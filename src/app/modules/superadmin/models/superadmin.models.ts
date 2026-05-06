@@ -291,6 +291,7 @@ export interface CreateOrganization {
   maxStorageBytes?: number;
   skipEmail?: boolean;
   temporaryPassword?: string;
+  enabledPracticeAreas?: string;
 }
 
 export interface UpdateOrganization {

@@ -1,12 +1,15 @@
 package com.bostoneo.bostoneosolutions.controller;
 
 import com.bostoneo.bostoneosolutions.annotation.AuditLog;
+import com.bostoneo.bostoneosolutions.exception.ApiException;
 import com.bostoneo.bostoneosolutions.model.HttpResponse;
+import com.bostoneo.bostoneosolutions.model.Organization;
 import com.bostoneo.bostoneosolutions.model.OrganizationInvitation;
 import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantService;
 import com.bostoneo.bostoneosolutions.service.OrganizationInvitationService;
 import com.bostoneo.bostoneosolutions.service.OrganizationService;
+import com.bostoneo.bostoneosolutions.util.PracticeAreaCsvValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -82,11 +85,27 @@ public class OrganizationInvitationController {
 
         log.info("Creating invitation for {} to organization {}", request.email(), orgId);
 
+        // Validate / normalize practiceAreas based on role.
+        // ATTORNEY: practiceAreas is REQUIRED and must be a subset of the
+        // org's enabledPracticeAreas. Other roles: practiceAreas is ignored.
+        String practiceAreasForInvite = null;
+        if (isAttorneyRole(request.role())) {
+            String normalized = PracticeAreaCsvValidator.validateAndNormalize(request.practiceAreas());
+            if (normalized == null) {
+                throw new ApiException("At least one practice area is required for attorney invitations.");
+            }
+            Organization org = organizationService.getOrganizationEntityById(orgId)
+                    .orElseThrow(() -> new ApiException("Organization not found: " + orgId));
+            PracticeAreaCsvValidator.requireSubset(normalized, org.getEnabledPracticeAreas());
+            practiceAreasForInvite = normalized;
+        }
+
         OrganizationInvitation invitation = invitationService.createInvitation(
                 orgId,
                 request.email(),
                 request.role(),
-                currentUser.getId()
+                currentUser.getId(),
+                practiceAreasForInvite
         );
 
         return ResponseEntity.status(CREATED).body(
@@ -98,6 +117,16 @@ public class OrganizationInvitationController {
                         .statusCode(CREATED.value())
                         .build()
         );
+    }
+
+    /**
+     * The role string the frontend sends is one of: "USER", "ATTORNEY",
+     * "PARALEGAL", etc. — sometimes prefixed with "ROLE_". Accept both shapes.
+     */
+    private static boolean isAttorneyRole(String role) {
+        if (role == null) return false;
+        String stripped = role.startsWith("ROLE_") ? role.substring(5) : role;
+        return "ATTORNEY".equalsIgnoreCase(stripped);
     }
 
     /**
@@ -226,6 +255,12 @@ public class OrganizationInvitationController {
         );
     }
 
-    // Request record for creating invitations
-    public record InvitationRequest(String email, String role) {}
+    // Request record for creating invitations.
+    // practiceAreas is optional in JSON; required by validation when role is
+    // ATTORNEY, ignored otherwise.
+    public record InvitationRequest(String email, String role, String practiceAreas) {
+        public InvitationRequest(String email, String role) {
+            this(email, role, null);
+        }
+    }
 }

@@ -8,9 +8,23 @@ import java.util.Optional;
 public interface OrganizationInvitationService {
 
     /**
-     * Create a new invitation
+     * Create a new invitation.
+     *
+     * @param practiceAreas comma-delimited PracticeArea enum names; ignored
+     *                      unless {@code role} is ATTORNEY. Caller is
+     *                      responsible for validating the value before passing
+     *                      it in.
      */
-    OrganizationInvitation createInvitation(Long organizationId, String email, String role, Long createdBy);
+    OrganizationInvitation createInvitation(Long organizationId, String email, String role, Long createdBy,
+                                            String practiceAreas);
+
+    /**
+     * Backwards-compatible overload — equivalent to passing {@code null} for
+     * {@code practiceAreas}.
+     */
+    default OrganizationInvitation createInvitation(Long organizationId, String email, String role, Long createdBy) {
+        return createInvitation(organizationId, email, role, createdBy, null);
+    }
 
     /**
      * Get invitation by token

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 import { SuperadminRoutingModule } from './superadmin-routing.module';
 import { SuperadminDashboardComponent } from './components/superadmin-dashboard/superadmin-dashboard.component';
@@ -43,6 +44,7 @@ import { ImageUrlPipe } from '../../pipes/image-url.pipe';
     NgbModule,
     SuperadminRoutingModule,
     NgApexchartsModule,
+    NgSelectModule,
     ImageUrlPipe
   ]
 })

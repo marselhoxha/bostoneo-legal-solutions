@@ -39,6 +39,10 @@ public class OrganizationDTO {
     // Jurisdiction — 2-letter US state code (e.g., "TX", "MA")
     private String state;
 
+    // Comma-delimited PracticeArea enum names enabled for the firm. Drives
+    // navigation, dashboard widgets, and feature gating.
+    private String enabledPracticeAreas;
+
     // Email Branding
     private String primaryColor;
 
@@ -94,6 +98,7 @@ public class OrganizationDTO {
                 .planExpiresAt(org.getPlanExpiresAt())
                 .firmType(org.getFirmType())
                 .state(org.getState())
+                .enabledPracticeAreas(org.getEnabledPracticeAreas())
                 .primaryColor(org.getPrimaryColor())
                 .twilioEnabled(org.getTwilioEnabled())
                 .twilioPhoneNumber(org.getTwilioPhoneNumber())
@@ -132,6 +137,7 @@ public class OrganizationDTO {
         if (address != null) org.setAddress(address);
         if (firmType != null) org.setFirmType(firmType);
         if (state != null) org.setState(state);
+        if (enabledPracticeAreas != null) org.setEnabledPracticeAreas(enabledPracticeAreas);
         if (primaryColor != null) org.setPrimaryColor(primaryColor);
         if (smsEnabled != null) org.setSmsEnabled(smsEnabled);
         if (whatsappEnabled != null) org.setWhatsappEnabled(whatsappEnabled);

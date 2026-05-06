@@ -11,6 +11,7 @@ import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.repository.OrganizationRepository;
 import com.bostoneo.bostoneosolutions.repository.PipelineStageRepository;
 import com.bostoneo.bostoneosolutions.service.OrganizationService;
+import com.bostoneo.bostoneosolutions.util.PracticeAreaCsvValidator;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
@@ -71,6 +72,9 @@ public class OrganizationServiceImpl implements OrganizationService {
             throw new ApiException("Organization slug already exists: " + slug);
         }
 
+        // Validate (or default) the comma-delimited PracticeArea CSV before persisting.
+        String enabledPracticeAreas = PracticeAreaCsvValidator.validateOrDefault(dto.getEnabledPracticeAreas());
+
         Organization org = Organization.builder()
                 .name(dto.getName())
                 .slug(slug)
@@ -80,6 +84,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .phone(dto.getPhone())
                 .address(dto.getAddress())
                 .planType(dto.getPlanType() != null ? dto.getPlanType() : Organization.PlanType.FREE)
+                .enabledPracticeAreas(enabledPracticeAreas)
                 .smsEnabled(dto.getSmsEnabled() != null ? dto.getSmsEnabled() : true)
                 .whatsappEnabled(dto.getWhatsappEnabled() != null ? dto.getWhatsappEnabled() : false)
                 .emailEnabled(dto.getEmailEnabled() != null ? dto.getEmailEnabled() : true)
@@ -167,6 +172,13 @@ public class OrganizationServiceImpl implements OrganizationService {
             if (!isSlugAvailable(dto.getSlug())) {
                 throw new ApiException("Organization slug already exists: " + dto.getSlug());
             }
+        }
+
+        // Validate enabledPracticeAreas if the caller is updating it.
+        // Blank → null so the partial-update guard in updateEntity skips it.
+        if (dto.getEnabledPracticeAreas() != null) {
+            dto.setEnabledPracticeAreas(
+                    PracticeAreaCsvValidator.validateAndNormalize(dto.getEnabledPracticeAreas()));
         }
 
         dto.updateEntity(org);

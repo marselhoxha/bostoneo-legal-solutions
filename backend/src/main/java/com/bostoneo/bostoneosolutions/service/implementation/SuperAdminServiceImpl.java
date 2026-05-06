@@ -15,6 +15,7 @@ import com.bostoneo.bostoneosolutions.service.NotificationService;
 import com.bostoneo.bostoneosolutions.service.OnlineUserService;
 import com.bostoneo.bostoneosolutions.service.SuperAdminService;
 import com.bostoneo.bostoneosolutions.service.TokenBlacklistService;
+import com.bostoneo.bostoneosolutions.util.PracticeAreaCsvValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -1039,6 +1040,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             throw new ApiException("Organization with slug '" + dto.getSlug() + "' already exists");
         }
 
+        // Validate (or default) the comma-delimited PracticeArea CSV before persisting.
+        String enabledPracticeAreas = PracticeAreaCsvValidator.validateOrDefault(dto.getEnabledPracticeAreas());
+
         // Create organization
         Organization org = Organization.builder()
             .name(dto.getName())
@@ -1049,6 +1053,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             .phone(dto.getPhone())
             .address(dto.getAddress())
             .website(dto.getWebsite())
+            .enabledPracticeAreas(enabledPracticeAreas)
             .maxUsers(dto.getMaxUsers() != null ? dto.getMaxUsers() : 5)
             .maxCases(dto.getMaxCases() != null ? dto.getMaxCases() : 100)
             .maxStorageBytes(dto.getMaxStorageBytes() != null ? dto.getMaxStorageBytes() : 5368709120L)
@@ -1201,6 +1206,11 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         if (dto.getMaxUsers() != null) org.setMaxUsers(dto.getMaxUsers());
         if (dto.getMaxCases() != null) org.setMaxCases(dto.getMaxCases());
         if (dto.getMaxStorageBytes() != null) org.setMaxStorageBytes(dto.getMaxStorageBytes());
+        if (dto.getEnabledPracticeAreas() != null) {
+            // Validate and normalize; null result (blank input) is left unchanged.
+            String normalized = PracticeAreaCsvValidator.validateAndNormalize(dto.getEnabledPracticeAreas());
+            if (normalized != null) org.setEnabledPracticeAreas(normalized);
+        }
 
         return organizationRepository.save(org);
     }

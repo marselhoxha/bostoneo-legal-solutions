@@ -1,9 +1,11 @@
 package com.bostoneo.bostoneosolutions.service.implementation;
 
 import com.bostoneo.bostoneosolutions.exception.ApiException;
+import com.bostoneo.bostoneosolutions.model.Attorney;
 import com.bostoneo.bostoneosolutions.model.Organization;
 import com.bostoneo.bostoneosolutions.model.OrganizationInvitation;
 import com.bostoneo.bostoneosolutions.model.User;
+import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
 import com.bostoneo.bostoneosolutions.repository.OrganizationInvitationRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.service.EmailService;
@@ -31,6 +33,7 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
 
     private final OrganizationInvitationRepository invitationRepository;
     private final UserRepository<User> userRepository;
+    private final AttorneyRepository attorneyRepository;
     private final EmailService emailService;
     private final OrganizationService organizationService;
     private final TenantService tenantService;
@@ -42,12 +45,14 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     public OrganizationInvitationServiceImpl(
             OrganizationInvitationRepository invitationRepository,
             UserRepository<User> userRepository,
+            AttorneyRepository attorneyRepository,
             EmailService emailService,
             OrganizationService organizationService,
             TenantService tenantService,
             @Qualifier("taskExecutor") TaskExecutor taskExecutor) {
         this.invitationRepository = invitationRepository;
         this.userRepository = userRepository;
+        this.attorneyRepository = attorneyRepository;
         this.emailService = emailService;
         this.organizationService = organizationService;
         this.tenantService = tenantService;
@@ -60,7 +65,8 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
     }
 
     @Override
-    public OrganizationInvitation createInvitation(Long organizationId, String email, String role, Long createdBy) {
+    public OrganizationInvitation createInvitation(Long organizationId, String email, String role, Long createdBy,
+                                                   String practiceAreas) {
         log.info("Creating invitation for email: {} to organization: {}", email, organizationId);
 
         // Check if user already exists in the organization
@@ -81,6 +87,7 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
                 .token(UUID.randomUUID().toString())
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .createdBy(createdBy)
+                .practiceAreas(practiceAreas)
                 .build();
 
         OrganizationInvitation saved = invitationRepository.save(invitation);
@@ -137,6 +144,27 @@ public class OrganizationInvitationServiceImpl implements OrganizationInvitation
         // Mark invitation as accepted
         invitation.accept();
         OrganizationInvitation saved = invitationRepository.save(invitation);
+
+        // If the invitation carries practiceAreas (only set for ATTORNEY
+        // invitations), upsert an Attorney row so the assignment is durable.
+        // Other Attorney fields are intentionally left as defaults — the
+        // attorney can fill in their profile after onboarding.
+        String invitationPracticeAreas = invitation.getPracticeAreas();
+        if (invitationPracticeAreas != null && !invitationPracticeAreas.isBlank()) {
+            Long orgId = invitation.getOrganizationId();
+            Attorney attorney = attorneyRepository.findByUserIdAndOrganizationId(userId, orgId)
+                    .orElseGet(() -> Attorney.builder()
+                            .userId(userId)
+                            .organizationId(orgId)
+                            .isActive(true)
+                            .currentCaseLoad(0)
+                            .maxCaseLoad(50)
+                            .build());
+            attorney.setPracticeAreas(invitationPracticeAreas);
+            attorneyRepository.save(attorney);
+            log.info("Persisted practiceAreas '{}' on attorney record for user {} in org {}",
+                    invitationPracticeAreas, userId, orgId);
+        }
 
         log.info("User {} joined organization {} via invitation {}",
                 userId, invitation.getOrganizationId(), invitation.getId());
