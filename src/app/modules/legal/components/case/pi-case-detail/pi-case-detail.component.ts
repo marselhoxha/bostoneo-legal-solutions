@@ -6222,12 +6222,12 @@ export class PiCaseDetailComponent implements OnInit, OnDestroy {
     // Volume mix derived from typeBreakdown — sum to total then normalize
     const total = Math.max(1, h.volume14d);
     const mixColors: { [k: string]: string } = {
-      EMAIL: 'var(--vz-info)',
-      CALL: 'var(--vz-success)',
+      EMAIL: 'var(--legience-info)',
+      CALL: 'var(--legience-success)',
       LETTER: '#6d28d9',
       MEETING: '#b45309',
       IN_PERSON: '#0d9488',
-      OTHER: 'var(--vz-secondary-color)',
+      OTHER: 'var(--legience-text-subtle)',
     };
     const volumeMix = Object.entries(h.typeBreakdown ?? {}).map(([type, count]) => ({
       widthPct: Math.round((count / total) * 1000) / 10,
@@ -6616,7 +6616,7 @@ export class PiCaseDetailComponent implements OnInit, OnDestroy {
         { icon: 'ri-shield-keyhole-line', html: 'GEICO · policy GA-90014 <span class="prov ai" title="extracted from police report">A</span>' },
         { icon: 'ri-map-pin-line',       html: '78 Park Dr, Brookline, MA 02446 <span class="prov ai" title="from police report">A</span>' },
         { icon: 'ri-mail-line',          link: 'Add email' },
-        { icon: 'ri-checkbox-circle-line', iconClass: 'text-success', html: '<span style="color:var(--vz-success);font-weight:500;">Service confirmed</span>' },
+        { icon: 'ri-checkbox-circle-line', iconClass: 'text-success', html: '<span style="color:var(--legience-success);font-weight:500;">Service confirmed</span>' },
       ]},
       { avatarType: 'witness', initials: 'JP', name: 'James Park', role: 'Passenger Witness', roleClass: 'role-wit',
         phone: '(617) 555-2218', rows: [
@@ -6626,7 +6626,7 @@ export class PiCaseDetailComponent implements OnInit, OnDestroy {
         { icon: 'ri-attachment-line', link: 'park-statement-jun7.mp3' },
       ]},
       { avatarType: 'expert', initials: '+', name: 'Engage expert', role: 'Expert (optional)', roleClass: 'role-exp', placeholder: true, rows: [
-        { icon: 'ri-information-line', html: '<span style="color:var(--vz-secondary-color);font-size:12px;">Decision pending: accident reconstructionist may be useful if liability becomes contested. <a href="javascript:void(0)" style="color:var(--vz-link-color, var(--vz-primary));text-decoration:none;">Open decision →</a></span>' },
+        { icon: 'ri-information-line', html: '<span style="color:var(--legience-text-subtle);font-size:12px;">Decision pending: accident reconstructionist may be useful if liability becomes contested. <a href="javascript:void(0)" style="color:var(--legience-text-link);text-decoration:none;">Open decision →</a></span>' },
       ]},
       { avatarType: 'counsel', initials: 'KF', name: 'Karen Foster, Esq.', role: 'Defense counsel', roleClass: 'role-counsel',
         phone: '(617) 555-7700', email: 'kfoster@hartfordlegal.com', rows: [

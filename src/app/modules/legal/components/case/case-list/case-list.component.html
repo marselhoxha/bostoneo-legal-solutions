@@ -1,373 +1,551 @@
-<div class="container-fluid">
-  <!-- Page Title & Breadcrumb -->
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <h4 class="mb-sm-0">Cases</h4>
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a routerLink="/">Home</a></li>
-            <li class="breadcrumb-item"><a routerLink="/legal/cases">Case Management</a></li>
-            <li class="breadcrumb-item active">Cases</li>
-          </ol>
+<!-- ════════════════════════════════════════════════════════════════
+     Cases — D1 Power Table with Board / Calendar / Map view modes
+     ════════════════════════════════════════════════════════════════ -->
+
+<div class="cl-page">
+
+  <!-- Page title -->
+  <div class="cl-page-title">
+    <h2>Cases <span class="cl-count">{{ totalCount() }} total · {{ visibleCount() }} visible</span></h2>
+    <div class="cl-page-actions">
+      <button class="cl-btn cl-btn-sm" (click)="loadCases()" [disabled]="isLoading">
+        <i class="ri-refresh-line"></i> Refresh
+      </button>
+      <button class="cl-btn cl-btn-sm">
+        <i class="ri-download-2-line"></i> Export
+      </button>
+      <button class="cl-btn cl-btn-primary cl-btn-sm" (click)="createCase()">
+        <i class="ri-add-line"></i> New Case
+      </button>
+    </div>
+  </div>
+
+  <!-- Main card -->
+  <div class="cl-card" (click)="closeFilterChip()">
+
+    <!-- Saved-view tabs -->
+    <div class="cl-views-bar">
+      <ng-container *ngFor="let v of savedViews">
+        <div class="cl-view"
+             [class.active]="currentView === v.key"
+             (click)="$event.stopPropagation(); applySavedView(v.key)">
+          {{ v.name }}
+          <span class="cl-badge" *ngIf="v.count !== undefined">{{ v.count }}</span>
+          <i class="ri-close-line cl-view-x" *ngIf="!v.builtIn" (click)="deleteSavedView(v.key, $event)" title="Delete view"></i>
+        </div>
+      </ng-container>
+      <div class="cl-view cl-view-add" (click)="$event.stopPropagation(); openSaveViewDialog()">
+        <i class="ri-add-line"></i> Save view
+      </div>
+    </div>
+
+    <!-- Toolbar: search + view switcher -->
+    <div class="cl-toolbar">
+      <div class="cl-search">
+        <i class="ri-search-line"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          placeholder="Search cases, clients, demands, court..."
+          (click)="$event.stopPropagation()" />
+      </div>
+      <div class="cl-view-switcher">
+        <button [class.active]="viewMode === 'table'" (click)="$event.stopPropagation(); setViewMode('table')" title="Table">
+          <i class="ri-list-check-2"></i><span>Table</span>
+        </button>
+        <button [class.active]="viewMode === 'board'" (click)="$event.stopPropagation(); setViewMode('board')" title="Board">
+          <i class="ri-layout-column-line"></i><span>Board</span>
+        </button>
+        <button [class.active]="viewMode === 'calendar'" (click)="$event.stopPropagation(); setViewMode('calendar')" title="Deadlines — cases plotted by their next deadline date">
+          <i class="ri-calendar-event-line"></i><span>Deadlines</span>
+        </button>
+        <button [class.active]="viewMode === 'map'" (click)="$event.stopPropagation(); setViewMode('map')" title="Map">
+          <i class="ri-map-pin-line"></i><span>Map</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter chips row -->
+    <div class="cl-filters">
+      <span class="cl-filters-label">Filter</span>
+
+      <!-- Status chip -->
+      <div class="cl-chip-wrap">
+        <span class="cl-chip"
+              [class.active]="advFilters.status.length"
+              (click)="toggleFilterChip('status', $event)">
+          Status<span class="cl-chip-val" *ngIf="advFilters.status.length">: {{ advFilters.status.length }}</span>
+          <i class="ri-arrow-down-s-line"></i>
+        </span>
+        <div class="cl-chip-dropdown" *ngIf="openFilterChip === 'status'" (click)="$event.stopPropagation()">
+          <div class="cl-fd-list">
+            <div class="cl-fd-item" *ngFor="let s of distinctStatuses()" (click)="toggleFilterValue('status', s)" [class.checked]="isFilterChecked('status', s)">
+              <span class="cl-checkbox" [class.checked]="isFilterChecked('status', s)"></span>{{ s }}
+            </div>
+            <div class="cl-fd-empty" *ngIf="distinctStatuses().length === 0">No statuses available</div>
+          </div>
+          <div class="cl-fd-footer">
+            <a (click)="clearFilterCategory('status')">Clear</a>
+            <a class="apply" (click)="closeFilterChip()">Apply ({{ advFilters.status.length }})</a>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Actions Row -->
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
-    <!-- Search Box -->
-    <div class="search-box d-none d-md-block">
-      <input type="text" class="form-control search-input"
-             [(ngModel)]="searchTerm"
-             (keyup)="onSearch()"
-             placeholder="Search cases...">
-      <i class="ri-search-line search-icon"></i>
-    </div>
-    <!-- Quick Actions -->
-    <div class="btn-group">
-      <button class="btn btn-primary" (click)="createCase()">
-        <i class="ri-add-line me-1"></i> New Case
-      </button>
-      <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
-              data-bs-toggle="dropdown" aria-expanded="false">
-        <span class="visually-hidden">Toggle Dropdown</span>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li>
-          <a class="dropdown-item" (click)="createCase()">
-            <i class="ri-briefcase-line me-2 text-primary"></i> Create New Case
-          </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-        <li>
-          <a class="dropdown-item">
-            <i class="ri-file-download-line me-2 text-info"></i> Export Cases
-          </a>
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- Stats Row - Attorney Focused -->
-  <div class="stats-row">
-    <!-- Hearings This Week -->
-    <div class="stat-item cursor-pointer"
-         [class.active]="selectedFilter === 'hearings'"
-         (click)="filterByStatus('hearings')"
-         ngbTooltip="Cases with court hearings in the next 7 days. Click to filter."
-         placement="bottom" [openDelay]="0" [closeDelay]="0" container="body">
-      <div class="stat-header">
-        <span class="stat-label">HEARINGS THIS WEEK</span>
-        <span class="stat-indicator stat-indicator-primary">
-          <i class="ri-calendar-event-line"></i>
+      <!-- Practice chip -->
+      <div class="cl-chip-wrap">
+        <span class="cl-chip"
+              [class.active]="advFilters.practice.length"
+              (click)="toggleFilterChip('practice', $event)">
+          Practice<span class="cl-chip-val" *ngIf="advFilters.practice.length">: {{ advFilters.practice.length }}</span>
+          <i class="ri-arrow-down-s-line"></i>
         </span>
-      </div>
-      <div class="stat-body">
-        <i class="ri-calendar-check-line stat-icon text-primary"></i>
-        <span class="stat-value">{{ hearingsThisWeekCount }}</span>
-      </div>
-    </div>
-
-    <!-- Deadlines Due -->
-    <div class="stat-item cursor-pointer"
-         [class.active]="selectedFilter === 'deadlines'"
-         [class.has-alert]="deadlinesDueCount > 0"
-         (click)="filterByStatus('deadlines')"
-         ngbTooltip="Cases with filing or trial deadlines in the next 7 days. Click to filter."
-         placement="bottom" [openDelay]="0" [closeDelay]="0" container="body">
-      <div class="stat-header">
-        <span class="stat-label">DEADLINES DUE</span>
-        <span class="stat-indicator stat-indicator-warning">
-          <i class="ri-timer-line"></i>
-        </span>
-      </div>
-      <div class="stat-body">
-        <i class="ri-alarm-warning-line stat-icon text-warning"></i>
-        <span class="stat-value">{{ deadlinesDueCount }}</span>
-      </div>
-    </div>
-
-    <!-- Awaiting Response -->
-    <div class="stat-item cursor-pointer"
-         [class.active]="selectedFilter === 'awaiting'"
-         (click)="filterByStatus('awaiting')"
-         ngbTooltip="Cases waiting for client or opposing counsel response. Click to filter."
-         placement="bottom" [openDelay]="0" [closeDelay]="0" container="body">
-      <div class="stat-header">
-        <span class="stat-label">AWAITING RESPONSE</span>
-        <span class="stat-indicator stat-indicator-info">
-          <i class="ri-time-line"></i>
-        </span>
-      </div>
-      <div class="stat-body">
-        <i class="ri-hourglass-line stat-icon text-info"></i>
-        <span class="stat-value">{{ awaitingResponseCount }}</span>
-      </div>
-    </div>
-
-    <!-- Needs Attention -->
-    <div class="stat-item cursor-pointer"
-         [class.active]="selectedFilter === 'attention'"
-         [class.has-alert]="needsAttentionCount > 0"
-         (click)="filterByStatus('attention')"
-         ngbTooltip="High priority, overdue invoices, or missed deadlines. Click to filter."
-         placement="bottom" [openDelay]="0" [closeDelay]="0" container="body">
-      <div class="stat-header">
-        <span class="stat-label">NEEDS ATTENTION</span>
-        <span class="stat-indicator" [ngClass]="needsAttentionCount > 0 ? 'stat-indicator-danger' : 'stat-indicator-success'">
-          <i class="ri-alert-line"></i>
-        </span>
-      </div>
-      <div class="stat-body">
-        <i class="ri-error-warning-line stat-icon" [ngClass]="needsAttentionCount > 0 ? 'text-danger' : 'text-success'"></i>
-        <span class="stat-value">{{ needsAttentionCount }}</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Main Content Card -->
-  <div class="row" style="margin-bottom: 60px;">
-    <div class="col-12">
-      <div class="card border-0 shadow-sm">
-        <div class="card-header bg-transparent border-bottom">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div>
-              <h5 class="mb-1 fw-semibold">All Cases</h5>
-              <p class="text-muted mb-0 fs-13">Manage and track all your legal cases</p>
+        <div class="cl-chip-dropdown" *ngIf="openFilterChip === 'practice'" (click)="$event.stopPropagation()">
+          <div class="cl-fd-list">
+            <div class="cl-fd-item" *ngFor="let p of distinctPractices()" (click)="toggleFilterValue('practice', p)" [class.checked]="isFilterChecked('practice', p)">
+              <span class="cl-checkbox" [class.checked]="isFilterChecked('practice', p)"></span>{{ p }}
             </div>
-            <div class="d-flex align-items-center gap-2">
-              <!-- Filter Badge -->
-              <span class="badge bg-primary-subtle text-primary" *ngIf="selectedFilter">
-                <ng-container [ngSwitch]="selectedFilter">
-                  <span *ngSwitchCase="'hearings'">Hearings This Week</span>
-                  <span *ngSwitchCase="'deadlines'">Deadlines Due</span>
-                  <span *ngSwitchCase="'awaiting'">Awaiting Response</span>
-                  <span *ngSwitchCase="'attention'">Needs Attention</span>
+            <div class="cl-fd-empty" *ngIf="distinctPractices().length === 0">No practice areas yet</div>
+          </div>
+          <div class="cl-fd-footer">
+            <a (click)="clearFilterCategory('practice')">Clear</a>
+            <a class="apply" (click)="closeFilterChip()">Apply ({{ advFilters.practice.length }})</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage chip -->
+      <div class="cl-chip-wrap">
+        <span class="cl-chip"
+              [class.active]="advFilters.stage.length"
+              (click)="toggleFilterChip('stage', $event)">
+          Stage<span class="cl-chip-val" *ngIf="advFilters.stage.length">: {{ advFilters.stage.length }}</span>
+          <i class="ri-arrow-down-s-line"></i>
+        </span>
+        <div class="cl-chip-dropdown" *ngIf="openFilterChip === 'stage'" (click)="$event.stopPropagation()">
+          <div class="cl-fd-list">
+            <div class="cl-fd-item" *ngFor="let s of STAGE_LIST" (click)="toggleFilterValue('stage', s)" [class.checked]="isFilterChecked('stage', s)">
+              <span class="cl-checkbox" [class.checked]="isFilterChecked('stage', s)"></span>{{ s }}
+            </div>
+          </div>
+          <div class="cl-fd-footer">
+            <a (click)="clearFilterCategory('stage')">Clear</a>
+            <a class="apply" (click)="closeFilterChip()">Apply ({{ advFilters.stage.length }})</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attorney chip -->
+      <div class="cl-chip-wrap">
+        <span class="cl-chip"
+              [class.active]="advFilters.attorney.length"
+              (click)="toggleFilterChip('attorney', $event)">
+          Attorney<span class="cl-chip-val" *ngIf="advFilters.attorney.length">: {{ advFilters.attorney.length }}</span>
+          <i class="ri-arrow-down-s-line"></i>
+        </span>
+        <div class="cl-chip-dropdown" *ngIf="openFilterChip === 'attorney'" (click)="$event.stopPropagation()">
+          <div class="cl-fd-list">
+            <div class="cl-fd-item" *ngFor="let a of distinctAttorneys()" (click)="toggleFilterValue('attorney', a)" [class.checked]="isFilterChecked('attorney', a)">
+              <span class="cl-checkbox" [class.checked]="isFilterChecked('attorney', a)"></span>{{ a }}
+            </div>
+            <div class="cl-fd-empty" *ngIf="distinctAttorneys().length === 0">No attorneys assigned yet</div>
+          </div>
+          <div class="cl-fd-footer">
+            <a (click)="clearFilterCategory('attorney')">Clear</a>
+            <a class="apply" (click)="closeFilterChip()">Apply ({{ advFilters.attorney.length }})</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Has deadline this week toggle -->
+      <span class="cl-chip"
+            [class.active]="advFilters.hasDeadlineThisWeek"
+            (click)="$event.stopPropagation(); toggleDeadlineThisWeek()">
+        Deadline this week
+      </span>
+
+      <!-- Value chip -->
+      <div class="cl-chip-wrap">
+        <span class="cl-chip"
+              [class.active]="!!advFilters.valueGtKey"
+              (click)="toggleFilterChip('value', $event)">
+          Value<span class="cl-chip-val" *ngIf="advFilters.valueGtKey">: > {{ advFilters.valueGtKey === 'gt1m' ? '$1M' : advFilters.valueGtKey === 'gt500k' ? '$500K' : '$100K' }}</span>
+          <i class="ri-arrow-down-s-line"></i>
+        </span>
+        <div class="cl-chip-dropdown cl-chip-dropdown-sm" *ngIf="openFilterChip === 'value'" (click)="$event.stopPropagation()">
+          <div class="cl-fd-list">
+            <div class="cl-fd-item" (click)="setValueGt('gt100k'); closeFilterChip()" [class.checked]="advFilters.valueGtKey === 'gt100k'">
+              <span class="cl-checkbox" [class.checked]="advFilters.valueGtKey === 'gt100k'"></span>&gt; $100K
+            </div>
+            <div class="cl-fd-item" (click)="setValueGt('gt500k'); closeFilterChip()" [class.checked]="advFilters.valueGtKey === 'gt500k'">
+              <span class="cl-checkbox" [class.checked]="advFilters.valueGtKey === 'gt500k'"></span>&gt; $500K
+            </div>
+            <div class="cl-fd-item" (click)="setValueGt('gt1m'); closeFilterChip()" [class.checked]="advFilters.valueGtKey === 'gt1m'">
+              <span class="cl-checkbox" [class.checked]="advFilters.valueGtKey === 'gt1m'"></span>&gt; $1M
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <a class="cl-clear-all" *ngIf="hasActiveFilters() || searchTerm" (click)="$event.stopPropagation(); clearAllFilters()">Clear all</a>
+    </div>
+
+    <!-- Bulk-action bar (conditional) -->
+    <div class="cl-bulk-bar" *ngIf="selectedIds.size > 0" (click)="$event.stopPropagation()">
+      <span class="cl-checkbox checked" (click)="clearSelection()"></span>
+      <strong>{{ selectedIds.size }} selected</strong>
+      <span class="cl-bulk-summary">— {{ selectedSummary() }}</span>
+      <div class="cl-bulk-actions">
+        <button class="cl-btn cl-btn-sm" (click)="bulkAction('reassign')">Reassign</button>
+        <button class="cl-btn cl-btn-sm" (click)="bulkAction('priority')">Set priority</button>
+        <button class="cl-btn cl-btn-sm" (click)="bulkAction('message')">Send update</button>
+        <button class="cl-btn cl-btn-sm" (click)="bulkAction('export')">Export</button>
+        <button class="cl-btn cl-btn-sm" (click)="bulkAction('archive')">Archive</button>
+      </div>
+    </div>
+
+    <!-- Loading / error -->
+    <div class="cl-loading" *ngIf="isLoading">
+      <div class="cl-spinner"></div>Loading cases…
+    </div>
+    <div class="cl-error" *ngIf="error && !isLoading">
+      <i class="ri-error-warning-line"></i>{{ error }}
+      <button class="cl-btn cl-btn-sm" (click)="loadCases()">Retry</button>
+    </div>
+
+    <!-- ─────────── TABLE VIEW ─────────── -->
+    <ng-container *ngIf="!isLoading && !error && viewMode === 'table'">
+      <div class="cl-table-wrap">
+        <table class="cl-table">
+          <thead>
+            <tr>
+              <th class="col-checkbox"><span class="cl-checkbox" [class.checked]="allVisibleSelected()" (click)="toggleSelectAllVisible()"></span></th>
+              <th class="col-case sortable" [class.sorted]="sortField === 'case'" (click)="toggleSort('case')">Case / Client <span class="arrow">↕</span></th>
+              <th class="sortable" [class.sorted]="sortField === 'stage'" (click)="toggleSort('stage')">Stage <span class="arrow">↕</span></th>
+              <th class="sortable" [class.sorted]="sortField === 'attorney'" (click)="toggleSort('attorney')">Attorney <span class="arrow">↕</span></th>
+              <th class="sortable col-value" [class.sorted]="sortField === 'value'" (click)="toggleSort('value')">Value <span class="arrow">{{ sortField === 'value' ? (sortDir === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+              <th class="sortable" [class.sorted]="sortField === 'deadline'" (click)="toggleSort('deadline')">Next Deadline <span class="arrow">{{ sortField === 'deadline' ? (sortDir === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+              <th class="col-activity">Activity</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of getFilteredCases()"
+                [class.selected]="isSelected(c.id || '')"
+                (click)="openDrawer(c)">
+              <td class="col-checkbox">
+                <span class="cl-checkbox" [class.checked]="isSelected(c.id || '')" (click)="toggleSelect(c.id || '', $event)"></span>
+              </td>
+              <td class="col-case">
+                <a class="cl-case-title">{{ c.title || c.caseNumber }}</a>
+                <div class="cl-case-meta">
+                  <span class="cl-case-id">{{ c.caseNumber }}</span>
+                  <span class="cl-sep">·</span>
+                  <span class="cl-pa-dot" [ngClass]="practiceColorClass(c)"></span> {{ inferPractice(c) }}
+                  <span class="cl-sep">·</span>
+                  {{ c.clientName || '—' }}
+                </div>
+              </td>
+              <td><span [ngClass]="stagePillClass(inferStage(c))"><span class="dot"></span>{{ inferStage(c) }}</span></td>
+              <td class="col-attorney">
+                <span class="cl-attorney" *ngIf="getLeadAttorneyName(c); else unassigned">
+                  <span class="cl-avatar" [ngClass]="attorneyAvatarColor(c)">{{ getLeadAttorneyInitials(c) }}</span>
+                  {{ getLeadAttorneyName(c) }}
+                </span>
+                <ng-template #unassigned><em class="cl-unassigned">Unassigned</em></ng-template>
+              </td>
+              <td class="col-value">{{ inferValue(c) }}</td>
+              <td class="col-deadline">
+                <ng-container *ngIf="formatDeadline(c) as fd">
+                  <div class="cl-deadline-cell" *ngIf="fd.label !== '—'">
+                    <span class="cl-deadline-label">{{ fd.label }}</span>
+                    <span class="cl-countdown" [ngClass]="fd.urgency">{{ fd.sub }}</span>
+                  </div>
+                  <span class="cl-no-deadline" *ngIf="fd.label === '—'">—</span>
                 </ng-container>
-                <i class="ri-close-line ms-1 cursor-pointer" (click)="clearFilter()"></i>
-              </span>
-              <!-- Sort Dropdown -->
-              <div class="dropdown">
-                <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                  <i class="ri-sort-desc me-1"></i> Sort
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" [class.active]="sortBy === 'deadline'" (click)="sortBy = 'deadline'">
-                    <i class="ri-calendar-line me-2"></i> By Deadline
-                  </a></li>
-                  <li><a class="dropdown-item" [class.active]="sortBy === 'priority'" (click)="sortBy = 'priority'">
-                    <i class="ri-flag-line me-2"></i> By Priority
-                  </a></li>
-                  <li><a class="dropdown-item" [class.active]="sortBy === 'updated'" (click)="sortBy = 'updated'">
-                    <i class="ri-history-line me-2"></i> By Last Activity
-                  </a></li>
-                  <li><a class="dropdown-item" [class.active]="sortBy === 'client'" (click)="sortBy = 'client'">
-                    <i class="ri-user-line me-2"></i> By Client
-                  </a></li>
-                </ul>
-              </div>
-              <!-- Refresh -->
-              <button class="btn btn-soft-secondary btn-sm" (click)="loadCases()" [disabled]="isLoading">
-                <i class="ri-refresh-line" [class.spin]="isLoading"></i>
-              </button>
-            </div>
-          </div>
+              </td>
+              <td class="col-activity">{{ getRelativeTime(c.updatedAt) }}</td>
+              <td class="col-actions">
+                <span class="cl-row-actions">
+                  <button class="cl-btn cl-btn-icon cl-btn-ghost" (click)="$event.stopPropagation(); viewCase(c.id || '')" title="Open"><i class="ri-arrow-right-up-line"></i></button>
+                  <button class="cl-btn cl-btn-icon cl-btn-ghost" (click)="$event.stopPropagation(); deleteCase(c)" title="Delete"><i class="ri-delete-bin-line"></i></button>
+                </span>
+              </td>
+            </tr>
+
+            <!-- Empty state -->
+            <tr *ngIf="getFilteredCases().length === 0">
+              <td colspan="8" class="cl-empty-row">
+                <div class="cl-empty">
+                  <div class="cl-empty-icon"><i class="ri-search-line"></i></div>
+                  <h4>No cases match these filters</h4>
+                  <p *ngIf="hasActiveFilters() || searchTerm">Try widening the filter, clearing all filters, or creating a new case.</p>
+                  <p *ngIf="!hasActiveFilters() && !searchTerm">No cases yet. Create your first case to get started.</p>
+                  <div class="cl-empty-actions">
+                    <button class="cl-btn cl-btn-sm" *ngIf="hasActiveFilters() || searchTerm" (click)="clearAllFilters()">Clear all filters</button>
+                    <button class="cl-btn cl-btn-primary cl-btn-sm" (click)="createCase()"><i class="ri-add-line"></i> New Case</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="cl-pagination" *ngIf="state?.appData?.data?.page">
+        <span>Showing {{ visibleCount() }} of {{ state.appData.data.page.totalElements || totalCount() }}</span>
+        <div class="cl-pages">
+          <a [class.disabled]="state.appData.data.page.first" (click)="goToNextOrPreviousPage('back')">‹</a>
+          <span class="cl-page-current">Page {{ (state.appData.data.page.number || 0) + 1 }} / {{ state.appData.data.page.totalPages || 1 }}</span>
+          <a [class.disabled]="state.appData.data.page.last" (click)="goToNextOrPreviousPage('forward')">›</a>
         </div>
+        <span>{{ state.appData.data.page.size || 10 }} per page</span>
+      </div>
+    </ng-container>
 
-        <div class="card-body">
-          <!-- Loading Spinner -->
-          <div class="text-center py-5" *ngIf="isLoading">
-            <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-            <h5 class="mt-4">Loading Cases</h5>
-            <p class="text-muted">Fetching your legal cases...</p>
-          </div>
-
-          <!-- Error Message -->
-          <div class="alert alert-danger d-flex align-items-center" *ngIf="error && !isLoading" role="alert">
-            <i class="ri-error-warning-line fs-4 me-3"></i>
-            <div>{{ error }}</div>
-          </div>
-
-          <!-- Swipe Hint (mobile only) -->
-          <div class="swipe-hint d-md-none" *ngIf="!isLoading && !error">
-            <i class="ri-arrow-left-right-line"></i>
-            <span>Swipe left/right to see all columns</span>
-          </div>
-
-          <!-- Cases Table -->
-          <div class="table-responsive" *ngIf="!isLoading && !error">
-            <table class="table table-hover table-nowrap align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th scope="col" style="width: 12%;">Case #</th>
-                  <th scope="col" style="width: 32%;">Case / Client</th>
-                  <th scope="col" style="width: 18%;">Assigned To</th>
-                  <th scope="col" style="width: 12%;">Status</th>
-                  <th scope="col" style="width: 12%;">Priority</th>
-                  <th scope="col" style="width: 14%;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let case of getFilteredCases()"
-                    [class.row-urgent]="getDeadlineUrgency(case) === 'urgent' || getDeadlineUrgency(case) === 'overdue'">
-                  <!-- Case Number -->
-                  <td>
-                    <a class="fw-medium text-primary cursor-pointer" (click)="viewCase(case.id)">
-                      {{ case.caseNumber }}
-                    </a>
-                  </td>
-
-                  <!-- Case / Client -->
-                  <td>
-                    <div class="d-flex align-items-start gap-2">
-                      <div class="avatar-xs flex-shrink-0">
-                        <span class="avatar-title rounded-circle" [ngClass]="getCaseTypeIconClass(case.practiceArea || case.type)">
-                          <i [class]="getCaseTypeIcon(case.practiceArea || case.type)"></i>
-                        </span>
-                      </div>
-                      <div class="flex-grow-1 overflow-hidden">
-                        <h6 class="mb-0 text-truncate cursor-pointer" style="max-width: 250px;"
-                            (click)="viewCase(case.id)">{{ case.title }}</h6>
-                        <div class="d-flex align-items-center gap-2 mt-1">
-                          <small class="text-muted">
-                            <i class="ri-user-3-line me-1"></i>{{ case.clientName || 'No Client' }}
-                          </small>
-                          <span class="badge fs-10" [ngClass]="getCaseTypeBadgeClass(case.practiceArea || case.type)" *ngIf="case.practiceArea || case.type">{{ case.practiceArea || case.type }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <!-- Assigned Attorney -->
-                  <td>
-                    <div class="d-flex align-items-center gap-2" *ngIf="getLeadAttorneyName(case)">
-                      <div class="avatar-xs">
-                        <span class="avatar-title bg-info-subtle text-info rounded-circle fs-12">
-                          {{ getLeadAttorneyInitials(case) }}
-                        </span>
-                      </div>
-                      <span class="text-truncate" style="max-width: 100px;">
-                        {{ getLeadAttorneyName(case) }}
-                      </span>
-                    </div>
-                    <span class="text-muted" *ngIf="!getLeadAttorneyName(case)">Unassigned</span>
-                  </td>
-
-                  <!-- Status -->
-                  <td>
-                    <span class="badge rounded-pill"
-                      [ngClass]="{
-                        'bg-success-subtle text-success': case.status === 'OPEN',
-                        'bg-warning-subtle text-warning': case.status === 'IN_PROGRESS',
-                        'bg-info-subtle text-info': case.status === 'PENDING',
-                        'bg-danger-subtle text-danger': case.status === 'CLOSED',
-                        'bg-secondary-subtle text-secondary': case.status === 'ARCHIVED'
-                      }">
-                      <i class="ri-circle-fill fs-7 me-1"></i>
-                      {{ case.status | titlecase }}
-                    </span>
-                  </td>
-
-                  <!-- Priority -->
-                  <td>
-                    <span class="badge rounded-pill"
-                      [ngClass]="{
-                        'bg-danger text-white': case.priority === 'URGENT',
-                        'bg-warning text-dark': case.priority === 'HIGH',
-                        'bg-info-subtle text-info': case.priority === 'MEDIUM',
-                        'bg-secondary-subtle text-secondary': case.priority === 'LOW'
-                      }">
-                      <i class="me-1" [ngClass]="{
-                        'ri-fire-fill': case.priority === 'URGENT',
-                        'ri-flag-fill': case.priority === 'HIGH',
-                        'ri-flag-line': case.priority === 'MEDIUM',
-                        'ri-flag-2-line': case.priority === 'LOW'
-                      }"></i>
-                      {{ case.priority | titlecase }}
-                    </span>
-                  </td>
-
-                  <!-- Actions -->
-                  <td>
-                    <div class="d-flex gap-2">
-                      <button type="button" class="btn btn-soft-primary btn-icon"
-                              (click)="viewCase(case.id)">
-                        <i class="ri-eye-line fs-16"></i>
-                      </button>
-                      <button type="button" class="btn btn-soft-danger btn-icon"
-                              (click)="deleteCase(case)">
-                        <i class="ri-delete-bin-line fs-16"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Empty State -->
-                <tr *ngIf="getFilteredCases().length === 0">
-                  <td colspan="6" class="text-center py-5">
-                    <div class="empty-state-container">
-                      <div class="empty-state-illustration">
-                        <div class="empty-state-icon-lg">
-                          <i class="ri-briefcase-line"></i>
-                        </div>
-                        <div class="empty-state-circles">
-                          <span></span><span></span><span></span>
-                        </div>
-                      </div>
-                      <h5 class="fw-semibold mb-2">No Cases Found</h5>
-                      <p class="text-muted mb-4" *ngIf="!selectedFilter && !searchTerm">Get started by creating your first case</p>
-                      <p class="text-muted mb-4" *ngIf="selectedFilter || searchTerm">No cases match the selected filter or search</p>
-                      <div class="d-flex gap-2 justify-content-center">
-                        <button class="btn btn-primary" (click)="createCase()" *ngIf="!selectedFilter && !searchTerm">
-                          <i class="ri-add-line me-1"></i> Create Case
-                        </button>
-                        <button class="btn btn-soft-secondary" (click)="clearFilter()" *ngIf="selectedFilter || searchTerm">
-                          <i class="ri-close-line me-1"></i> Clear Filters
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination -->
-          <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top"
-               *ngIf="state?.appData?.data?.page?.content?.length > 0 && !isLoading">
-            <div class="text-muted fs-13">
-              Showing {{ getFilteredCases().length }} of {{ state?.appData?.data?.page?.totalElements || cases.length }} cases
+    <!-- ─────────── BOARD VIEW ─────────── -->
+    <ng-container *ngIf="!isLoading && !error && viewMode === 'board'">
+      <div class="cl-board-area">
+        <div class="cl-board">
+          <div class="cl-bcol" *ngFor="let stage of STAGE_LIST" [attr.data-stage]="stage">
+            <div class="cl-bcol-header">
+              <span class="cl-bcol-dot"></span>
+              <span class="cl-bcol-title">{{ stage }}</span>
+              <span class="cl-bcol-count">{{ casesInStage(stage).length }}</span>
             </div>
-            <nav aria-label="Page navigation">
-              <ul class="pagination pagination-sm mb-0">
-                <li class="page-item" [class.disabled]="(currentPage$ | async) === 0">
-                  <a class="page-link" (click)="goToNextOrPreviousPage('backward')">
-                    <i class="ri-arrow-left-s-line"></i>
-                  </a>
-                </li>
-                <li *ngFor="let pageNumber of [].constructor(state?.appData?.data?.page?.totalPages || 1); let i = index;"
-                    class="page-item" [class.active]="i === (currentPage$ | async)">
-                  <a class="page-link" (click)="goToPage(i)">{{ i + 1 }}</a>
-                </li>
-                <li class="page-item" [class.disabled]="(currentPage$ | async) === (state?.appData?.data?.page?.totalPages - 1)">
-                  <a class="page-link" (click)="goToNextOrPreviousPage('forward')">
-                    <i class="ri-arrow-right-s-line"></i>
-                  </a>
-                </li>
-              </ul>
-            </nav>
+            <div class="cl-bcard"
+                 *ngFor="let c of casesInStage(stage)"
+                 [ngClass]="practiceColorClass(c)"
+                 (click)="openDrawer(c)">
+              <div class="cl-bcard-bar"></div>
+              <div class="cl-bcard-id">{{ c.caseNumber }}</div>
+              <div class="cl-bcard-title">{{ c.title }}</div>
+              <div class="cl-bcard-client">{{ c.clientName || inferPractice(c) }}</div>
+              <div class="cl-bcard-footer">
+                <ng-container *ngIf="formatDeadline(c) as fd">
+                  <span class="cl-bcard-deadline" *ngIf="fd.label !== '—'" [ngClass]="fd.urgency">
+                    {{ getDaysUntilDeadline(c) !== null ? (getDaysUntilDeadline(c)! < 0 ? '-' + (-getDaysUntilDeadline(c)!) : getDaysUntilDeadline(c)) + 'd' : '—' }}
+                  </span>
+                </ng-container>
+                <span class="cl-bcard-value">{{ inferValue(c) }}</span>
+                <span class="cl-avatar" [ngClass]="attorneyAvatarColor(c)" *ngIf="getLeadAttorneyName(c)">{{ getLeadAttorneyInitials(c) }}</span>
+              </div>
+            </div>
+            <div class="cl-bcol-add" *ngIf="casesInStage(stage).length === 0" (click)="createCase()">+ Add case</div>
           </div>
         </div>
       </div>
+    </ng-container>
+
+    <!-- ─────────── CALENDAR VIEW ─────────── -->
+    <ng-container *ngIf="!isLoading && !error && viewMode === 'calendar'">
+      <div class="cl-cal-area">
+        <div class="cl-cal-header">
+          <div class="cl-cal-month">
+            <span class="cl-cal-nav">
+              <button class="cl-btn cl-btn-icon" (click)="goPrevMonth()" title="Previous month"><i class="ri-arrow-left-s-line"></i></button>
+              <button class="cl-btn cl-btn-icon" (click)="goNextMonth()" title="Next month"><i class="ri-arrow-right-s-line"></i></button>
+            </span>
+            {{ formatMonthYear() }}
+            <button class="cl-btn cl-btn-sm" (click)="goToday()">Today</button>
+          </div>
+          <div class="cl-cal-meta">{{ visibleCount() }} cases plotted by their next deadline · for the firm-wide calendar (hearings, meetings, etc.) use the Calendar in the top nav</div>
+        </div>
+
+        <div class="cl-cal-grid">
+          <div class="cl-cal-dow">Sun</div>
+          <div class="cl-cal-dow">Mon</div>
+          <div class="cl-cal-dow">Tue</div>
+          <div class="cl-cal-dow">Wed</div>
+          <div class="cl-cal-dow">Thu</div>
+          <div class="cl-cal-dow">Fri</div>
+          <div class="cl-cal-dow">Sat</div>
+
+          <div *ngFor="let cell of getCalendarMatrix()" class="cl-cal-cell" [class.outside]="!cell.inMonth" [class.today]="cell.isToday">
+            <div class="cl-cal-num">{{ cell.date.getDate() }}</div>
+            <div class="cl-cal-event" *ngFor="let c of cell.cases.slice(0, 3)" [ngClass]="getDeadlineUrgency(c)" (click)="openDrawer(c); $event.stopPropagation()">
+              {{ (c.title || c.caseNumber) }} · {{ formatDeadline(c).label }}
+            </div>
+            <div class="cl-cal-more" *ngIf="cell.cases.length > 3">+{{ cell.cases.length - 3 }} more</div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ─────────── MAP VIEW ─────────── -->
+    <ng-container *ngIf="!isLoading && !error && viewMode === 'map'">
+      <div class="cl-map-area">
+        <div class="cl-map-canvas">
+          <div class="cl-map-water"></div>
+          <div class="cl-map-region-label" style="top: 22%; left: 10%;">Massachusetts</div>
+          <div class="cl-map-region-label" style="top: 14%; right: 10%; opacity: 0.5;">Atlantic Ocean</div>
+
+          <div *ngFor="let cluster of getMapClusters()"
+               [ngClass]="['cl-map-pin', cluster.urgency, cluster.count > 1 ? 'cluster' : '']"
+               [style.left.%]="cluster.x"
+               [style.top.%]="cluster.y"
+               (click)="cluster.count === 1 && openDrawer(cluster.pins[0].caseRef)">
+            <div class="cl-map-pin-marker">
+              <span *ngIf="cluster.count > 1">{{ cluster.count }}</span>
+              <i *ngIf="cluster.count === 1" class="ri-scales-line"></i>
+            </div>
+            <div class="cl-map-pin-label">{{ cluster.city }}<span *ngIf="cluster.count > 1"> · {{ cluster.count }} cases</span><span *ngIf="cluster.count === 1"> · {{ cluster.pins[0].caseRef.title }}</span></div>
+          </div>
+
+          <div class="cl-map-controls">
+            <button title="Zoom in"><i class="ri-add-line"></i></button>
+            <button title="Zoom out"><i class="ri-subtract-line"></i></button>
+            <button title="Recenter"><i class="ri-focus-3-line"></i></button>
+          </div>
+          <div class="cl-map-legend">
+            <strong>Urgency</strong>
+            <div class="cl-legend-row"><span class="cl-legend-dot urgent"></span>Overdue or this week</div>
+            <div class="cl-legend-row"><span class="cl-legend-dot warn"></span>Due 1–14 days</div>
+            <div class="cl-legend-row"><span class="cl-legend-dot good"></span>On track / settled</div>
+          </div>
+        </div>
+
+        <aside class="cl-map-side">
+          <div class="cl-map-side-header">
+            <h3>Cases in view</h3>
+            <div class="cl-map-side-meta">{{ getMapPins().length }} cases · MA region</div>
+          </div>
+          <div class="cl-map-side-list">
+            <div class="cl-map-side-item" *ngFor="let p of getMapPins()" (click)="openDrawer(p.caseRef)">
+              <div class="cl-map-side-row1">
+                <span class="cl-pa-dot" [ngClass]="practiceColorClass(p.caseRef)"></span>
+                {{ p.caseRef.title }}
+              </div>
+              <div class="cl-map-side-row2">
+                <span class="cl-case-id">{{ p.caseRef.caseNumber }}</span>
+                · {{ p.city }}, MA
+                · <span [ngClass]="stagePillClass(inferStage(p.caseRef))" style="font-size: 9.5px; padding: 1px 6px;"><span class="dot"></span>{{ inferStage(p.caseRef) }}</span>
+              </div>
+            </div>
+            <div class="cl-empty" *ngIf="getMapPins().length === 0" style="padding: 32px 16px;">
+              <p style="font-size: 13px; color: var(--legience-text-muted);">No cases in current map view</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </ng-container>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       Detail drawer (overlay) — opens on row click
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="cl-drawer-backdrop" *ngIf="drawerCase" (click)="closeDrawer()"></div>
+  <aside class="cl-drawer" *ngIf="drawerCase">
+    <header class="cl-drawer-header">
+      <span class="cl-drawer-bar" [ngClass]="practiceColorClass(drawerCase)"></span>
+      <div class="cl-drawer-title">
+        <h3>{{ drawerCase.title }}</h3>
+        <div class="cl-drawer-meta">
+          <span class="cl-case-id">{{ drawerCase.caseNumber }}</span>
+          <span class="cl-sep">·</span>
+          <span class="cl-pa-dot" [ngClass]="practiceColorClass(drawerCase)"></span>{{ inferPractice(drawerCase) }}
+          <span class="cl-sep">·</span>
+          {{ drawerCase.clientName || '—' }}
+          <span class="cl-sep">·</span>
+          <span [ngClass]="stagePillClass(inferStage(drawerCase))"><span class="dot"></span>{{ inferStage(drawerCase) }}</span>
+        </div>
+      </div>
+      <div class="cl-drawer-actions">
+        <button class="cl-btn cl-btn-sm" (click)="viewCase(drawerCase.id || '')">Open full case <i class="ri-arrow-right-up-line"></i></button>
+        <button class="cl-btn cl-btn-icon cl-btn-ghost" (click)="closeDrawer()" title="Close (Esc)"><i class="ri-close-line"></i></button>
+      </div>
+    </header>
+
+    <div class="cl-drawer-content">
+      <section class="cl-drawer-section">
+        <h5>At a glance</h5>
+        <div class="cl-kpi-grid">
+          <div class="cl-kpi-cell">
+            <div class="cl-kpi-label">Value</div>
+            <div class="cl-kpi-value">{{ inferValue(drawerCase) }}</div>
+            <div class="cl-kpi-hint">{{ drawerCase.billingInfo?.totalHours ? drawerCase.billingInfo!.totalHours + 'h logged' : 'Awaiting bills' }}</div>
+          </div>
+          <div class="cl-kpi-cell">
+            <div class="cl-kpi-label">Stage</div>
+            <div class="cl-kpi-value" style="font-size: 14px;">{{ inferStage(drawerCase) }}</div>
+            <div class="cl-kpi-hint">{{ drawerCase.status }}</div>
+          </div>
+          <div class="cl-kpi-cell">
+            <div class="cl-kpi-label">Next Deadline</div>
+            <ng-container *ngIf="formatDeadline(drawerCase) as fd">
+              <div class="cl-kpi-value" [ngClass]="'urg-' + fd.urgency" style="font-size: 14px;">{{ fd.sub || '—' }}</div>
+              <div class="cl-kpi-hint">{{ fd.label }}</div>
+            </ng-container>
+          </div>
+        </div>
+      </section>
+
+      <section class="cl-drawer-section" *ngIf="getLeadAttorneyName(drawerCase)">
+        <h5>Lead attorney</h5>
+        <div class="cl-attorney-card">
+          <span class="cl-avatar cl-avatar-lg" [ngClass]="attorneyAvatarColor(drawerCase)">{{ getLeadAttorneyInitials(drawerCase) }}</span>
+          <div>
+            <div class="cl-attorney-name">{{ getLeadAttorneyName(drawerCase) }}</div>
+            <div class="cl-attorney-role">{{ inferPractice(drawerCase) }}</div>
+          </div>
+          <button class="cl-btn cl-btn-sm" style="margin-left: auto;">Reassign</button>
+        </div>
+      </section>
+
+      <section class="cl-drawer-section">
+        <h5>Case info</h5>
+        <dl class="cl-defs">
+          <dt>Type</dt><dd>{{ drawerCase.type || '—' }}</dd>
+          <dt>Client</dt><dd>{{ drawerCase.clientName || '—' }}<span *ngIf="drawerCase.clientEmail" style="color: var(--legience-text-muted); margin-left: 6px;">· {{ drawerCase.clientEmail }}</span></dd>
+          <dt>Court</dt><dd>{{ drawerCase.courtInfo?.countyName || '—' }}</dd>
+          <dt>Judge</dt><dd>{{ drawerCase.courtInfo?.judgeName || '—' }}</dd>
+          <dt>Filed</dt><dd>{{ drawerCase.importantDates?.filingDate ? (drawerCase.importantDates!.filingDate | date:'mediumDate') : '—' }}</dd>
+          <dt>Created</dt><dd>{{ drawerCase.createdAt ? (drawerCase.createdAt | date:'mediumDate') : '—' }}</dd>
+        </dl>
+      </section>
+    </div>
+
+    <footer class="cl-drawer-footer">
+      <button class="cl-btn cl-btn-sm">Log time</button>
+      <button class="cl-btn cl-btn-sm">Send message</button>
+      <button class="cl-btn cl-btn-sm">Add note</button>
+      <button class="cl-btn cl-btn-primary cl-btn-sm" (click)="viewCase(drawerCase.id || '')">Open full case →</button>
+    </footer>
+  </aside>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       Save-view dialog
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="cl-dialog-backdrop" *ngIf="showSaveViewDialog" (click)="closeSaveViewDialog()"></div>
+  <div class="cl-dialog" *ngIf="showSaveViewDialog" (click)="$event.stopPropagation()">
+    <h4>Save current filters as a view</h4>
+    <p>Quickly return to this filtered list later. View also remembers which mode (Table/Board/Calendar/Map).</p>
+    <label>View name <input type="text" [(ngModel)]="newViewName" /></label>
+    <label>Filters captured
+      <div class="cl-dialog-preview">
+        <span class="cl-dialog-pf" *ngFor="let s of advFilters.status">Status: {{ s }}</span>
+        <span class="cl-dialog-pf" *ngFor="let p of advFilters.practice">Practice: {{ p }}</span>
+        <span class="cl-dialog-pf" *ngFor="let s of advFilters.stage">Stage: {{ s }}</span>
+        <span class="cl-dialog-pf" *ngFor="let a of advFilters.attorney">Attorney: {{ a }}</span>
+        <span class="cl-dialog-pf" *ngIf="advFilters.hasDeadlineThisWeek">Deadline this week</span>
+        <span class="cl-dialog-pf" *ngIf="advFilters.valueGtKey">Value &gt; {{ advFilters.valueGtKey === 'gt1m' ? '$1M' : advFilters.valueGtKey === 'gt500k' ? '$500K' : '$100K' }}</span>
+        <span class="cl-dialog-pf" *ngIf="searchTerm">Search: "{{ searchTerm }}"</span>
+        <span class="cl-dialog-pf" *ngIf="!hasActiveFilters() && !searchTerm">No filters — saves the current view mode only</span>
+      </div>
+    </label>
+    <label>Visibility
+      <div class="cl-dialog-vis">
+        <label [class.checked]="newViewVisibility === 'me'" (click)="newViewVisibility = 'me'">Just me</label>
+        <label [class.checked]="newViewVisibility === 'team'" (click)="newViewVisibility = 'team'">My team</label>
+        <label [class.checked]="newViewVisibility === 'firm'" (click)="newViewVisibility = 'firm'">Whole firm</label>
+      </div>
+    </label>
+    <div class="cl-dialog-footer">
+      <button class="cl-btn cl-btn-sm" (click)="closeSaveViewDialog()">Cancel</button>
+      <button class="cl-btn cl-btn-primary cl-btn-sm" (click)="confirmSaveView()" [disabled]="!newViewName.trim()">Save view</button>
     </div>
   </div>
-</div>
 
-<!-- Floating Action Button -->
-<div class="fab-container">
-  <button class="fab-main btn btn-primary" (click)="createCase()">
-    <i class="ri-add-line"></i>
-  </button>
 </div>

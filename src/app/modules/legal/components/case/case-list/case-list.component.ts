@@ -1,14 +1,84 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { LegalCase, CaseStatus, CasePriority, PaymentStatus } from '../../../interfaces/case.interface';
 import { CaseService } from '../../../services/case.service';
 import Swal from 'sweetalert2';
-import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
-import { catchError, map, startWith, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { DataState } from 'src/app/enum/datastate.enum';
-import { State } from 'src/app/interface/state';
-import { CustomHttpResponse, Page } from 'src/app/interface/appstates';
-import { User } from 'src/app/interface/user';
+
+// ──────────────────────────────────────────────────────────────────
+// Types & constants
+// ──────────────────────────────────────────────────────────────────
+type ViewMode = 'table' | 'board' | 'calendar' | 'map';
+type FilterChip = 'status' | 'practice' | 'stage' | 'attorney' | 'value' | 'deadline';
+
+interface AdvFilters {
+  status: string[];
+  practice: string[];
+  stage: string[];
+  attorney: string[];
+  hasDeadlineThisWeek: boolean;
+  valueGtKey: '' | 'gt100k' | 'gt500k' | 'gt1m';
+}
+
+interface SavedView {
+  key: string;
+  name: string;
+  filters: AdvFilters;
+  searchTerm: string;
+  viewMode: ViewMode;
+  builtIn?: boolean;
+  count?: number;
+}
+
+interface CalendarCell {
+  date: Date;
+  inMonth: boolean;
+  isToday: boolean;
+  cases: LegalCase[];
+}
+
+interface MapPin {
+  caseRef: LegalCase;
+  city: string;
+  x: number;       // 0–100 % of map canvas width
+  y: number;       // 0–100 % of map canvas height
+  urgency: 'urgent' | 'warn' | 'good';
+}
+
+const STORAGE_KEY = 'legience.caseList.savedViews';
+
+// 7-stage PI lifecycle (also doubles as generic case lifecycle)
+const STAGES = ['Intake', 'Investigation', 'Treatment', 'Pre-Demand', 'Demand Sent', 'Negotiation', 'Settled'] as const;
+type Stage = typeof STAGES[number];
+
+// Built-in saved views, available out of the box
+const BUILT_IN_VIEWS: SavedView[] = [
+  { key: 'all',         name: 'All',           filters: blankFilters(), searchTerm: '', viewMode: 'table', builtIn: true },
+  { key: 'mine',        name: 'My Cases',      filters: blankFilters(), searchTerm: '', viewMode: 'table', builtIn: true },
+  { key: 'thisWeek',    name: 'This Week',     filters: { ...blankFilters(), hasDeadlineThisWeek: true }, searchTerm: '', viewMode: 'table', builtIn: true },
+  { key: 'demands',     name: 'Demands Due',   filters: { ...blankFilters(), stage: ['Pre-Demand', 'Demand Sent'] }, searchTerm: '', viewMode: 'table', builtIn: true },
+  { key: 'unassigned',  name: 'Unassigned',    filters: blankFilters(), searchTerm: '', viewMode: 'table', builtIn: true },
+];
+
+function blankFilters(): AdvFilters {
+  return { status: [], practice: [], stage: [], attorney: [], hasDeadlineThisWeek: false, valueGtKey: '' };
+}
+
+// City coordinates (Massachusetts metro area, normalized 0-100 of map canvas)
+const CITY_COORDS: Record<string, { x: number; y: number }> = {
+  'Boston':       { x: 65, y: 50 },
+  'Cambridge':    { x: 60, y: 47 },
+  'Quincy':       { x: 65, y: 60 },
+  'Newton':       { x: 55, y: 50 },
+  'Worcester':    { x: 30, y: 50 },
+  'Lowell':       { x: 50, y: 30 },
+  'Lynn':         { x: 70, y: 40 },
+  'Springfield':  { x: 12, y: 55 },
+  'Brockton':     { x: 60, y: 67 },
+  'Framingham':   { x: 45, y: 53 },
+};
 
 @Component({
   selector: 'app-case-list',
@@ -16,40 +86,72 @@ import { User } from 'src/app/interface/user';
   styleUrls: ['./case-list.component.scss']
 })
 export class CaseListComponent implements OnInit, OnDestroy {
+
+  // ────────────────────────────────────────────────────────────
+  // Existing state (preserved for back-compat with services/tests)
+  // ────────────────────────────────────────────────────────────
   cases: LegalCase[] = [];
-  allCases: LegalCase[] = []; // Store all cases from current page for local filtering
+  allCases: LegalCase[] = [];
   isLoading = false;
   error: string | null = null;
   isSearching = false;
 
-  // Stats - Attorney Focused
   hearingsThisWeekCount = 0;
   deadlinesDueCount = 0;
   awaitingResponseCount = 0;
   needsAttentionCount = 0;
 
-  // Search and Filter
   searchTerm = '';
   selectedFilter: string | null = null;
   sortBy: string = 'deadline';
 
-  // Server-side search
-  private searchSubject = new Subject<string>();
-  private destroy$ = new Subject<void>();
-
-  // Pagination-related variables
   state: { dataState: DataState, appData?: any } = { dataState: DataState.LOADING };
   readonly DataState = DataState;
   private currentPageSubject = new BehaviorSubject<number>(0);
   currentPage$ = this.currentPageSubject.asObservable();
 
+  // ────────────────────────────────────────────────────────────
+  // New state — view/filters/selection/drawer
+  // ────────────────────────────────────────────────────────────
+  viewMode: ViewMode = 'table';
+  advFilters: AdvFilters = blankFilters();
+  savedViews: SavedView[] = [];
+  currentView: string = 'all';
+
+  // Sort
+  sortField: 'case' | 'stage' | 'attorney' | 'value' | 'deadline' = 'value';
+  sortDir: 'asc' | 'desc' = 'desc';
+
+  // Bulk selection
+  selectedIds = new Set<string>();
+
+  // Drawer
+  drawerCase: LegalCase | null = null;
+
+  // UI state
+  openFilterChip: FilterChip | null = null;
+  showSaveViewDialog = false;
+  newViewName = '';
+  newViewVisibility: 'me' | 'team' | 'firm' = 'me';
+
+  // Calendar
+  calendarMonth = new Date();
+
+  // Constants for template
+  readonly STAGES = STAGES;
+  readonly STAGE_LIST = [...STAGES];
+
+  private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
+
   constructor(
     private caseService: CaseService,
     private router: Router,
-    private cdr: ChangeDetectorRef
-  ) { }
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
+    this.loadSavedViews();
     this.loadCases();
     this.setupSearchDebounce();
   }
@@ -59,722 +161,624 @@ export class CaseListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private setupSearchDebounce(): void {
-    this.searchSubject.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      takeUntil(this.destroy$)
-    ).subscribe(searchTerm => {
-      if (searchTerm && searchTerm.trim().length >= 2) {
-        this.performServerSearch(searchTerm.trim());
-      } else if (!searchTerm || searchTerm.trim().length === 0) {
-        // Reset to show all cases
-        this.cases = [...this.allCases];
-        this.isSearching = false;
-        this.cdr.detectChanges();
-      }
-    });
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.drawerCase) this.closeDrawer();
+    else if (this.showSaveViewDialog) this.closeSaveViewDialog();
+    else if (this.openFilterChip) this.openFilterChip = null;
   }
 
-  private performServerSearch(query: string): void {
-    this.isSearching = true;
-    this.cdr.detectChanges();
-
-    this.caseService.searchCases(query, 0, 50).pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (response) => {
-        if (response?.data?.page?.content) {
-          this.cases = response.data.page.content;
-        } else if (response?.data?.page) {
-          this.cases = response.data.page;
-        } else {
-          this.cases = [];
-        }
-        this.isSearching = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Search error:', err);
-        this.isSearching = false;
-        // Fallback to local search
-        this.cases = this.allCases.filter(c =>
-          c.caseNumber?.toLowerCase().includes(query.toLowerCase()) ||
-          c.title?.toLowerCase().includes(query.toLowerCase()) ||
-          c.clientName?.toLowerCase().includes(query.toLowerCase()) ||
-          (c as any).practiceArea?.toLowerCase().includes(query.toLowerCase()) ||
-          c.type?.toLowerCase().includes(query.toLowerCase())
-        );
-        this.cdr.detectChanges();
-      }
-    });
-  }
-
+  // ────────────────────────────────────────────────────────────
+  // Data loading (preserved + extended)
+  // ────────────────────────────────────────────────────────────
   loadCases(): void {
     this.isLoading = true;
     this.error = null;
     this.cdr.detectChanges();
 
-    // Use real data from the API with pagination
     this.caseService.getCases(this.currentPageSubject.value).subscribe({
       next: (response) => {
-        // The backend returns data in a wrapper object
-        if (response && response.data) {
-          // Handle both formats: data.page and data.cases
-          if (response.data.page && response.data.page.content) {
-            this.cases = response.data.page.content || [];
-            this.allCases = [...this.cases]; // Store for local filtering
-            // Update state for pagination
-            this.state = {
-              dataState: DataState.LOADED,
-              appData: response
-            };
-          } else if (response.data.cases) {
-            this.cases = response.data.cases || [];
-            this.allCases = [...this.cases];
-            this.state = {
-              dataState: DataState.LOADED,
-              appData: response
-            };
-          } else if (Array.isArray(response.data)) {
-            this.cases = response.data;
-            this.allCases = [...this.cases];
-            this.state = {
-              dataState: DataState.LOADED,
-              appData: response
-            };
-          } else {
-            console.warn('Unexpected data format:', response.data);
-            this.cases = [];
-            this.allCases = [];
-          }
+        if (response?.data?.page?.content) {
+          this.cases = response.data.page.content || [];
+        } else if (response?.data?.cases) {
+          this.cases = response.data.cases || [];
+        } else if (Array.isArray(response?.data)) {
+          this.cases = response.data;
         } else if (Array.isArray(response)) {
           this.cases = response;
-          this.allCases = [...this.cases];
         } else {
-          console.warn('Unexpected response format:', response);
           this.cases = [];
-          this.allCases = [];
         }
+        this.allCases = [...this.cases];
+        this.state = { dataState: DataState.LOADED, appData: response };
         this.calculateStats();
+        this.refreshSavedViewCounts();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading cases:', err);
         this.error = 'Failed to load cases. Please try again later.';
-        this.isLoading = false;
         this.cases = [];
         this.allCases = [];
-        // Set sample data for development
-        this.setSampleData();
+        this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
   }
 
-  // Pagination methods
-  goToPage(pageNumber: number): void {
-    this.currentPageSubject.next(pageNumber);
-    this.loadCases();
+  private setupSearchDebounce(): void {
+    this.searchSubject.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(term => {
+        if (term && term.trim().length >= 2) this.performServerSearch(term.trim());
+        else if (!term || term.trim().length === 0) {
+          this.cases = [...this.allCases];
+          this.isSearching = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
-  goToNextOrPreviousPage(direction?: string): void {
-    const newPage = direction === 'forward' 
-      ? this.currentPageSubject.value + 1 
-      : this.currentPageSubject.value - 1;
-    this.goToPage(newPage);
+  private performServerSearch(query: string): void {
+    this.isSearching = true;
+    this.caseService.searchCases(query, 0, 50).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response) => {
+        this.cases = response?.data?.page?.content || response?.data?.page || [];
+        this.isSearching = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        const q = query.toLowerCase();
+        this.cases = this.allCases.filter(c =>
+          c.caseNumber?.toLowerCase().includes(q) ||
+          c.title?.toLowerCase().includes(q) ||
+          c.clientName?.toLowerCase().includes(q) ||
+          c.type?.toLowerCase().includes(q));
+        this.isSearching = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
-  viewCase(id: string): void {
-    this.router.navigate(['/legal/cases', id]);
+  goToPage(p: number): void { this.currentPageSubject.next(p); this.loadCases(); }
+  goToNextOrPreviousPage(d?: string): void {
+    this.goToPage(d === 'forward' ? this.currentPageSubject.value + 1 : this.currentPageSubject.value - 1);
   }
 
-  editCase(id: string): void {
-    this.router.navigate(['/legal/cases/edit', id]);
-  }
+  // ────────────────────────────────────────────────────────────
+  // Navigation + deletion (preserved)
+  // ────────────────────────────────────────────────────────────
+  viewCase(id: string): void { this.router.navigate(['/legal/cases', id]); }
+  editCase(id: string): void { this.router.navigate(['/legal/cases/edit', id]); }
+  createCase(): void { this.router.navigate(['/legal/cases/new']); }
 
-  createCase(): void {
-    this.router.navigate(['/legal/cases/new']);
-  }
-  
-  deleteCase(caseItem: LegalCase): void {
+  deleteCase(c: LegalCase): void {
     Swal.fire({
       title: 'Are you sure?',
-      text: `You are about to delete case "${caseItem.title}". This action cannot be undone.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.isLoading = true;
-        this.cdr.detectChanges();
-        
-        this.caseService.deleteCase(caseItem.id).subscribe({
-          next: () => {
-            this.isLoading = false;
-            Swal.fire({
-              title: 'Deleted!',
-              text: 'Case has been successfully deleted.',
-              icon: 'success',
-              confirmButtonColor: '#3085d6'
-            }).then(() => {
-              // Reload the cases list after deletion
-              this.loadCases();
-            });
-          },
-          error: (error) => {
-            this.isLoading = false;
-            console.error('Error deleting case:', error);
-            
-            // For status 400, always treat as dependency/foreign key error
-            if (error.status === 400) {
-              Swal.fire({
-                title: 'Cannot Delete Case',
-                html: `This case has related records (documents, notes, activities, etc.) that must be deleted first.<br><br>
-                       Please remove all documents, notes, and other related items before deleting this case.`,
-                icon: 'warning',
-                confirmButtonColor: '#3085d6',
-                confirmButtonText: 'I Understand'
-              });
-            } else {
-              // Generic error handling for other types of errors
-              Swal.fire({
-                title: 'Error!',
-                text: 'Failed to delete case: ' + (error.error?.reason || error.error?.message || 'Please try again later.'),
-                icon: 'error',
-                confirmButtonColor: '#3085d6'
-              });
-            }
-            
-            this.cdr.detectChanges();
+      text: `You are about to delete case "${c.title}". This action cannot be undone.`,
+      icon: 'warning', showCancelButton: true,
+      confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!', cancelButtonText: 'Cancel'
+    }).then(r => {
+      if (!r.isConfirmed) return;
+      this.isLoading = true; this.cdr.detectChanges();
+      this.caseService.deleteCase(c.id).subscribe({
+        next: () => {
+          Swal.fire({ title: 'Deleted!', text: 'Case has been successfully deleted.', icon: 'success', confirmButtonColor: '#3085d6' })
+            .then(() => this.loadCases());
+        },
+        error: (err) => {
+          this.isLoading = false;
+          if (err.status === 400) {
+            Swal.fire({ title: 'Cannot Delete Case', html: `This case has related records (documents, notes, activities, etc.) that must be deleted first.<br><br>Please remove all documents, notes, and other related items before deleting this case.`, icon: 'warning', confirmButtonColor: '#3085d6', confirmButtonText: 'I Understand' });
+          } else {
+            Swal.fire({ title: 'Error!', text: 'Failed to delete case: ' + (err.error?.reason || err.error?.message || 'Please try again later.'), icon: 'error', confirmButtonColor: '#3085d6' });
           }
-        });
-      }
+          this.cdr.detectChanges();
+        }
+      });
     });
   }
 
-  private setSampleData(): void {
-    // Add sample data for development
-    this.cases = [
-      {
-        id: '1',
-        caseNumber: 'CASE-2025-001',
-        title: 'Smith vs. Johnson Contract Dispute',
-        description: 'Contract breach litigation involving commercial property',
-        status: CaseStatus.OPEN,
-        priority: CasePriority.HIGH,
-        type: 'Contract Litigation',
-        clientName: 'John Smith',
-        clientEmail: 'john.smith@example.com',
-        clientPhone: '555-0123',
-        clientAddress: '123 Main St, Boston, MA',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        courtInfo: {
-          countyName: 'Suffolk County',
-          judgeName: 'Hon. Jane Doe',
-          courtroom: 'Room 501'
-        },
-        importantDates: {
-          filingDate: new Date(),
-          nextHearing: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          trialDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-        },
-        billingInfo: {
-          hourlyRate: 350,
-          totalHours: 45,
-          totalAmount: 15750,
-          paymentStatus: PaymentStatus.PENDING
-        }
-      },
-      {
-        id: '2',
-        caseNumber: 'CASE-2025-002',
-        title: 'Estate Planning - Williams Family',
-        description: 'Comprehensive estate planning and trust formation',
-        status: CaseStatus.IN_PROGRESS,
-        priority: CasePriority.MEDIUM,
-        type: 'Estate Planning',
-        clientName: 'Sarah Williams',
-        clientEmail: 'sarah.williams@example.com',
-        clientPhone: '555-0124',
-        clientAddress: '456 Oak Ave, Cambridge, MA',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        billingInfo: {
-          hourlyRate: 400,
-          totalHours: 20,
-          totalAmount: 8000,
-          paymentStatus: PaymentStatus.PAID
-        }
-      }
-    ];
-    this.state = { 
-      dataState: DataState.LOADED, 
-      appData: { data: { cases: this.cases } } 
-    };
-  }
-
-  /**
-   * Checks if an error is related to a foreign key constraint violation
-   * Note: This method is kept for backward compatibility but
-   * we now handle all 400 errors as dependency errors directly
-   */
-  private isForeignKeyConstraintError(error: any): boolean {
-    // All 400 status codes when deleting are treated as constraint errors
-    if (error.status === 400) {
-      return true;
-    }
-    
-    // For additional safety, still check error messages
-    const errorMsg = JSON.stringify(error || {}).toLowerCase();
-    return errorMsg.includes('foreign key constraint') || 
-           errorMsg.includes('constraint fails') || 
-           errorMsg.includes('cannot delete') ||
-           errorMsg.includes('referenced by') ||
-           errorMsg.includes('bad request');
-  }
-
-  getStatusClass(status: CaseStatus): string {
-    switch (status) {
-      case CaseStatus.OPEN:
-        return 'badge bg-success';
-      case CaseStatus.IN_PROGRESS:
-        return 'badge bg-warning';
-      case CaseStatus.PENDING:
-        return 'badge bg-info';
-      case CaseStatus.CLOSED:
-        return 'badge bg-danger';
-      case CaseStatus.ARCHIVED:
-        return 'badge bg-secondary';
-      default:
-        return 'badge';
-    }
-  }
-
-  getPriorityClass(priority: CasePriority): string {
-    switch (priority) {
-      case CasePriority.LOW:
-        return 'badge bg-success';
-      case CasePriority.MEDIUM:
-        return 'badge bg-warning';
-      case CasePriority.HIGH:
-        return 'badge bg-danger';
-      case CasePriority.URGENT:
-        return 'badge bg-danger';
-      default:
-        return 'badge';
-    }
-  }
-
+  // ────────────────────────────────────────────────────────────
+  // KPI stats (preserved)
+  // ────────────────────────────────────────────────────────────
   private calculateStats(): void {
     const now = new Date();
-    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    // Hearings this week - cases with next hearing within 7 days
+    const oneWeek = new Date(now.getTime() + 7 * 86400000);
     this.hearingsThisWeekCount = this.cases.filter(c => {
-      const hearing = c.importantDates?.nextHearing;
-      if (!hearing) return false;
-      const hearingDate = new Date(hearing);
-      return hearingDate >= now && hearingDate <= oneWeekFromNow;
+      const h = c.importantDates?.nextHearing;
+      if (!h) return false;
+      const d = new Date(h);
+      return d >= now && d <= oneWeek;
     }).length;
-
-    // Deadlines due - cases with important dates within 7 days (filing, trial)
     this.deadlinesDueCount = this.cases.filter(c => {
       if (!c.importantDates) return false;
-      const filing = c.importantDates.filingDate ? new Date(c.importantDates.filingDate) : null;
-      const trial = c.importantDates.trialDate ? new Date(c.importantDates.trialDate) : null;
-      const hasUpcomingFiling = filing && filing >= now && filing <= oneWeekFromNow;
-      const hasUpcomingTrial = trial && trial >= now && trial <= oneWeekFromNow;
-      return hasUpcomingFiling || hasUpcomingTrial;
+      const f = c.importantDates.filingDate ? new Date(c.importantDates.filingDate) : null;
+      const t = c.importantDates.trialDate ? new Date(c.importantDates.trialDate) : null;
+      return (f && f >= now && f <= oneWeek) || (t && t >= now && t <= oneWeek);
     }).length;
-
-    // Awaiting response - cases in PENDING status
-    this.awaitingResponseCount = this.cases.filter(c =>
-      c.status === CaseStatus.PENDING
-    ).length;
-
-    // Needs attention - High priority OR overdue billing OR past deadlines
+    this.awaitingResponseCount = this.cases.filter(c => c.status === CaseStatus.PENDING).length;
     this.needsAttentionCount = this.cases.filter(c => {
-      const isHighPriority = c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT;
-      const isOverdue = c.billingInfo?.paymentStatus === PaymentStatus.OVERDUE;
-      const hasPastHearing = c.importantDates?.nextHearing && new Date(c.importantDates.nextHearing) < now;
-      return isHighPriority || isOverdue || hasPastHearing;
+      const high = c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT;
+      const overdue = c.billingInfo?.paymentStatus === PaymentStatus.OVERDUE;
+      const past = c.importantDates?.nextHearing && new Date(c.importantDates.nextHearing) < now;
+      return high || overdue || past;
     }).length;
   }
 
-  // Filter and Search methods
-  filterByStatus(filter: string): void {
-    if (this.selectedFilter === filter) {
-      this.selectedFilter = null;
-    } else {
-      this.selectedFilter = filter;
-    }
-  }
-
-  clearFilter(): void {
-    this.selectedFilter = null;
-    this.searchTerm = '';
-    this.cases = [...this.allCases];
-    this.isSearching = false;
-    this.cdr.detectChanges();
-  }
-
-  onSearch(): void {
-    // Trigger server-side search via debounced subject
-    this.searchSubject.next(this.searchTerm);
-  }
-
+  // ────────────────────────────────────────────────────────────
+  // Filtering & sorting (extended — supports adv-filters)
+  // ────────────────────────────────────────────────────────────
   getFilteredCases(): LegalCase[] {
-    let filtered = [...this.cases];
-    const now = new Date();
-    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    let out = [...this.cases];
 
-    // Apply status filter
-    if (this.selectedFilter) {
-      switch (this.selectedFilter) {
-        case 'hearings':
-          filtered = filtered.filter(c => {
-            const hearing = c.importantDates?.nextHearing;
-            if (!hearing) return false;
-            const hearingDate = new Date(hearing);
-            return hearingDate >= now && hearingDate <= oneWeekFromNow;
-          });
-          break;
-        case 'deadlines':
-          filtered = filtered.filter(c => {
-            if (!c.importantDates) return false;
-            const filing = c.importantDates.filingDate ? new Date(c.importantDates.filingDate) : null;
-            const trial = c.importantDates.trialDate ? new Date(c.importantDates.trialDate) : null;
-            const hasUpcomingFiling = filing && filing >= now && filing <= oneWeekFromNow;
-            const hasUpcomingTrial = trial && trial >= now && trial <= oneWeekFromNow;
-            return hasUpcomingFiling || hasUpcomingTrial;
-          });
-          break;
-        case 'awaiting':
-          filtered = filtered.filter(c => c.status === CaseStatus.PENDING);
-          break;
-        case 'attention':
-          filtered = filtered.filter(c => {
-            const isHighPriority = c.priority === CasePriority.HIGH || c.priority === CasePriority.URGENT;
-            const isOverdue = c.billingInfo?.paymentStatus === PaymentStatus.OVERDUE;
-            const hasPastHearing = c.importantDates?.nextHearing && new Date(c.importantDates.nextHearing) < now;
-            return isHighPriority || isOverdue || hasPastHearing;
-          });
-          break;
-      }
+    // Built-in saved-view scopes
+    if (this.currentView === 'mine') out = out.filter(c => this.isMine(c));
+    if (this.currentView === 'unassigned') out = out.filter(c => !this.getLeadAttorneyName(c));
+
+    // Adv filter: status (multi)
+    if (this.advFilters.status.length) out = out.filter(c => this.advFilters.status.includes(c.status));
+
+    // Adv filter: practice area (multi)
+    if (this.advFilters.practice.length) out = out.filter(c => this.advFilters.practice.includes(this.inferPractice(c)));
+
+    // Adv filter: stage (multi)
+    if (this.advFilters.stage.length) out = out.filter(c => this.advFilters.stage.includes(this.inferStage(c)));
+
+    // Adv filter: attorney (multi by initials, simple match)
+    if (this.advFilters.attorney.length) out = out.filter(c => this.advFilters.attorney.includes(this.getLeadAttorneyInitials(c)));
+
+    // Adv filter: deadline this week
+    if (this.advFilters.hasDeadlineThisWeek) {
+      const now = new Date();
+      const weekOut = new Date(now.getTime() + 7 * 86400000);
+      out = out.filter(c => {
+        const d = this.getNextDeadline(c);
+        return d && d >= now && d <= weekOut;
+      });
     }
 
-    // Apply search filter
-    if (this.searchTerm && this.searchTerm.trim()) {
-      const term = this.searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(c =>
-        c.caseNumber?.toLowerCase().includes(term) ||
-        c.title?.toLowerCase().includes(term) ||
-        c.clientName?.toLowerCase().includes(term) ||
-        (c as any).practiceArea?.toLowerCase().includes(term) ||
-        c.type?.toLowerCase().includes(term) ||
-        this.getLeadAttorneyName(c)?.toLowerCase().includes(term)
-      );
+    // Adv filter: value > N
+    if (this.advFilters.valueGtKey) {
+      const limit = this.advFilters.valueGtKey === 'gt1m' ? 1_000_000 : this.advFilters.valueGtKey === 'gt500k' ? 500_000 : 100_000;
+      out = out.filter(c => (c.billingInfo?.totalAmount || 0) > limit);
     }
 
-    // Apply sorting
-    filtered = this.sortCases(filtered);
+    // Free-text search (in addition to server-side debounce)
+    if (this.searchTerm?.trim()) {
+      const q = this.searchTerm.toLowerCase().trim();
+      out = out.filter(c =>
+        c.caseNumber?.toLowerCase().includes(q) ||
+        c.title?.toLowerCase().includes(q) ||
+        c.clientName?.toLowerCase().includes(q) ||
+        c.type?.toLowerCase().includes(q) ||
+        this.getLeadAttorneyName(c).toLowerCase().includes(q));
+    }
 
-    return filtered;
+    return this.sortCases(out);
   }
 
-  sortCases(cases: LegalCase[]): LegalCase[] {
-    return [...cases].sort((a, b) => {
-      switch (this.sortBy) {
+  sortCases(cs: LegalCase[]): LegalCase[] {
+    const dir = this.sortDir === 'asc' ? 1 : -1;
+    return [...cs].sort((a, b) => {
+      let cmp = 0;
+      switch (this.sortField) {
+        case 'case': cmp = (a.title || '').localeCompare(b.title || ''); break;
+        case 'stage': cmp = this.inferStage(a).localeCompare(this.inferStage(b)); break;
+        case 'attorney': cmp = this.getLeadAttorneyName(a).localeCompare(this.getLeadAttorneyName(b)); break;
+        case 'value': cmp = (a.billingInfo?.totalAmount || 0) - (b.billingInfo?.totalAmount || 0); break;
         case 'deadline':
-          const dateA = this.getNextDeadline(a);
-          const dateB = this.getNextDeadline(b);
-          if (!dateA && !dateB) return 0;
-          if (!dateA) return 1;
-          if (!dateB) return -1;
-          return dateA.getTime() - dateB.getTime();
-        case 'priority':
-          const priorityOrder = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-          return (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
-        case 'updated':
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        case 'client':
-          return (a.clientName || '').localeCompare(b.clientName || '');
-        default:
-          return 0;
+          const da = this.getNextDeadline(a)?.getTime() ?? Infinity;
+          const db = this.getNextDeadline(b)?.getTime() ?? Infinity;
+          cmp = da - db; break;
+      }
+      return cmp * dir;
+    });
+  }
+
+  toggleSort(field: 'case' | 'stage' | 'attorney' | 'value' | 'deadline'): void {
+    if (this.sortField === field) this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    else { this.sortField = field; this.sortDir = field === 'value' || field === 'deadline' ? 'desc' : 'asc'; }
+  }
+
+  filterByStatus(filter: string): void { this.selectedFilter = this.selectedFilter === filter ? null : filter; }
+  clearFilter(): void { this.selectedFilter = null; this.searchTerm = ''; this.cases = [...this.allCases]; this.cdr.detectChanges(); }
+  onSearch(): void { this.searchSubject.next(this.searchTerm); }
+
+  // ────────────────────────────────────────────────────────────
+  // View modes
+  // ────────────────────────────────────────────────────────────
+  setViewMode(m: ViewMode): void { this.viewMode = m; this.openFilterChip = null; }
+
+  // ────────────────────────────────────────────────────────────
+  // Saved views
+  // ────────────────────────────────────────────────────────────
+  private loadSavedViews(): void {
+    let user: SavedView[] = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) user = JSON.parse(raw);
+    } catch { /* ignore corrupt */ }
+    this.savedViews = [...BUILT_IN_VIEWS.map(v => ({ ...v })), ...user];
+    this.currentView = 'all';
+  }
+
+  private saveUserViews(): void {
+    const user = this.savedViews.filter(v => !v.builtIn);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(user)); } catch {}
+  }
+
+  applySavedView(key: string): void {
+    const v = this.savedViews.find(x => x.key === key);
+    if (!v) return;
+    this.currentView = key;
+    this.advFilters = { ...blankFilters(), ...v.filters, status: [...v.filters.status], practice: [...v.filters.practice], stage: [...v.filters.stage], attorney: [...v.filters.attorney] };
+    this.searchTerm = v.searchTerm || '';
+    this.viewMode = v.viewMode || 'table';
+    this.openFilterChip = null;
+  }
+
+  openSaveViewDialog(): void {
+    this.newViewName = `Custom view ${this.savedViews.filter(v => !v.builtIn).length + 1}`;
+    this.newViewVisibility = 'me';
+    this.showSaveViewDialog = true;
+  }
+  closeSaveViewDialog(): void { this.showSaveViewDialog = false; }
+
+  confirmSaveView(): void {
+    if (!this.newViewName.trim()) return;
+    const key = 'v_' + Date.now();
+    this.savedViews.push({
+      key, name: this.newViewName.trim(),
+      filters: JSON.parse(JSON.stringify(this.advFilters)),
+      searchTerm: this.searchTerm,
+      viewMode: this.viewMode,
+    });
+    this.currentView = key;
+    this.saveUserViews();
+    this.closeSaveViewDialog();
+  }
+
+  deleteSavedView(key: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.savedViews = this.savedViews.filter(v => v.key !== key);
+    if (this.currentView === key) this.applySavedView('all');
+    this.saveUserViews();
+  }
+
+  private refreshSavedViewCounts(): void {
+    // Count display per saved view (best-effort, uses current page data)
+    const total = this.allCases.length;
+    const mine = this.allCases.filter(c => this.isMine(c)).length;
+    const unassigned = this.allCases.filter(c => !this.getLeadAttorneyName(c)).length;
+    const now = new Date();
+    const week = new Date(now.getTime() + 7 * 86400000);
+    const thisWeek = this.allCases.filter(c => {
+      const d = this.getNextDeadline(c);
+      return d && d >= now && d <= week;
+    }).length;
+    const demands = this.allCases.filter(c => {
+      const s = this.inferStage(c);
+      return s === 'Pre-Demand' || s === 'Demand Sent';
+    }).length;
+    this.savedViews.forEach(v => {
+      switch (v.key) {
+        case 'all': v.count = total; break;
+        case 'mine': v.count = mine; break;
+        case 'thisWeek': v.count = thisWeek; break;
+        case 'demands': v.count = demands; break;
+        case 'unassigned': v.count = unassigned; break;
       }
     });
   }
 
-  // Helper methods for template
-  getNextDeadline(caseItem: LegalCase): Date | null {
-    if (!caseItem.importantDates) return null;
-    const dates = [
-      caseItem.importantDates.nextHearing,
-      caseItem.importantDates.filingDate,
-      caseItem.importantDates.trialDate
-    ].filter(d => d && new Date(d) >= new Date()).map(d => new Date(d!));
+  // ────────────────────────────────────────────────────────────
+  // Adv-filter chip dropdown
+  // ────────────────────────────────────────────────────────────
+  toggleFilterChip(c: FilterChip, ev?: MouseEvent): void {
+    ev?.stopPropagation();
+    this.openFilterChip = this.openFilterChip === c ? null : c;
+  }
+  closeFilterChip(): void { this.openFilterChip = null; }
 
-    if (dates.length === 0) return null;
-    return dates.reduce((min, d) => d < min ? d : min);
+  toggleFilterValue(category: 'status' | 'practice' | 'stage' | 'attorney', value: string): void {
+    const arr = this.advFilters[category];
+    const idx = arr.indexOf(value);
+    if (idx >= 0) arr.splice(idx, 1); else arr.push(value);
+  }
+  isFilterChecked(category: 'status' | 'practice' | 'stage' | 'attorney', value: string): boolean {
+    return this.advFilters[category].includes(value);
+  }
+  clearFilterCategory(category: 'status' | 'practice' | 'stage' | 'attorney'): void { this.advFilters[category] = []; }
+  clearAllFilters(): void {
+    this.advFilters = blankFilters();
+    this.searchTerm = '';
+    this.openFilterChip = null;
+  }
+  toggleDeadlineThisWeek(): void { this.advFilters.hasDeadlineThisWeek = !this.advFilters.hasDeadlineThisWeek; }
+  setValueGt(key: AdvFilters['valueGtKey']): void { this.advFilters.valueGtKey = this.advFilters.valueGtKey === key ? '' : key; }
+
+  hasActiveFilters(): boolean {
+    return !!(this.advFilters.status.length + this.advFilters.practice.length + this.advFilters.stage.length + this.advFilters.attorney.length)
+      || this.advFilters.hasDeadlineThisWeek
+      || !!this.advFilters.valueGtKey;
   }
 
-  getDaysUntilDeadline(caseItem: LegalCase): number | null {
-    const deadline = this.getNextDeadline(caseItem);
-    if (!deadline) return null;
-    const now = new Date();
-    const diffTime = deadline.getTime() - now.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // ────────────────────────────────────────────────────────────
+  // Bulk select
+  // ────────────────────────────────────────────────────────────
+  isSelected(id: string): boolean { return this.selectedIds.has(id); }
+
+  toggleSelect(id: string, ev?: MouseEvent): void {
+    ev?.stopPropagation();
+    if (this.selectedIds.has(id)) this.selectedIds.delete(id); else this.selectedIds.add(id);
   }
 
-  getDeadlineUrgency(caseItem: LegalCase): string {
-    const days = this.getDaysUntilDeadline(caseItem);
-    if (days === null) return '';
-    if (days < 0) return 'overdue';
-    if (days <= 3) return 'urgent';
-    if (days <= 7) return 'warning';
-    return 'normal';
+  toggleSelectAllVisible(): void {
+    const visible = this.getFilteredCases().map(c => c.id).filter(Boolean) as string[];
+    const allSelected = visible.length > 0 && visible.every(id => this.selectedIds.has(id));
+    if (allSelected) visible.forEach(id => this.selectedIds.delete(id));
+    else visible.forEach(id => this.selectedIds.add(id));
   }
 
-  getLeadAttorneyName(caseItem: LegalCase): string {
-    if (caseItem.assignedAttorneys && caseItem.assignedAttorneys.length > 0) {
-      const lead = caseItem.assignedAttorneys.find(a => a.roleType === 'LEAD') || caseItem.assignedAttorneys[0];
+  allVisibleSelected(): boolean {
+    const ids = this.getFilteredCases().map(c => c.id).filter(Boolean) as string[];
+    return ids.length > 0 && ids.every(id => this.selectedIds.has(id));
+  }
+
+  clearSelection(): void { this.selectedIds.clear(); }
+
+  selectedSummary(): string {
+    if (this.selectedIds.size === 0) return '';
+    const arr = this.cases.filter(c => c.id && this.selectedIds.has(c.id));
+    const names = arr.slice(0, 2).map(c => c.title?.split(/\s+v\./i)[0] || c.title || c.caseNumber).filter(Boolean);
+    if (arr.length > 2) names.push(`+${arr.length - 2} more`);
+    return names.join(', ');
+  }
+
+  bulkAction(action: 'reassign' | 'priority' | 'message' | 'export' | 'archive'): void {
+    const count = this.selectedIds.size;
+    if (count === 0) return;
+
+    if (action === 'archive') {
+      Swal.fire({
+        title: `Archive ${count} cases?`,
+        html: `<div style="text-align:left;font-size:13px;color:#57534d;">Archived cases are hidden from active views but remain searchable. They can be restored anytime within 90 days.</div>`,
+        icon: 'warning', showCancelButton: true,
+        confirmButtonColor: '#0b64e9', cancelButtonColor: '#a6a09b',
+        confirmButtonText: `Archive ${count}`, cancelButtonText: 'Cancel',
+      }).then(r => {
+        if (r.isConfirmed) Swal.fire({ icon: 'success', title: 'Archived', text: `${count} cases archived. (Wire to backend in next iteration.)`, confirmButtonColor: '#0b64e9' });
+      });
+      return;
+    }
+    Swal.fire({ icon: 'info', title: this.bulkActionLabel(action), text: `Action will run on ${count} selected cases. (Wire to backend in next iteration.)`, confirmButtonColor: '#0b64e9' });
+  }
+
+  private bulkActionLabel(a: string): string {
+    return ({ reassign: 'Reassign attorney', priority: 'Set priority', message: 'Send update', export: 'Export', archive: 'Archive' } as any)[a] || a;
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Drawer
+  // ────────────────────────────────────────────────────────────
+  openDrawer(c: LegalCase, ev?: Event): void { ev?.stopPropagation(); this.drawerCase = c; }
+  closeDrawer(): void { this.drawerCase = null; }
+
+  // ────────────────────────────────────────────────────────────
+  // Calendar
+  // ────────────────────────────────────────────────────────────
+  getCalendarMatrix(): CalendarCell[] {
+    const month = this.calendarMonth.getMonth();
+    const year = this.calendarMonth.getFullYear();
+    const first = new Date(year, month, 1);
+    const startWeekday = first.getDay(); // 0 (Sun) - 6 (Sat)
+    const startDate = new Date(year, month, 1 - startWeekday);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    const cells: CalendarCell[] = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(startDate.getTime() + i * 86400000);
+      const dayKey = d.toISOString().slice(0, 10);
+      const cases = this.getFilteredCases().filter(c => {
+        const dl = this.getNextDeadline(c);
+        return dl && dl.toISOString().slice(0, 10) === dayKey;
+      });
+      cells.push({
+        date: d,
+        inMonth: d.getMonth() === month,
+        isToday: d.getTime() === today.getTime(),
+        cases,
+      });
+    }
+    return cells;
+  }
+
+  goPrevMonth(): void { this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() - 1, 1); }
+  goNextMonth(): void { this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() + 1, 1); }
+  goToday(): void { this.calendarMonth = new Date(); }
+
+  formatMonthYear(): string {
+    return this.calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Map
+  // ────────────────────────────────────────────────────────────
+  getMapPins(): MapPin[] {
+    return this.getFilteredCases().map(c => {
+      const city = this.extractCity(c.clientAddress) || 'Boston';
+      const coords = CITY_COORDS[city] || CITY_COORDS['Boston'];
+      const days = this.getDaysUntilDeadline(c);
+      const urgency: MapPin['urgency'] = days !== null && days < 0 ? 'urgent' : days !== null && days <= 7 ? 'warn' : 'good';
+      return { caseRef: c, city, x: coords.x, y: coords.y, urgency };
+    });
+  }
+
+  getMapClusters(): { x: number; y: number; city: string; count: number; urgency: MapPin['urgency']; pins: MapPin[] }[] {
+    const groups = new Map<string, MapPin[]>();
+    this.getMapPins().forEach(p => {
+      const k = p.city;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k)!.push(p);
+    });
+    return Array.from(groups.entries()).map(([city, pins]) => {
+      const urgency: MapPin['urgency'] = pins.some(p => p.urgency === 'urgent') ? 'urgent' : pins.some(p => p.urgency === 'warn') ? 'warn' : 'good';
+      return { x: pins[0].x, y: pins[0].y, city, count: pins.length, urgency, pins };
+    });
+  }
+
+  private extractCity(addr?: string): string | null {
+    if (!addr) return null;
+    for (const city of Object.keys(CITY_COORDS)) {
+      if (addr.toLowerCase().includes(city.toLowerCase())) return city;
+    }
+    return null;
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Inferences from existing LegalCase fields
+  // ────────────────────────────────────────────────────────────
+  inferStage(c: LegalCase): Stage {
+    // Use explicit stage if provided by backend, else map from status
+    const explicit = (c as any).stage as string | undefined;
+    if (explicit && (STAGES as readonly string[]).includes(explicit)) return explicit as Stage;
+    switch (c.status) {
+      case CaseStatus.OPEN:        return 'Pre-Demand';
+      case CaseStatus.IN_PROGRESS: return 'Investigation';
+      case CaseStatus.PENDING:     return 'Negotiation';
+      case CaseStatus.CLOSED:      return 'Settled';
+      case CaseStatus.ARCHIVED:    return 'Settled';
+      default: return 'Intake';
+    }
+  }
+
+  inferPractice(c: LegalCase): string {
+    const t = (c.type || '').toLowerCase();
+    if (/(injury|accident|medical|malpractice)/.test(t)) return 'Personal Injury';
+    if (/(family|divorce|custody|adoption)/.test(t)) return 'Family Law';
+    if (/(corporate|business|merger|contract)/.test(t)) return 'Business Law';
+    if (/(real estate|property|landlord|tenant)/.test(t)) return 'Real Estate';
+    if (/(estate|probate|trust|will)/.test(t)) return 'Estate Planning';
+    if (/(employment|labor|discrimination|wrongful)/.test(t)) return 'Employment';
+    if (/(criminal|defense|dui|felony)/.test(t)) return 'Criminal';
+    if (/(bankruptcy|debt|insolvency)/.test(t)) return 'Bankruptcy';
+    if (/(immigration|visa|asylum)/.test(t)) return 'Immigration';
+    if (/(intellectual|patent|trademark)/.test(t)) return 'IP';
+    return c.type || 'General';
+  }
+
+  practiceColorClass(c: LegalCase): string {
+    const p = this.inferPractice(c);
+    return ({ 'Personal Injury': 'pa-pi', 'Family Law': 'pa-fam', 'Business Law': 'pa-biz', 'Real Estate': 'pa-realestate',
+             'Estate Planning': 'pa-estate', 'Employment': 'pa-emp', 'Criminal': 'pa-crim',
+             'Bankruptcy': 'pa-bk', 'Immigration': 'pa-imm', 'IP': 'pa-ip' } as Record<string, string>)[p] || 'pa-default';
+  }
+
+  inferValue(c: LegalCase): string {
+    const v = c.billingInfo?.totalAmount;
+    if (!v) return '—';
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+    return `$${v.toLocaleString()}`;
+  }
+
+  isMine(c: LegalCase): boolean {
+    // Without current user injection, treat lead-attorney presence as a placeholder.
+    // Wire to UserService in a follow-up.
+    return !!this.getLeadAttorneyName(c);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Existing helpers (preserved)
+  // ────────────────────────────────────────────────────────────
+  getStatusClass(s: CaseStatus): string {
+    return ({ [CaseStatus.OPEN]: 'pill pill-success', [CaseStatus.IN_PROGRESS]: 'pill pill-warning',
+             [CaseStatus.PENDING]: 'pill pill-info', [CaseStatus.CLOSED]: 'pill pill-subtle',
+             [CaseStatus.ARCHIVED]: 'pill pill-subtle' } as any)[s] || 'pill pill-subtle';
+  }
+  getPriorityClass(p: CasePriority): string {
+    return ({ [CasePriority.LOW]: 'pill pill-success', [CasePriority.MEDIUM]: 'pill pill-warning',
+             [CasePriority.HIGH]: 'pill pill-danger', [CasePriority.URGENT]: 'pill pill-danger' } as any)[p] || 'pill';
+  }
+  stagePillClass(stage: Stage): string {
+    return ({ 'Intake': 'pill pill-subtle', 'Investigation': 'pill pill-accent',
+             'Treatment': 'pill pill-info', 'Pre-Demand': 'pill pill-warning',
+             'Demand Sent': 'pill pill-orange', 'Negotiation': 'pill pill-warning',
+             'Settled': 'pill pill-success' } as Record<string, string>)[stage] || 'pill pill-subtle';
+  }
+
+  getNextDeadline(c: LegalCase): Date | null {
+    if (!c.importantDates) return null;
+    const ds = [c.importantDates.nextHearing, c.importantDates.filingDate, c.importantDates.trialDate]
+      .filter(d => d && new Date(d) >= new Date()).map(d => new Date(d!));
+    if (!ds.length) return null;
+    return ds.reduce((m, d) => d < m ? d : m);
+  }
+  getDaysUntilDeadline(c: LegalCase): number | null {
+    const d = this.getNextDeadline(c); if (!d) return null;
+    return Math.ceil((d.getTime() - Date.now()) / 86400000);
+  }
+  getDeadlineUrgency(c: LegalCase): string {
+    const d = this.getDaysUntilDeadline(c); if (d === null) return '';
+    if (d < 0) return 'overdue'; if (d <= 3) return 'urgent'; if (d <= 7) return 'warn'; return 'good';
+  }
+
+  getLeadAttorneyName(c: LegalCase): string {
+    if (c.assignedAttorneys?.length) {
+      const lead = c.assignedAttorneys.find(a => a.roleType === 'LEAD') || c.assignedAttorneys[0];
       return `${lead.firstName} ${lead.lastName}`;
     }
-    if (caseItem.assignedTo) {
-      return `${caseItem.assignedTo.firstName || ''} ${caseItem.assignedTo.lastName || ''}`.trim();
-    }
+    if (c.assignedTo) return `${c.assignedTo.firstName || ''} ${c.assignedTo.lastName || ''}`.trim();
     return '';
   }
-
-  getLeadAttorneyInitials(caseItem: LegalCase): string {
-    const name = this.getLeadAttorneyName(caseItem);
-    if (!name) return '?';
-    const parts = name.split(' ').filter(p => p);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
+  getLeadAttorneyInitials(c: LegalCase): string {
+    const n = this.getLeadAttorneyName(c); if (!n) return '?';
+    const parts = n.split(' ').filter(p => p);
+    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : n.substring(0, 2).toUpperCase();
+  }
+  attorneyAvatarColor(c: LegalCase): string {
+    const initials = this.getLeadAttorneyInitials(c);
+    if (initials === '?') return 'av-subtle';
+    const hash = initials.charCodeAt(0) + (initials.charCodeAt(1) || 0);
+    return ['av-blue', 'av-green', 'av-violet', 'av-pink', 'av-orange'][hash % 5];
   }
 
-  getPaymentStatusClass(caseItem: LegalCase): string {
-    const status = caseItem.billingInfo?.paymentStatus;
-    switch (status) {
-      case PaymentStatus.PAID: return 'bg-success-subtle text-success';
-      case PaymentStatus.PENDING: return 'bg-warning-subtle text-warning';
-      case PaymentStatus.OVERDUE: return 'bg-danger-subtle text-danger';
-      default: return 'bg-secondary-subtle text-secondary';
-    }
+  getRelativeTime(date?: Date | string): string {
+    if (!date) return '—';
+    const ms = Date.now() - new Date(date).getTime();
+    const m = Math.floor(ms / 60000), h = Math.floor(ms / 3600000), d = Math.floor(ms / 86400000);
+    if (m < 1) return 'just now'; if (m < 60) return `${m}m ago`; if (h < 24) return `${h}h ago`;
+    if (d < 7) return `${d}d ago`; if (d < 30) return `${Math.floor(d / 7)}w ago`;
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  formatDeadline(c: LegalCase): { label: string; sub: string; urgency: string } {
+    const d = this.getNextDeadline(c);
+    if (!d) return { label: '—', sub: '', urgency: '' };
+    const days = this.getDaysUntilDeadline(c)!;
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const sub = days < 0 ? `Overdue · ${Math.abs(days)}d` : `${dateStr} · ${days}d`;
+    return { label: this.getDeadlineLabel(c), sub, urgency: this.getDeadlineUrgency(c) };
+  }
+  private getDeadlineLabel(c: LegalCase): string {
+    if (!c.importantDates) return 'Deadline';
+    const next = this.getNextDeadline(c)?.getTime();
+    if (next === new Date(c.importantDates.nextHearing as any).getTime()) return 'Hearing';
+    if (next === new Date(c.importantDates.trialDate as any).getTime()) return 'Trial';
+    if (next === new Date(c.importantDates.filingDate as any).getTime()) return 'Filing';
+    return 'Deadline';
   }
 
-  getPaymentStatusText(caseItem: LegalCase): string {
-    return caseItem.billingInfo?.paymentStatus || 'N/A';
-  }
+  // Distinct lists for filter chip dropdowns
+  distinctStatuses(): string[] { return Array.from(new Set(this.allCases.map(c => c.status).filter(Boolean) as string[])); }
+  distinctPractices(): string[] { return Array.from(new Set(this.allCases.map(c => this.inferPractice(c)))).sort(); }
+  distinctAttorneys(): string[] { return Array.from(new Set(this.allCases.map(c => this.getLeadAttorneyInitials(c)).filter(i => i !== '?'))).sort(); }
 
-  getRelativeTime(date: Date | string): string {
-    if (!date) return 'Never';
-    const now = new Date();
-    const then = new Date(date);
-    const diffMs = now.getTime() - then.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  // Counts for board
+  casesInStage(stage: Stage): LegalCase[] { return this.getFilteredCases().filter(c => this.inferStage(c) === stage); }
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  getNextHearing(caseItem: LegalCase): Date | null {
-    return caseItem.importantDates?.nextHearing ? new Date(caseItem.importantDates.nextHearing) : null;
-  }
-
-  // Tooltip helper methods
-  getStatusTooltip(status: string): string {
-    switch (status) {
-      case 'OPEN': return 'Case is open and active - ready for work';
-      case 'IN_PROGRESS': return 'Case is currently being worked on';
-      case 'PENDING': return 'Awaiting response from client, court, or opposing counsel';
-      case 'CLOSED': return 'Case has been resolved and closed';
-      case 'ARCHIVED': return 'Case is archived for record-keeping';
-      default: return status;
-    }
-  }
-
-  getDeadlineTooltip(caseItem: LegalCase): string {
-    const deadline = this.getNextDeadline(caseItem);
-    if (!deadline) return 'No upcoming deadlines';
-
-    const days = this.getDaysUntilDeadline(caseItem);
-    const dateStr = deadline.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-
-    if (days === null) return dateStr;
-    if (days < 0) return `OVERDUE: ${dateStr} (${Math.abs(days)} days ago)`;
-    if (days === 0) return `TODAY: ${dateStr}`;
-    if (days === 1) return `TOMORROW: ${dateStr}`;
-    return `${dateStr} (in ${days} days)`;
-  }
-
-  getBillingTooltip(caseItem: LegalCase): string {
-    if (!caseItem.billingInfo) return 'No billing information available';
-
-    const { paymentStatus, totalAmount, totalHours, hourlyRate } = caseItem.billingInfo;
-    let tooltip = `Status: ${paymentStatus}`;
-
-    if (totalAmount) {
-      tooltip += ` | Total: $${totalAmount.toLocaleString()}`;
-    }
-    if (totalHours && hourlyRate) {
-      tooltip += ` | ${totalHours} hrs @ $${hourlyRate}/hr`;
-    }
-
-    return tooltip;
-  }
-
-  // Case type badge styling helpers
-  getCaseTypeBadgeClass(type: string): string {
-    if (!type) return 'bg-secondary-subtle text-secondary';
-
-    const typeLower = type.toLowerCase();
-
-    // Criminal cases - Red/Danger
-    if (typeLower.includes('criminal') || typeLower.includes('defense') || typeLower.includes('dui') || typeLower.includes('felony')) {
-      return 'bg-danger-subtle text-danger';
-    }
-    // Family law - Pink/Purple
-    if (typeLower.includes('family') || typeLower.includes('divorce') || typeLower.includes('custody') || typeLower.includes('adoption')) {
-      return 'bg-pink-subtle text-pink';
-    }
-    // Immigration - Teal/Cyan
-    if (typeLower.includes('immigration') || typeLower.includes('visa') || typeLower.includes('asylum') || typeLower.includes('naturalization')) {
-      return 'bg-info-subtle text-info';
-    }
-    // Corporate/Business - Blue
-    if (typeLower.includes('corporate') || typeLower.includes('business') || typeLower.includes('merger') || typeLower.includes('contract')) {
-      return 'bg-primary-subtle text-primary';
-    }
-    // Real Estate - Green
-    if (typeLower.includes('real estate') || typeLower.includes('property') || typeLower.includes('landlord') || typeLower.includes('tenant')) {
-      return 'bg-success-subtle text-success';
-    }
-    // Personal Injury - Orange/Warning
-    if (typeLower.includes('injury') || typeLower.includes('accident') || typeLower.includes('medical') || typeLower.includes('malpractice')) {
-      return 'bg-warning-subtle text-warning';
-    }
-    // Estate/Probate - Purple
-    if (typeLower.includes('estate') || typeLower.includes('probate') || typeLower.includes('trust') || typeLower.includes('will')) {
-      return 'bg-purple-subtle text-purple';
-    }
-    // Employment/Labor - Indigo
-    if (typeLower.includes('employment') || typeLower.includes('labor') || typeLower.includes('discrimination') || typeLower.includes('wrongful')) {
-      return 'bg-indigo-subtle text-indigo';
-    }
-    // Intellectual Property - Cyan
-    if (typeLower.includes('intellectual') || typeLower.includes('patent') || typeLower.includes('trademark') || typeLower.includes('copyright')) {
-      return 'bg-cyan-subtle text-cyan';
-    }
-    // Bankruptcy - Dark
-    if (typeLower.includes('bankruptcy') || typeLower.includes('debt') || typeLower.includes('insolvency')) {
-      return 'bg-dark-subtle text-dark';
-    }
-    // Litigation - Orange
-    if (typeLower.includes('litigation') || typeLower.includes('civil') || typeLower.includes('dispute')) {
-      return 'bg-orange-subtle text-orange';
-    }
-
-    // Default
-    return 'bg-secondary-subtle text-secondary';
-  }
-
-  getCaseTypeIcon(type: string): string {
-    if (!type) return 'ri-briefcase-line';
-
-    const typeLower = type.toLowerCase();
-
-    if (typeLower.includes('criminal') || typeLower.includes('defense') || typeLower.includes('dui')) {
-      return 'ri-shield-user-line';
-    }
-    if (typeLower.includes('family') || typeLower.includes('divorce') || typeLower.includes('custody')) {
-      return 'ri-parent-line';
-    }
-    if (typeLower.includes('immigration') || typeLower.includes('visa') || typeLower.includes('asylum')) {
-      return 'ri-global-line';
-    }
-    if (typeLower.includes('corporate') || typeLower.includes('business') || typeLower.includes('contract')) {
-      return 'ri-building-2-line';
-    }
-    if (typeLower.includes('real estate') || typeLower.includes('property')) {
-      return 'ri-home-line';
-    }
-    if (typeLower.includes('injury') || typeLower.includes('accident') || typeLower.includes('medical')) {
-      return 'ri-heart-pulse-line';
-    }
-    if (typeLower.includes('estate') || typeLower.includes('probate') || typeLower.includes('trust')) {
-      return 'ri-file-list-3-line';
-    }
-    if (typeLower.includes('employment') || typeLower.includes('labor')) {
-      return 'ri-user-settings-line';
-    }
-    if (typeLower.includes('intellectual') || typeLower.includes('patent') || typeLower.includes('trademark')) {
-      return 'ri-lightbulb-line';
-    }
-    if (typeLower.includes('bankruptcy') || typeLower.includes('debt')) {
-      return 'ri-money-dollar-circle-line';
-    }
-    if (typeLower.includes('litigation') || typeLower.includes('civil')) {
-      return 'ri-scales-3-line';
-    }
-
-    return 'ri-briefcase-line';
-  }
-
-  getCaseTypeIconClass(type: string): string {
-    if (!type) return 'bg-secondary-subtle text-secondary';
-
-    const typeLower = type.toLowerCase();
-
-    if (typeLower.includes('criminal') || typeLower.includes('defense') || typeLower.includes('dui')) {
-      return 'bg-danger-subtle text-danger';
-    }
-    if (typeLower.includes('family') || typeLower.includes('divorce') || typeLower.includes('custody')) {
-      return 'bg-pink-subtle text-pink';
-    }
-    if (typeLower.includes('immigration') || typeLower.includes('visa') || typeLower.includes('asylum')) {
-      return 'bg-info-subtle text-info';
-    }
-    if (typeLower.includes('corporate') || typeLower.includes('business') || typeLower.includes('contract')) {
-      return 'bg-primary-subtle text-primary';
-    }
-    if (typeLower.includes('real estate') || typeLower.includes('property')) {
-      return 'bg-success-subtle text-success';
-    }
-    if (typeLower.includes('injury') || typeLower.includes('accident') || typeLower.includes('medical')) {
-      return 'bg-warning-subtle text-warning';
-    }
-    if (typeLower.includes('estate') || typeLower.includes('probate') || typeLower.includes('trust')) {
-      return 'bg-purple-subtle text-purple';
-    }
-    if (typeLower.includes('employment') || typeLower.includes('labor')) {
-      return 'bg-indigo-subtle text-indigo';
-    }
-    if (typeLower.includes('intellectual') || typeLower.includes('patent') || typeLower.includes('trademark')) {
-      return 'bg-cyan-subtle text-cyan';
-    }
-    if (typeLower.includes('bankruptcy') || typeLower.includes('debt')) {
-      return 'bg-dark-subtle text-dark';
-    }
-    if (typeLower.includes('litigation') || typeLower.includes('civil')) {
-      return 'bg-orange-subtle text-orange';
-    }
-
-    return 'bg-secondary-subtle text-secondary';
-  }
-} 
+  // Counts for KPI / pagination
+  totalCount(): number { return this.allCases.length; }
+  visibleCount(): number { return this.getFilteredCases().length; }
+}
