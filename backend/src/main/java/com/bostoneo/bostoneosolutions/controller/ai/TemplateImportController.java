@@ -249,6 +249,7 @@ public class TemplateImportController {
                  ENCRYPTED_FILE,
                  CORRUPT_FILE,
                  EMPTY_DOCUMENT           -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case INTERNAL_ERROR          -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
         return ResponseEntity.status(status).body(Map.of(
             "errorCode", e.getCode().name(),
