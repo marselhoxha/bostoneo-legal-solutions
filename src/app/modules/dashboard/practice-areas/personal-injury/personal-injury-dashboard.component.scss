@@ -1,0 +1,7 @@
+// Top-level PI layer is a thin vertical stack of its three children. The
+// children own their own padding/margins (matching the existing dashboard's
+// `.ai-insights-grid`, `.risk-alerts-band`, and `.cross-matter-intel` blocks),
+// so this host has no styles of its own.
+:host {
+  display: block;
+}

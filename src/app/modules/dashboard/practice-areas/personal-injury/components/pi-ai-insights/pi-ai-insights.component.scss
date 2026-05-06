@@ -1,0 +1,126 @@
+// Copied from src/app/component/dashboards/attorney/attorney-dashboard.component.scss
+// (lines 2117-2238). Original block remains intact for now — Phase 7 cleanup
+// removes it once the new layered dashboard is the only consumer.
+
+.ai-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.ai-insight-card {
+  // Default accent — overridden per .accent-* variant. References Tier 2
+  // category seed tokens so the palette can shift centrally.
+  --ai-accent: var(--legience-cat-blue);
+  --ai-accent-rgb: var(--legience-cat-blue-rgb);
+  --ai-accent-soft: var(--legience-cat-blue-soft);
+
+  position: relative;
+  background: var(--legience-bg-card);
+  border: 1px solid var(--legience-border-hairline);
+  border-left: 3px solid var(--ai-accent);
+  border-radius: 8px;
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 110px;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(var(--ai-accent-rgb), 0.25);
+    border-color: var(--legience-border-hairline);
+    border-left-color: var(--ai-accent);
+  }
+
+  // Header row — accent icon chip + uppercase category label
+  .ai-insight-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ai-insight-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    i { font-size: 12px; line-height: 1; }
+  }
+
+  .ai-insight-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ai-accent);
+  }
+
+  // Body — short narrative with bolded matter name
+  .ai-insight-body {
+    font-size: 13px;
+    color: var(--legience-text-muted);
+    line-height: 1.45;
+    flex-grow: 1;
+
+    strong {
+      color: var(--legience-text-primary);
+      font-weight: 600;
+    }
+  }
+
+  // Action — small accent-coloured CTA at bottom
+  .ai-insight-action {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ai-accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    i {
+      font-size: 14px;
+      transition: transform 0.15s ease;
+    }
+  }
+
+  &:hover .ai-insight-action i { transform: translateX(2px); }
+
+  // Accent variants — map to Tier 2 category seed tokens
+  &.accent-orange {
+    --ai-accent: var(--legience-cat-orange);
+    --ai-accent-rgb: var(--legience-cat-orange-rgb);
+    --ai-accent-soft: var(--legience-cat-orange-soft);
+  }
+  &.accent-green {
+    --ai-accent: var(--legience-cat-green);
+    --ai-accent-rgb: var(--legience-cat-green-rgb);
+    --ai-accent-soft: var(--legience-cat-green-soft);
+  }
+  &.accent-violet {
+    --ai-accent: var(--legience-cat-violet);
+    --ai-accent-rgb: var(--legience-cat-violet-rgb);
+    --ai-accent-soft: var(--legience-cat-violet-soft);
+  }
+  &.accent-blue {
+    --ai-accent: var(--legience-cat-blue);
+    --ai-accent-rgb: var(--legience-cat-blue-rgb);
+    --ai-accent-soft: var(--legience-cat-blue-soft);
+  }
+}
+
+// Dark-mode tweak — keep the left-border accent vivid; soften the surface
+:host-context([data-bs-theme="dark"]) .ai-insight-card {
+  background: var(--legience-bg-card);
+  border-color: var(--legience-border-hairline);
+
+  .ai-insight-icon { background: rgba(var(--ai-accent-rgb), 0.18); }
+}

@@ -1,0 +1,30 @@
+<!--
+  AI Insights row — markup mirrors the existing
+  attorney-dashboard.component.html lines 117-143. The wrapper row/col is
+  preserved so the section drops into the dashboard with identical spacing.
+  Children render only when data exists (matches the original `aiInsights.length > 0`
+  guard).
+-->
+<div class="row g-3" *ngIf="!loading() && insights().length > 0">
+  <div class="col-12">
+    <div class="ai-insights-grid">
+      <div *ngFor="let insight of insights()"
+           class="ai-insight-card"
+           [ngClass]="'accent-' + insight.accentColor"
+           (click)="onInsightAction(insight)">
+        <div class="ai-insight-header">
+          <span class="ai-insight-icon">
+            <i [class]="insight.iconClass"></i>
+          </span>
+          <span class="ai-insight-label">{{ insight.categoryLabel }}</span>
+        </div>
+        <div class="ai-insight-body">
+          <strong>{{ insight.matter }}</strong> · {{ insight.description }}
+        </div>
+        <div class="ai-insight-action">
+          {{ insight.actionLabel }} <i class="ri-arrow-right-line"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
