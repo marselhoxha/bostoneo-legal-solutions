@@ -1,0 +1,12 @@
+<div class="practice-area-tabs" *ngIf="tabs.length >= 2" role="tablist">
+  <button
+    *ngFor="let tab of tabs"
+    type="button"
+    role="tab"
+    class="practice-area-tab"
+    [class.active]="tab === active"
+    [attr.aria-selected]="tab === active"
+    (click)="onTabClick(tab)">
+    {{ labelFor(tab) }}
+  </button>
+</div>

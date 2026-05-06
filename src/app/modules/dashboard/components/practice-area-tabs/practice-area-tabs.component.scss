@@ -1,0 +1,43 @@
+// Practice-area tab strip — pill style, mirrors cases-page nav-tab density.
+// Only rendered when the attorney has 2+ practice areas, so it sits above
+// the practice-area-outlet as a single horizontal row of selectable pills.
+
+.practice-area-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.practice-area-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-pill);
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-subtle);
+  font: 500 12.5px/1.4 var(--legience-font-sans);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--legience-text-primary);
+    border-color: var(--legience-border-emphasis);
+  }
+
+  &.active {
+    background: var(--legience-accent-bg-subtle);
+    color: var(--legience-accent);
+    border-color: rgba(var(--legience-accent-rgb), 0.35);
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.25);
+  }
+}

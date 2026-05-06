@@ -1,0 +1,19 @@
+<ng-container *ngIf="loading()">
+  <div class="practice-area-outlet-loading">
+    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    <span>Loading...</span>
+  </div>
+</ng-container>
+
+<ng-container *ngIf="error() as err">
+  <div class="practice-area-outlet-error">
+    <p class="mb-2">{{ err }}</p>
+    <button type="button" class="btn btn-sm btn-outline-primary" (click)="retry()">Retry</button>
+  </div>
+</ng-container>
+
+<ng-container *ngIf="notRegistered() && activePracticeArea && !loading()">
+  <app-practice-area-coming-soon [practiceArea]="activePracticeArea"></app-practice-area-coming-soon>
+</ng-container>
+
+<ng-container #container></ng-container>

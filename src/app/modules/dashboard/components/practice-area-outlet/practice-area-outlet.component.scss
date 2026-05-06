@@ -1,0 +1,21 @@
+// Practice-area outlet — host for the lazy-loaded layer component.
+// SCSS only covers the framing states (loading, error). The lazy
+// component owns its own styles.
+
+.practice-area-outlet-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1.25rem 1rem;
+  color: var(--legience-text-muted);
+  font: 500 13px/1.4 var(--legience-font-sans);
+}
+
+.practice-area-outlet-error {
+  padding: 1.25rem 1rem;
+  border: 1px solid rgba(var(--legience-danger-rgb), 0.25);
+  background: var(--legience-danger-bg-subtle);
+  color: var(--legience-danger);
+  border-radius: var(--legience-radius-lg);
+  font: 500 13px/1.4 var(--legience-font-sans);
+}

@@ -1,0 +1,14 @@
+// Practice-area "coming soon" empty state — soft accent border so it reads
+// as friendly placeholder rather than missing content.
+
+.practice-area-coming-soon {
+  border: 1px solid rgba(var(--legience-accent-rgb), 0.18);
+  background: var(--legience-bg-elevated);
+  border-radius: var(--legience-radius-lg);
+  box-shadow: var(--legience-shadow-sm);
+}
+
+.practice-area-coming-soon-icon {
+  color: var(--legience-accent);
+  display: inline-block;
+}

@@ -8,6 +8,7 @@ import { NgChartsModule } from 'ng2-charts';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { FlatpickrModule } from 'angularx-flatpickr';
 import { PermissionDebuggerComponent } from 'src/app/shared/components/permission-debugger/permission-debugger.component';
+import { AttorneyDashboardModule } from 'src/app/modules/dashboard/attorney-dashboard.module';
 
 // Import dashboard components
 import { AdminDashboardComponent } from '../dashboards/admin/admin-dashboard.component';
@@ -28,14 +29,15 @@ import { ManagerDashboardComponent } from '../dashboards/manager/manager-dashboa
     ManagerDashboardComponent
   ],
   imports: [
-    SharedModule, 
-    HomeRoutingModule, 
+    SharedModule,
+    HomeRoutingModule,
     LayoutsModule,
     StatsModule,
-    NgApexchartsModule, 
+    NgApexchartsModule,
     NgChartsModule,
     FlatpickrModule.forRoot(),
-    PermissionDebuggerComponent
+    PermissionDebuggerComponent,
+    AttorneyDashboardModule
   ],
 })
 export class HomeModule { }
