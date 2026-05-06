@@ -34,6 +34,7 @@ import { LegalCaseService } from 'src/app/modules/legal/services/legal-case.serv
 import { BackgroundTask, BackgroundTaskService } from 'src/app/modules/legal/services/background-task.service';
 import { ActiveCaseContextService, ActiveCaseContext } from 'src/app/core/services/active-case-context.service';
 import { AiDrawerService } from 'src/app/core/services/ai-drawer.service';
+import { CommandPaletteService } from 'src/app/core/services/command-palette.service';
 import { firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
 import { decodeJwtPayload } from '../../../core/utils/jwt.util';
@@ -126,7 +127,8 @@ export class TopbarComponent implements OnInit, OnDestroy {
     private clientPortalService: ClientPortalService, private timerService: TimerService,
     private legalCaseService: LegalCaseService, private backgroundTaskService: BackgroundTaskService,
     private activeCaseContext: ActiveCaseContextService,
-    private aiDrawer: AiDrawerService) {
+    private aiDrawer: AiDrawerService,
+    private commandPalette: CommandPaletteService) {
       this.activeCase$ = this.activeCaseContext.activeCase$;
       this.firstActiveTimer$ = this.timerService.activeTimers$.pipe(
         map(timers => timers?.[0] ?? null)
@@ -190,10 +192,9 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
 
   openSearch(): void {
-    // Phase 1 — trigger the existing mobile-style search dropdown.
-    // ⌘K command palette is a separate spec.
-    const trigger = document.getElementById('page-header-search-dropdown');
-    trigger?.click();
+    // Opens the global Cmd+K command palette. Same destination as the global
+    // ⌘K shortcut wired in app.component.ts — kept in sync via the shared service.
+    this.commandPalette.open();
   }
 
   openMessages(): void {

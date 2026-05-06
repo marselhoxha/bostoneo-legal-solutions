@@ -1,6 +1,8 @@
 <app-preloader [isHidden]="!showPreloader"></app-preloader>
 <router-outlet></router-outlet>
 <app-tos-acceptance-modal *ngIf="showTosModal" (accepted)="onTosAccepted()"></app-tos-acceptance-modal>
+<!-- Cmd+K command palette — globally available, opens via service or ⌘K shortcut. -->
+<app-command-palette></app-command-palette>
 <!-- Dev-only design switcher. In production Rox is the only design and
      this component must not render — end users should never see a
      developer V/C/R toggle. -->

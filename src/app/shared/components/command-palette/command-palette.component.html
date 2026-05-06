@@ -1,0 +1,54 @@
+<div class="cmd-palette-backdrop" *ngIf="isOpen" (click)="close()">
+  <div class="cmd-palette" role="dialog" aria-modal="true" aria-label="Command palette" (click)="$event.stopPropagation()">
+    <!-- Search row -->
+    <div class="cmd-palette-search">
+      <i-lucide name="search" [size]="18" class="cmd-palette-search-icon"></i-lucide>
+      <input
+        #searchInput
+        type="text"
+        class="cmd-palette-input"
+        placeholder="Search cases, clients, pages…"
+        [(ngModel)]="query"
+        (input)="onQueryChange()"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <kbd class="cmd-palette-kbd-esc">esc</kbd>
+    </div>
+
+    <!-- Results -->
+    <div class="cmd-palette-results">
+      <ng-container *ngFor="let group of groupedResults">
+        <div class="cmd-palette-section-label">{{ group.label }}</div>
+        <button
+          *ngFor="let result of group.results; let i = index"
+          type="button"
+          class="cmd-palette-result"
+          [class.selected]="selectedIndex === group.startIndex + i"
+          (click)="onResultClick(result)"
+          (mouseenter)="onResultHover(group.startIndex + i)"
+        >
+          <i-lucide [name]="result.icon" [size]="16" class="cmd-palette-result-icon"></i-lucide>
+          <div class="cmd-palette-result-text">
+            <span class="cmd-palette-result-label">{{ result.label }}</span>
+            <span class="cmd-palette-result-sublabel" *ngIf="result.sublabel">{{ result.sublabel }}</span>
+          </div>
+          <i-lucide name="corner-down-left" [size]="14" class="cmd-palette-result-enter"
+                    *ngIf="selectedIndex === group.startIndex + i"></i-lucide>
+        </button>
+      </ng-container>
+
+      <div *ngIf="flatResults.length === 0" class="cmd-palette-empty">
+        <ng-container *ngIf="query">No results for "<strong>{{ query }}</strong>"</ng-container>
+        <ng-container *ngIf="!query">Start typing to search…</ng-container>
+      </div>
+    </div>
+
+    <!-- Footer hints -->
+    <div class="cmd-palette-footer">
+      <span class="cmd-palette-hint"><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span class="cmd-palette-hint"><kbd>↵</kbd> open</span>
+      <span class="cmd-palette-hint"><kbd>esc</kbd> close</span>
+    </div>
+  </div>
+</div>

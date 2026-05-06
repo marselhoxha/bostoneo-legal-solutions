@@ -26,12 +26,16 @@ import { TosAcceptanceModalComponent } from './component/tos-acceptance-modal/to
 import { PreloaderComponent } from './component/preloader/preloader.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { DesignSwitcherComponent } from './component/dev-tools/design-switcher/design-switcher.component';
+import { CommandPaletteComponent } from './shared/components/command-palette/command-palette.component';
 import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
          Clock, FolderOpen, LayoutDashboard, Folder, Calendar, CheckSquare,
          Wrench, Users, DollarSign, Headphones, PenTool, Briefcase,
          X, ChevronDown, Building2, BarChart2, Settings, Megaphone,
          FileText, CalendarCheck, MessageCircle, UserCog,
-         BookOpen, Receipt, ScrollText, Square } from 'lucide-angular';
+         BookOpen, Receipt, ScrollText, Square,
+         // Command-palette icons
+         Home, CreditCard, Edit, CheckCircle, Tag, PieChart, UserPlus,
+         Inbox, Edit3, Zap, Shield, File, User, Building, CornerDownLeft } from 'lucide-angular';
 
 @NgModule({
   declarations: [
@@ -56,12 +60,16 @@ import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
     CountUpModule,
     NgbAccordionModule,
     DesignSwitcherComponent,
+    CommandPaletteComponent,
     LucideAngularModule.pick({
       Search, Bell, MessageSquare, Moon, Sun, Sparkles, Clock, FolderOpen,
       LayoutDashboard, Folder, Calendar, CheckSquare, Wrench, Users,
       DollarSign, Headphones, PenTool, Briefcase, X, ChevronDown,
       Building2, BarChart2, Settings, Megaphone, FileText, CalendarCheck,
-      MessageCircle, UserCog, BookOpen, Receipt, ScrollText, Square
+      MessageCircle, UserCog, BookOpen, Receipt, ScrollText, Square,
+      // Command-palette icons
+      Home, CreditCard, Edit, CheckCircle, Tag, PieChart, UserPlus,
+      Inbox, Edit3, Zap, Shield, File, User, Building, CornerDownLeft
     }),
     // JwtModule removed - custom TokenInterceptor handles auth to avoid conflicts
     StoreModule.forRoot(rootReducer)

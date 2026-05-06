@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import {
   Router,
   ActivatedRoute,
@@ -25,6 +25,7 @@ import { DeadlineAlertService } from './core/services/deadline-alert.service';
 import { OrganizationService } from './core/services/organization.service';
 import { decodeJwtPayload } from './core/utils/jwt.util';
 import { environment } from 'src/environments/environment';
+import { CommandPaletteService } from './core/services/command-palette.service';
 
 @Component({
   selector: 'app-root',
@@ -56,7 +57,9 @@ export class AppComponent implements OnInit, OnDestroy {
     // Eagerly instantiate so it subscribes to router events from app bootstrap —
     // this is how the draft-dashboard's linked-case chip knows where to send
     // the user back to. Inject-and-forget; no calls needed from this component.
-    private _navigationHistoryService: NavigationHistoryService
+    private _navigationHistoryService: NavigationHistoryService,
+    // Inject so the global ⌘K HostListener below can toggle it.
+    private commandPalette: CommandPaletteService
   ) {
     // Set the Rox design attribute on <html> as early as possible — before
     // the design-switcher component mounts. This eliminates the one-paint
@@ -98,6 +101,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Initialize push notifications when app starts
     this.initializePushNotifications();
+  }
+
+  /**
+   * Global ⌘K (Mac) / Ctrl+K (Win/Linux) handler — toggles the command palette.
+   * Lives at app root so it works from any route. preventDefault() stops the
+   * browser's default URL-bar focus behavior on Cmd+K in some browsers.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeyDown(event: KeyboardEvent): void {
+    const mod = event.metaKey || event.ctrlKey;
+    if (mod && (event.key === 'k' || event.key === 'K')) {
+      event.preventDefault();
+      this.commandPalette.toggle();
+    }
   }
 
   ngOnInit(): void {
