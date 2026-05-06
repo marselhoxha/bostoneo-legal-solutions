@@ -1,0 +1,414 @@
+// =====================================================
+// Task drawer · D1 Inbox
+// Mirrors the brainstorm preview's `.drawer` styles, adapted to a
+// fixed right-side overlay with backdrop. Class names are scoped under
+// `.t-drawer` to avoid collision with any global `.drawer` styles.
+// =====================================================
+
+// ── Backdrop ─────────────────────────────────────────────────
+// Sits one z-layer below the drawer. Covers the rest of the viewport
+// with the standard scrim token so the drawer is clearly modal.
+.t-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--legience-overlay-backdrop);
+  border: none;
+  cursor: default;
+  // One below the drawer (modal layer = 1070).
+  z-index: calc(var(--legience-z-modal) - 1);
+  animation: t-drawer-fade-in var(--legience-motion-medium) var(--legience-ease-out);
+  padding: 0;
+  margin: 0;
+}
+
+// ── Drawer ───────────────────────────────────────────────────
+.t-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 100vw);
+  background: var(--legience-bg-elevated);
+  box-shadow: var(--legience-shadow-lg);
+  border-left: 1px solid var(--legience-border-hairline);
+  padding: 20px 24px;
+  overflow-y: auto;
+  z-index: var(--legience-z-modal);
+  animation: t-drawer-slide-in var(--legience-motion-medium) var(--legience-ease-out);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+@keyframes t-drawer-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes t-drawer-slide-in {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+// ── Header ───────────────────────────────────────────────────
+.drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+  margin-bottom: 16px;
+
+  .drawer-title {
+    margin: 0;
+    flex: 1;
+    font: 600 16px/1.3 var(--legience-font-sans);
+    letter-spacing: -0.02em;
+    color: var(--legience-text-primary);
+  }
+
+  .icon-x {
+    background: transparent;
+    border: none;
+    color: var(--legience-text-muted);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--legience-radius-sm);
+
+    &:hover {
+      color: var(--legience-text-primary);
+      background: var(--legience-bg-row-hover);
+    }
+  }
+}
+
+// ── Field labels / values (used in metadata grid + description) ──
+.field-label {
+  font: 600 10.5px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-muted);
+  margin-bottom: 6px;
+}
+
+.field-value {
+  font: 400 13.5px/1.5 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+
+  &.muted { color: var(--legience-text-muted); }
+  &.with-avatar { display: inline-flex; align-items: center; gap: 8px; }
+  &.description { white-space: pre-wrap; line-height: 1.55; }
+}
+
+// ── Row-stack (top block: metadata grid + blocker + description) ─
+// Children are visually grouped with margin-top alone — no hairline
+// borders. Mirrors the brainstorm preview's `.drawer .row-stack`.
+.row-stack > * + * {
+  margin-top: 14px;
+}
+
+// ── 2x2 metadata grid ────────────────────────────────────────
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+// ── Drawer sections (each with a top hairline + sec-head) ───
+.drawer-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--legience-border-hairline);
+
+  .sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+
+    .title {
+      font: 600 12px/1 var(--legience-font-sans);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--legience-text-secondary);
+    }
+  }
+}
+
+// ── Status-driven blocker callout ────────────────────────────
+// Visible only when task.status === BLOCKED. Sits between the
+// metadata grid and the Description (inside `.row-stack`, so
+// vertical spacing comes from the parent's `> * + *` rule).
+.blocker-callout {
+  padding: 12px 14px;
+  background: var(--legience-danger-bg-subtle);
+  border-left: 3px solid var(--legience-danger);
+  border-radius: var(--legience-radius);
+
+  .blocker-head {
+    font: 600 10.5px/1 var(--legience-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--legience-danger);
+    margin-bottom: 6px;
+  }
+
+  .blocker-body {
+    font: 400 13px/1.5 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+
+    .muted { color: var(--legience-text-muted); }
+
+    .auto-unblock {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--legience-text-muted);
+    }
+  }
+}
+
+// ── View-driven stubs (Phase 2 / Phase 3) ────────────────────
+// These elements are hidden via *ngIf="false" today; styles are
+// here so the markup is testable when the flags flip.
+.status-changer {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: var(--legience-radius-buttons);
+  background: var(--legience-bg-subtle);
+
+  .opt {
+    flex: 1;
+    text-align: center;
+    padding: 6px 10px;
+    font: 500 11.5px/1 var(--legience-font-sans);
+    color: var(--legience-text-subtle);
+    cursor: pointer;
+    border-radius: var(--legience-radius-sm);
+
+    &.active {
+      background: var(--legience-bg-elevated);
+      color: var(--legience-text-primary);
+      box-shadow: var(--legience-shadow-sm);
+      font-weight: 600;
+    }
+  }
+}
+
+.reassign-box {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: var(--legience-accent-bg-subtle);
+  border: 1px solid rgba(var(--legience-accent-rgb), 0.25);
+  border-radius: var(--legience-radius);
+
+  .reassign-head {
+    font: 600 12px/1 var(--legience-font-sans);
+    color: var(--legience-accent);
+    margin-bottom: 6px;
+  }
+
+  .reassign-body {
+    font: 400 13px/1.5 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+  }
+}
+
+// ── Subtask rows ─────────────────────────────────────────────
+.subtask-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+
+  .t-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--legience-border-emphasis);
+    border-radius: 4px;
+    background: var(--legience-bg-elevated);
+
+    &.checked {
+      background: var(--legience-accent);
+      border-color: var(--legience-accent);
+    }
+  }
+
+  .subtitle {
+    font: 400 13px/1.3 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+
+    &.done {
+      text-decoration: line-through;
+      color: var(--legience-text-muted);
+    }
+  }
+
+  .due {
+    font: 500 11px/1 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+  }
+}
+
+// ── Attachment pills ─────────────────────────────────────────
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attachment-pill {
+  padding: 4px 10px;
+  // Inherits .case-pill styles below; this just bumps padding to
+  // match the brainstorm preview's chunkier file-pill rendering.
+}
+
+.attachment-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+// ── Comments ─────────────────────────────────────────────────
+.comment {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  margin-top: 10px;
+
+  .meta {
+    font: 500 11px/1 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+    margin-bottom: 4px;
+
+    strong {
+      color: var(--legience-text-secondary);
+      font-weight: 600;
+      margin-right: 6px;
+    }
+  }
+
+  .body {
+    background: var(--legience-bg-card-hover);
+    border-radius: var(--legience-radius);
+    padding: 8px 10px;
+    font: 400 13px/1.5 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+  }
+}
+
+// ── Ringed avatar (shared across header / metadata / comments) ─
+// Same recipe as InboxViewComponent so the same person looks
+// identical in the row and in the drawer.
+.av-ringed {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ring, var(--legience-accent));
+  flex-shrink: 0;
+
+  .inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--legience-bg-elevated);
+    padding: 1.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inner .content {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--bg, var(--legience-accent));
+    color: #fff;
+    font: 600 9px/1 var(--legience-font-sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// ── Pills (priority + status) — copied from inbox-view so the
+// drawer is visually self-contained and we don't depend on
+// global pill styles leaking in. ─────────────────────────────
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--legience-radius-pill);
+  font: 600 10.5px/1.4 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+
+  .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+.pill-info    { background: var(--legience-info-bg-subtle);    color: var(--legience-info);     border-color: rgba(var(--legience-info-rgb), 0.25); }
+.pill-warning { background: var(--legience-warning-bg-subtle); color: #b45309;                  border-color: rgba(var(--legience-warning-rgb), 0.25); }
+.pill-danger  { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger);   border-color: rgba(var(--legience-danger-rgb), 0.25); }
+.pill-orange  { background: var(--legience-orange-soft);       color: var(--legience-orange);   border-color: rgba(var(--legience-orange-rgb), 0.25); }
+.pill-subtle  { background: var(--legience-bg-subtle);         color: var(--legience-text-subtle); border-color: var(--legience-border-hairline); }
+
+// ── Case pill (and the attachment pill that reuses it) ──────
+.case-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font: 500 11px/1.5 var(--legience-font-sans);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-secondary);
+  border: 1px solid var(--legience-border-hairline);
+  white-space: nowrap;
+
+  .case-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--legience-accent);
+  }
+}
+
+// ── Buttons (ghost + small) used in section headers ─────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--legience-radius-buttons);
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--legience-text-subtle);
+  padding: 4px 10px;
+  font: 500 12px/1.4 var(--legience-font-sans);
+
+  &:hover {
+    background: var(--legience-bg-row-hover);
+    color: var(--legience-text-primary);
+  }
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}

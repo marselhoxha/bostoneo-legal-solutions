@@ -1,0 +1,173 @@
+<!--
+  Backdrop and drawer render together when a task is loaded.
+  The backdrop is a button (not a div) so keyboard users can dismiss it
+  without leaving the page. The drawer is a fixed right-side overlay,
+  matching the brainstorm preview's "Drawer · D1 Inbox" content.
+-->
+
+<button
+  type="button"
+  class="t-drawer-backdrop"
+  *ngIf="task"
+  (click)="close()"
+  aria-label="Close drawer"
+></button>
+
+<aside class="t-drawer" *ngIf="task" role="complementary" aria-label="Task details">
+  <!-- Header: priority pill + title + close (always visible) -->
+  <header class="drawer-head">
+    <span class="pill" [ngClass]="'pill-' + (task.priority | priorityToTone)">
+      <span class="dot"></span>{{ task.priority | titlecase }}
+    </span>
+    <h3 class="drawer-title">{{ task.title }}</h3>
+    <button type="button" class="icon-x" (click)="close()" aria-label="Close drawer">&#x2715;</button>
+  </header>
+
+  <!--
+    VIEW-DRIVEN: Pipeline status-changer (Phase 2 — stubbed off via *ngIf="false").
+    Visible when activeView === 'pipeline' once the flag flips.
+  -->
+  <div class="status-changer" *ngIf="false">
+    <span class="opt">Open</span>
+    <span class="opt active">In progress</span>
+    <span class="opt">Blocked</span>
+    <span class="opt">Done</span>
+  </div>
+
+  <!--
+    VIEW-DRIVEN: Workload reassign action (Phase 3 — stubbed off via *ngIf="false").
+    Visible when activeView === 'workload' once the flag flips.
+  -->
+  <div class="reassign-box" *ngIf="false">
+    <div class="reassign-head">&#x2696; Reassign to balance load</div>
+    <div class="reassign-body">Available attorneys with capacity will list here.</div>
+  </div>
+
+  <!--
+    Top block — metadata grid, blocker callout (status-driven), and
+    description live in `.row-stack`. Children are spaced with
+    margin-top alone (no hairline border) to match the brainstorm
+    preview's visual grouping. Bordered `.drawer-section`s start
+    below this block at Subtasks.
+  -->
+  <div class="row-stack">
+    <!-- 2x2 metadata grid (always visible) -->
+    <div class="grid-2">
+      <div>
+        <div class="field-label">Case</div>
+        <span class="case-pill" *ngIf="task.caseTitle || task.caseNumber; else noCase">
+          <span class="case-dot"></span>
+          {{ task.caseTitle || task.caseNumber }}
+        </span>
+        <ng-template #noCase>
+          <div class="field-value muted">&mdash;</div>
+        </ng-template>
+      </div>
+      <div>
+        <div class="field-label">Due</div>
+        <div class="field-value">{{ task.dueDate | dueLabel }}</div>
+      </div>
+      <div>
+        <div class="field-label">Assignee</div>
+        <div class="field-value with-avatar" *ngIf="task.assignedToName as name; else noAssignee">
+          <div
+            class="av-ringed"
+            [style.--ring]="avatarColor(task.assignedToId ?? name)"
+            [style.--bg]="avatarColor(task.assignedToId ?? name)"
+          >
+            <div class="inner"><div class="content">{{ name | userInitials }}</div></div>
+          </div>
+          <span>{{ name }}</span>
+        </div>
+        <ng-template #noAssignee>
+          <div class="field-value muted">Unassigned</div>
+        </ng-template>
+      </div>
+      <div>
+        <div class="field-label">Status</div>
+        <span class="pill pill-subtle"><span class="dot"></span>{{ task.status | titlecase }}</span>
+      </div>
+    </div>
+
+    <!--
+      STATUS-DRIVEN: Blocker callout. Visible whenever status === BLOCKED,
+      regardless of view. Sits between metadata grid and description.
+    -->
+    <div class="blocker-callout" *ngIf="isBlocked()">
+      <div class="blocker-head">&#9208; Blocked</div>
+      <div class="blocker-body">
+        <ng-container *ngIf="task.blockerReason; else noReason">
+          <strong>{{ task.blockerReason }}</strong>
+        </ng-container>
+        <ng-template #noReason>
+          <em class="muted">No reason recorded</em>
+        </ng-template>
+        <div class="auto-unblock" *ngIf="task.autoUnblockDate">
+          Auto-unblock on <strong>{{ task.autoUnblockDate | date:'mediumDate' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description (always visible, no section border) -->
+    <div>
+      <div class="field-label">Description</div>
+      <div class="field-value description">{{ task.description || '(no description)' }}</div>
+    </div>
+  </div>
+
+  <!-- Subtasks (always visible when present) -->
+  <div class="drawer-section" *ngIf="task.subtasks?.length">
+    <div class="sec-head">
+      <span class="title">Subtasks &middot; {{ doneSubtaskCount }} of {{ task.subtasks?.length }}</span>
+      <button type="button" class="btn-ghost btn btn-sm">+ Add</button>
+    </div>
+    <div class="subtask-row" *ngFor="let st of task.subtasks">
+      <div class="t-checkbox" [class.checked]="st.status === 'COMPLETED'"></div>
+      <div class="subtitle" [class.done]="st.status === 'COMPLETED'">{{ st.title }}</div>
+      <div class="due">{{ st.dueDate | dueLabel }}</div>
+    </div>
+  </div>
+
+  <!-- Attachments (always visible when present) -->
+  <div class="drawer-section" *ngIf="task.attachments?.length">
+    <div class="sec-head">
+      <span class="title">Attachments &middot; {{ task.attachments?.length }}</span>
+    </div>
+    <div class="attachment-list">
+      <span class="case-pill attachment-pill" *ngFor="let a of task.attachments">
+        <span class="attachment-icon" aria-hidden="true">&#x1F4C4;</span>
+        {{ a.fileName }}<ng-container *ngIf="a.fileSize"> &middot; {{ formatFileSize(a.fileSize) }}</ng-container>
+      </span>
+    </div>
+  </div>
+
+  <!-- Time logged (always visible) -->
+  <div class="drawer-section">
+    <div class="sec-head">
+      <span class="title">Time logged &middot; {{ task.actualHours || 0 }} h</span>
+      <button type="button" class="btn-ghost btn btn-sm">&#9654; Start timer</button>
+    </div>
+  </div>
+
+  <!-- Comments (always visible when present) -->
+  <div class="drawer-section" *ngIf="task.comments?.length">
+    <div class="sec-head">
+      <span class="title">Comments &middot; {{ task.comments?.length }}</span>
+    </div>
+    <div class="comment" *ngFor="let c of task.comments">
+      <div
+        class="av-ringed"
+        [style.--ring]="avatarColor(c.userId ?? c.userName)"
+        [style.--bg]="avatarColor(c.userId ?? c.userName)"
+      >
+        <div class="inner"><div class="content">{{ c.userName | userInitials }}</div></div>
+      </div>
+      <div>
+        <div class="meta">
+          <strong>{{ c.userName }}</strong> &middot; {{ c.createdAt | date:'short' }}
+        </div>
+        <div class="body">{{ c.comment }}</div>
+      </div>
+    </div>
+  </div>
+</aside>

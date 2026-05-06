@@ -25,6 +25,9 @@ export interface CaseTask {
   comments?: TaskComment[];
   subtasks?: CaseTask[];
   attachments?: TaskAttachment[];
+  // Wave 1 Phase 1 — drawer surfaces these whenever status === BLOCKED
+  blockerReason?: string;
+  autoUnblockDate?: string | Date;
 }
 
 export interface TaskCreateRequest {
