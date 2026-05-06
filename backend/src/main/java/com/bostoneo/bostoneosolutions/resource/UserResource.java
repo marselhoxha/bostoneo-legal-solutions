@@ -77,6 +77,7 @@ public class UserResource {
     private final com.bostoneo.bostoneosolutions.repository.OrganizationRepository organizationRepository;
     private final com.bostoneo.bostoneosolutions.service.TokenBlacklistService tokenBlacklistService;
     private final com.bostoneo.bostoneosolutions.service.OnlineUserService onlineUserService;
+    private final com.bostoneo.bostoneosolutions.repository.AttorneyRepository attorneyRepository;
 
     // Holds the UserPrincipal from authentication to avoid rebuilding it in sendResponse()
     private final ThreadLocal<UserPrincipal> authenticatedPrincipal = new ThreadLocal<>();
@@ -616,6 +617,9 @@ public class UserResource {
             // Add case role assignments (only extra query needed for token)
             Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(loggedInUser.getId());
             principal = new UserPrincipal(principal.getUser(), principal.getRoles(), principal.getPermissions(), caseRoleAssignments);
+            // Re-attach the Attorney row for the rebuilt principal so practice-area
+            // checks work for callers that pull the principal from authenticatedPrincipal.
+            attorneyRepository.findByUserId(principal.getUser().getId()).ifPresent(principal::setAttorney);
             authenticatedPrincipal.set(principal);
 
             if(!loggedInUser.isUsingMFA()) {
@@ -682,8 +686,12 @@ public class UserResource {
         
         // Get case role assignments for the user
         Set<com.bostoneo.bostoneosolutions.model.CaseRoleAssignment> caseRoleAssignments = roleService.getCaseRoleAssignments(user.getId());
-        
-        return new UserPrincipal(userEntity, roles, permissions, caseRoleAssignments);
+
+        UserPrincipal principal = new UserPrincipal(userEntity, roles, permissions, caseRoleAssignments);
+        // Attach the Attorney row when present so principal.getPracticeAreas()
+        // returns the assigned areas instead of an empty list.
+        attorneyRepository.findByUserId(userEntity.getId()).ifPresent(principal::setAttorney);
+        return principal;
     }
 
     private ResponseEntity<HttpResponse> sendVerificationCode(UserDTO user) {

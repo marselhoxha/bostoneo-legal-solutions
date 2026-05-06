@@ -12,6 +12,7 @@ import com.bostoneo.bostoneosolutions.model.User;
 import com.bostoneo.bostoneosolutions.model.UserPrincipal;
 import com.bostoneo.bostoneosolutions.multitenancy.TenantContext;
 import com.bostoneo.bostoneosolutions.query.RoleQuery;
+import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
 import com.bostoneo.bostoneosolutions.repository.RoleRepository;
 import com.bostoneo.bostoneosolutions.repository.UserRepository;
 import com.bostoneo.bostoneosolutions.rowmapper.UserRowMapper;
@@ -65,6 +66,7 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
     private final EmailService emailService;
     private final FileStorageService fileStorageService;
     private final com.bostoneo.bostoneosolutions.util.PasswordPolicyValidator passwordPolicyValidator;
+    private final AttorneyRepository attorneyRepository;
 
     @Value("${UI_APP_URL:http://localhost:4200}")
     private String frontendBaseUrl;
@@ -337,7 +339,13 @@ public class UserRepositoryImpl implements UserRepository<User>, UserDetailsServ
             }
 
             // Create UserPrincipal with full RBAC information
-            return new UserPrincipal(user, roles, permissions, new HashSet<>());
+            UserPrincipal principal = new UserPrincipal(user, roles, permissions, new HashSet<>());
+
+            // Attach the Attorney row when present so authorization filters
+            // (e.g. practice-area scoping on the dashboards) can inspect
+            // practiceAreas via principal.getPracticeAreas().
+            attorneyRepository.findByUserId(user.getId()).ifPresent(principal::setAttorney);
+            return principal;
         }
     }
 
