@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.model;
 
 import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
+import com.bostoneo.bostoneosolutions.enumeration.PracticeArea;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
@@ -8,6 +9,9 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 import static jakarta.persistence.GenerationType.IDENTITY;
@@ -71,6 +75,11 @@ public class Organization {
     // Jurisdiction — 2-letter US state code (e.g., "TX", "MA")
     @Column(name = "state", length = 2)
     private String state;
+
+    // Practice areas the firm has enabled (comma-delimited PracticeArea enum names).
+    // Drives navigation, dashboard widgets, and feature gating per firm.
+    @Column(name = "enabled_practice_areas", columnDefinition = "TEXT")
+    private String enabledPracticeAreas;
 
     // Email Branding
     @Column(name = "primary_color", length = 7)
@@ -213,6 +222,30 @@ public class Organization {
         return whatsappEnabled != null && whatsappEnabled
                 && isTwilioConfigured()
                 && twilioWhatsappNumber != null && !twilioWhatsappNumber.isEmpty();
+    }
+
+    /**
+     * Parse {@link #enabledPracticeAreas} into a typed list. Tokens that do not
+     * map to a {@link PracticeArea} enum value (e.g., legacy/test values like
+     * MEDICAL_MALPRACTICE) are skipped silently so callers always get a clean
+     * list. Returns an empty list when the field is null or blank.
+     */
+    @JsonIgnore
+    public List<PracticeArea> getEnabledPracticeAreasList() {
+        if (enabledPracticeAreas == null || enabledPracticeAreas.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<PracticeArea> result = new ArrayList<>();
+        for (String token : enabledPracticeAreas.split(",")) {
+            String trimmed = token.trim();
+            if (trimmed.isEmpty()) continue;
+            try {
+                result.add(PracticeArea.valueOf(trimmed));
+            } catch (IllegalArgumentException ignored) {
+                // Skip tokens that aren't valid enum values (graceful handling).
+            }
+        }
+        return result;
     }
 
     /**

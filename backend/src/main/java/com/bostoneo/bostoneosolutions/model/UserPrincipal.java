@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.model;
 
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
+import com.bostoneo.bostoneosolutions.enumeration.PracticeArea;
 import com.bostoneo.bostoneosolutions.enums.ActionType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -9,7 +10,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static com.bostoneo.bostoneosolutions.dtomapper.UserDTOMapper.fromUser;
@@ -22,6 +25,10 @@ public class UserPrincipal implements UserDetails {
     private final Set<Role> roles;
     private final Set<Permission> permissions;
     private final Set<CaseRoleAssignment> caseRoleAssignments;
+    // Optional — populated post-construction when the user has an Attorney row.
+    // Surfaces practice areas to authorization filters without forcing a
+    // repository lookup inside this principal.
+    private Attorney attorney;
 
     /**
      * Constructor for the RBAC system
@@ -136,5 +143,35 @@ public class UserPrincipal implements UserDetails {
      */
     public boolean hasRole(String roleName) {
         return roles.stream().anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
+    }
+
+    /**
+     * The Attorney row associated with this principal, if any. May be null for
+     * non-attorney users (org admins, paralegals without an attorneys-row, etc.).
+     */
+    public Attorney getAttorney() {
+        return attorney;
+    }
+
+    public void setAttorney(Attorney attorney) {
+        this.attorney = attorney;
+    }
+
+    /**
+     * Convenience for the user's organization id. Returns null if not set.
+     */
+    public Long getOrgId() {
+        return user == null ? null : user.getOrganizationId();
+    }
+
+    /**
+     * Practice areas the principal is assigned to. Returns an empty list when
+     * no Attorney row is attached or the attorney has no practice areas set.
+     */
+    public List<PracticeArea> getPracticeAreas() {
+        if (attorney == null) {
+            return Collections.emptyList();
+        }
+        return attorney.getPracticeAreasList();
     }
 }

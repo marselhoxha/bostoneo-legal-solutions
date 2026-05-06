@@ -1,11 +1,16 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.enumeration.PracticeArea;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
@@ -63,6 +68,12 @@ public class OrganizationInvitation {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    // Practice areas the invited user will be assigned to (comma-delimited
+    // PracticeArea enum names). Copied onto the resulting Attorney row when
+    // the invitation is accepted.
+    @Column(name = "practice_areas", columnDefinition = "TEXT")
+    private String practiceAreas;
+
     // Transient fields for display
     @Transient
     private String organizationName;
@@ -108,5 +119,28 @@ public class OrganizationInvitation {
      */
     public void accept() {
         this.acceptedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Parse {@link #practiceAreas} (comma-delimited PracticeArea enum names)
+     * into a typed list. Tokens that do not map to a known enum value are
+     * skipped silently. Returns an empty list when the field is null or blank.
+     */
+    @JsonIgnore
+    public List<PracticeArea> getPracticeAreasList() {
+        if (practiceAreas == null || practiceAreas.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<PracticeArea> result = new ArrayList<>();
+        for (String token : practiceAreas.split(",")) {
+            String trimmed = token.trim();
+            if (trimmed.isEmpty()) continue;
+            try {
+                result.add(PracticeArea.valueOf(trimmed));
+            } catch (IllegalArgumentException ignored) {
+                // Skip unknown enum tokens (graceful handling).
+            }
+        }
+        return result;
     }
 }

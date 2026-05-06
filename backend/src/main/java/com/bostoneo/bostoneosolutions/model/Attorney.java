@@ -1,5 +1,7 @@
 package com.bostoneo.bostoneosolutions.model;
 
+import com.bostoneo.bostoneosolutions.enumeration.PracticeArea;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,6 +10,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "attorneys")
@@ -111,5 +116,28 @@ public class Attorney {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Parse {@link #practiceAreas} (comma-delimited PracticeArea enum names)
+     * into a typed list. Tokens that do not map to a known enum value are
+     * skipped silently. Returns an empty list when the field is null or blank.
+     */
+    @JsonIgnore
+    public List<PracticeArea> getPracticeAreasList() {
+        if (practiceAreas == null || practiceAreas.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<PracticeArea> result = new ArrayList<>();
+        for (String token : practiceAreas.split(",")) {
+            String trimmed = token.trim();
+            if (trimmed.isEmpty()) continue;
+            try {
+                result.add(PracticeArea.valueOf(trimmed));
+            } catch (IllegalArgumentException ignored) {
+                // Skip unknown enum tokens (graceful handling for legacy data).
+            }
+        }
+        return result;
     }
 }
