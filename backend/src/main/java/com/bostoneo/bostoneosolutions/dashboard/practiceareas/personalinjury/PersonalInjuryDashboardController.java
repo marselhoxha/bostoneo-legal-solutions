@@ -1,8 +1,6 @@
 package com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury;
 
-import com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury.dto.PiCrossMatterPatternDto;
 import com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury.dto.PiInsightDto;
-import com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury.dto.PiRiskAlertDto;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.enumeration.PracticeArea;
 import com.bostoneo.bostoneosolutions.model.Attorney;
@@ -54,18 +52,6 @@ public class PersonalInjuryDashboardController {
     public List<PiInsightDto> getInsights(Authentication authentication) {
         Attorney attorney = resolveAttorneyOrDeny(authentication);
         return service.getInsights(attorney.getOrganizationId());
-    }
-
-    @GetMapping("/risk-alerts")
-    public List<PiRiskAlertDto> getRiskAlerts(Authentication authentication) {
-        Attorney attorney = resolveAttorneyOrDeny(authentication);
-        return service.getRiskAlerts(attorney.getOrganizationId());
-    }
-
-    @GetMapping("/cross-matter")
-    public PiCrossMatterPatternDto getCrossMatter(Authentication authentication) {
-        Attorney attorney = resolveAttorneyOrDeny(authentication);
-        return service.getCrossMatterPattern(attorney.getOrganizationId());
     }
 
     /**

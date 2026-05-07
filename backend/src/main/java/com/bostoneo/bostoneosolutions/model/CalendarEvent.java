@@ -92,7 +92,19 @@ public class CalendarEvent {
     // New field to mark high priority deadlines
     @Column(name = "high_priority")
     private Boolean highPriority;
-    
+
+    // Cal-D2 deadline tier: STATUTE | COURT | SOFT (nullable; inferred at render time when null)
+    @Column(name = "deadline_tier", length = 20)
+    private String deadlineTier;
+
+    // Free-text statutory or rule citation backing a STATUTE-tier deadline
+    @Column(name = "source_authority", columnDefinition = "TEXT")
+    private String sourceAuthority;
+
+    // Free-text required action to satisfy the deadline
+    @Column(name = "required_action", columnDefinition = "TEXT")
+    private String requiredAction;
+
     @Column(name = "external_id")
     private String externalId; // ID in external calendar system
     

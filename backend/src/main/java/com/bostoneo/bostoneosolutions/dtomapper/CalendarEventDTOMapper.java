@@ -38,6 +38,9 @@ public class CalendarEventDTOMapper {
         dto.setEmailNotification(event.getEmailNotification());
         dto.setPushNotification(event.getPushNotification());
         dto.setHighPriority(event.getHighPriority());
+        dto.setDeadlineTier(event.getDeadlineTier());
+        dto.setSourceAuthority(event.getSourceAuthority());
+        dto.setRequiredAction(event.getRequiredAction());
         dto.setUserId(event.getUserId());
         dto.setCaseId(event.getCaseId());
         dto.setCreatedAt(event.getCreatedAt());
@@ -90,6 +93,9 @@ public class CalendarEventDTOMapper {
         event.setEmailNotification(dto.getEmailNotification());
         event.setPushNotification(dto.getPushNotification());
         event.setHighPriority(dto.getHighPriority());
+        event.setDeadlineTier(dto.getDeadlineTier());
+        event.setSourceAuthority(dto.getSourceAuthority());
+        event.setRequiredAction(dto.getRequiredAction());
         event.setUserId(dto.getUserId());
         event.setCaseId(dto.getCaseId());
         // Don't copy createdAt/updatedAt - let JPA handle these
@@ -137,6 +143,9 @@ public class CalendarEventDTOMapper {
         
         // Update new fields
         if (dto.getHighPriority() != null) event.setHighPriority(dto.getHighPriority());
+        if (dto.getDeadlineTier() != null) event.setDeadlineTier(dto.getDeadlineTier());
+        if (dto.getSourceAuthority() != null) event.setSourceAuthority(dto.getSourceAuthority());
+        if (dto.getRequiredAction() != null) event.setRequiredAction(dto.getRequiredAction());
         
         // Handle additional reminders list
         if (dto.getAdditionalReminders() != null) {

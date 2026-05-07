@@ -49,9 +49,16 @@ public class CreateCalendarEventRequest {
     
     // Flag for high priority deadlines
     private Boolean highPriority;
-    
+
+    // Cal-D2 deadline tier: STATUTE | COURT | SOFT (nullable; inferred at render time when null)
+    private String deadlineTier;
+    // Free-text statutory or rule citation backing a STATUTE-tier deadline
+    private String sourceAuthority;
+    // Free-text required action to satisfy the deadline
+    private String requiredAction;
+
     // Additional reminder times (minutes before deadline)
     private List<Integer> additionalReminders;
-    
+
     private String externalCalendar;
-} 
+}

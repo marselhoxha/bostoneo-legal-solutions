@@ -129,6 +129,9 @@ public class CalendarEventController {
         
         // Set additional fields
         eventDTO.setHighPriority(request.getHighPriority());
+        eventDTO.setDeadlineTier(request.getDeadlineTier());
+        eventDTO.setSourceAuthority(request.getSourceAuthority());
+        eventDTO.setRequiredAction(request.getRequiredAction());
         eventDTO.setAdditionalReminders(request.getAdditionalReminders());
         
         CalendarEventDTO createdEvent = calendarEventService.createEvent(eventDTO);

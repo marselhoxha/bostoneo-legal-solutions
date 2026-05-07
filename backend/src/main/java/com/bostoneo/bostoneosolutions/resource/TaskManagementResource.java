@@ -210,7 +210,33 @@ public class TaskManagementResource {
                         .statusCode(OK.value())
                         .build());
     }
-    
+
+    /**
+     * V78 — multi-assignee. Body: { "userIds": [1, 2, 3] }.
+     * Replaces the full set of assignees for the task. The first userId in
+     * the list is treated as the "primary" (mirrors `assignedTo` for legacy
+     * notification + filter wiring).
+     */
+    @PutMapping("/{taskId}/assignees")
+    @Operation(summary = "Replace the full set of assignees on a task")
+    @PreAuthorize("hasAuthority('TASK:ASSIGN') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<HttpResponse> replaceAssignees(
+            @PathVariable Long taskId,
+            @RequestBody java.util.Map<String, java.util.List<Long>> body) {
+        java.util.List<Long> userIds = body == null ? java.util.Collections.emptyList()
+                : body.getOrDefault("userIds", java.util.Collections.emptyList());
+        log.info("Replacing assignees on task {} -> {}", taskId, userIds);
+        CaseTaskDTO task = taskService.replaceAssignees(taskId, userIds);
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("task", task))
+                        .message("Task assignees updated")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
     @PutMapping("/{taskId}/status")
     @Operation(summary = "Update task status")
     @PreAuthorize("hasAuthority('TASK:EDIT') or hasAuthority('TASK:ADMIN') or @securityService.isTaskAssignee(#taskId)")

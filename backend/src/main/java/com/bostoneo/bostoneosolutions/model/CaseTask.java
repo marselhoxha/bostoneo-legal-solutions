@@ -15,7 +15,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT;
 
@@ -67,6 +69,19 @@ public class CaseTask {
     @JoinColumn(name = "assigned_to")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User assignedTo;
+
+    // V78 — multi-assignee. Tasks can have N assignees; `assignedTo` above
+    // remains the "primary" pointer for legacy callers + notifications.
+    // The first entry of `assignees` is treated as primary if `assignedTo`
+    // is null.
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "case_task_assignees",
+        joinColumns = @JoinColumn(name = "task_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Set<User> assignees = new HashSet<>();
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by", nullable = false)

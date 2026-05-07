@@ -134,6 +134,19 @@ public class LegalCaseServiceImpl implements LegalCaseService {
             legalCase.setStage(CaseStage.INTAKE);
         }
 
+        // V77 — default billing_type by practice area when attorney didn't specify.
+        //   Personal Injury -> CONTINGENCY (attorney can override on the case)
+        //   Everything else -> HOURLY (safe default; matches V77 backfill)
+        // Same Hibernate-explicit-INSERT reasoning as the V61 stage default above:
+        // we cannot rely on the DB column DEFAULT alone.
+        if (legalCase.getBillingType() == null) {
+            legalCase.setBillingType(
+                "Personal Injury".equalsIgnoreCase(legalCase.getPracticeArea())
+                    ? com.bostoneo.bostoneosolutions.enumeration.BillingType.CONTINGENCY
+                    : com.bostoneo.bostoneosolutions.enumeration.BillingType.HOURLY
+            );
+        }
+
         // V61 — auto-fill statute_of_limitations on intake when injuryDate is provided.
         // Old value is null for a new case; helper handles the (null → set, statute null) case.
         applyStatuteAutoFill(legalCase, null);

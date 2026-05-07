@@ -1,5 +1,6 @@
 package com.bostoneo.bostoneosolutions.dto;
 
+import com.bostoneo.bostoneosolutions.enumeration.BillingType;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStage;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
@@ -171,6 +172,12 @@ public class LegalCaseDTO {
     // Practice Area Identifier
     // ============================================
     private String practiceArea;
+
+    // ============================================
+    // Billing arrangement (V77) — drives time-log UI visibility on tasks.
+    // Default applied by practice area at case-create time; attorney can override.
+    // ============================================
+    private BillingType billingType;
 
     // ============================================
     // Attorney Workflow (V61) — primarily for PI cases.

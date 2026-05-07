@@ -16,7 +16,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static java.time.LocalDateTime.now;
 import static java.util.Map.of;
@@ -243,14 +245,44 @@ public class TaskManagementController {
             @PathVariable Long taskId,
             @PathVariable Long userId) {
         log.info("User {} assigning task {} to user {}", currentUserId, taskId, userId);
-        
+
         CaseTaskDTO task = taskManagementService.assignTask(taskId, userId);
-        
+
         return ResponseEntity.ok(
                 HttpResponse.builder()
                         .timeStamp(now().toString())
                         .data(of("task", task))
                         .message("Task assigned successfully")
+                        .status(OK)
+                        .statusCode(OK.value())
+                        .build());
+    }
+
+    /**
+     * V78 — multi-assignee. Body: { "userIds": [1, 2, 3] }.
+     * Replaces the full set of assignees for the task. The first userId in
+     * the list becomes the "primary" (mirrors `assignedTo` for legacy
+     * notification + filter wiring). Mirrors the legacy assign endpoint's
+     * role list for consistency.
+     */
+    @PutMapping("/{taskId}/assignees")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_ATTORNEY', 'ROLE_MANAGING_PARTNER', 'ROLE_SENIOR_PARTNER', 'ROLE_EQUITY_PARTNER', 'ROLE_OF_COUNSEL', 'ROLE_PARALEGAL', 'ROLE_SECRETARY', 'ROLE_MANAGER')")
+    public ResponseEntity<HttpResponse> replaceAssignees(
+            @AuthenticationPrincipal(expression = "id") Long currentUserId,
+            @PathVariable Long taskId,
+            @RequestBody Map<String, List<Long>> body) {
+        List<Long> userIds = body == null
+                ? Collections.emptyList()
+                : body.getOrDefault("userIds", Collections.emptyList());
+        log.info("User {} replacing assignees on task {} -> {}", currentUserId, taskId, userIds);
+
+        CaseTaskDTO task = taskManagementService.replaceAssignees(taskId, userIds);
+
+        return ResponseEntity.ok(
+                HttpResponse.builder()
+                        .timeStamp(now().toString())
+                        .data(of("task", task))
+                        .message("Task assignees updated successfully")
                         .status(OK)
                         .statusCode(OK.value())
                         .build());

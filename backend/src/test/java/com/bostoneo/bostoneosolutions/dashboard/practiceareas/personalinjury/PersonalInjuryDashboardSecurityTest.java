@@ -1,8 +1,6 @@
 package com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury;
 
-import com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury.dto.PiCrossMatterPatternDto;
 import com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury.dto.PiInsightDto;
-import com.bostoneo.bostoneosolutions.dashboard.practiceareas.personalinjury.dto.PiRiskAlertDto;
 import com.bostoneo.bostoneosolutions.dto.UserDTO;
 import com.bostoneo.bostoneosolutions.model.Attorney;
 import com.bostoneo.bostoneosolutions.repository.AttorneyRepository;
@@ -22,9 +20,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Pins the access-control invariant on the PI dashboard endpoints:
- * only attorneys whose {@code practiceAreas} include
- * {@code PERSONAL_INJURY} may call the three handlers. Everyone else gets
+ * Pins the access-control invariant on the PI dashboard endpoint: only
+ * attorneys whose {@code practiceAreas} include {@code PERSONAL_INJURY}
+ * may call the {@code /insights} handler. Everyone else gets
  * {@code 403 FORBIDDEN}.
  *
  * <p>Mirrors the existing test style in
@@ -54,14 +52,6 @@ class PersonalInjuryDashboardSecurityTest {
                 new PiInsightDto("gap", "Treatment gap", "ri-flashlight-fill",
                         "orange", "Test Client", "desc", "Generate analysis", 1L)
         ));
-        when(service.getRiskAlerts(anyLong())).thenReturn(List.of(
-                new PiRiskAlertDto("warning", "doc-stale", "Document awaiting signature",
-                        "Test · pending", null)
-        ));
-        when(service.getCrossMatterPattern(anyLong())).thenReturn(
-                new PiCrossMatterPatternDto("Pattern", "summary", List.of(),
-                        "Open", "Compare")
-        );
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -100,24 +90,6 @@ class PersonalInjuryDashboardSecurityTest {
         assertThat(body).isNotNull().isNotEmpty();
     }
 
-    @Test
-    void riskAlerts_personalInjuryAttorney_returnsBody() {
-        mockAttorney("PERSONAL_INJURY");
-
-        List<PiRiskAlertDto> body = controller.getRiskAlerts(authFor(USER_ID));
-
-        assertThat(body).isNotNull();
-    }
-
-    @Test
-    void crossMatter_personalInjuryAttorney_returnsBody() {
-        mockAttorney("PERSONAL_INJURY");
-
-        PiCrossMatterPatternDto body = controller.getCrossMatter(authFor(USER_ID));
-
-        assertThat(body).isNotNull();
-    }
-
     // ──────────────────────────────────────────────────────────────────
     // Multi-practice attorney that includes PI: still allowed
     // ──────────────────────────────────────────────────────────────────
@@ -129,20 +101,6 @@ class PersonalInjuryDashboardSecurityTest {
         List<PiInsightDto> body = controller.getInsights(authFor(USER_ID));
 
         assertThat(body).isNotNull().isNotEmpty();
-    }
-
-    @Test
-    void riskAlerts_multiPracticeAreaIncludingPi_returnsBody() {
-        mockAttorney("PERSONAL_INJURY,FAMILY_LAW");
-
-        assertThat(controller.getRiskAlerts(authFor(USER_ID))).isNotNull();
-    }
-
-    @Test
-    void crossMatter_multiPracticeAreaIncludingPi_returnsBody() {
-        mockAttorney("PERSONAL_INJURY,FAMILY_LAW");
-
-        assertThat(controller.getCrossMatter(authFor(USER_ID))).isNotNull();
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -159,26 +117,6 @@ class PersonalInjuryDashboardSecurityTest {
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    @Test
-    void riskAlerts_familyLawOnly_throws403() {
-        mockAttorney("FAMILY_LAW");
-
-        assertThatThrownBy(() -> controller.getRiskAlerts(authFor(USER_ID)))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
-                .isEqualTo(HttpStatus.FORBIDDEN);
-    }
-
-    @Test
-    void crossMatter_familyLawOnly_throws403() {
-        mockAttorney("FAMILY_LAW");
-
-        assertThatThrownBy(() -> controller.getCrossMatter(authFor(USER_ID)))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
-                .isEqualTo(HttpStatus.FORBIDDEN);
-    }
-
     // ──────────────────────────────────────────────────────────────────
     // Empty practiceAreas: 403
     // ──────────────────────────────────────────────────────────────────
@@ -188,26 +126,6 @@ class PersonalInjuryDashboardSecurityTest {
         mockAttorney("");
 
         assertThatThrownBy(() -> controller.getInsights(authFor(USER_ID)))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
-                .isEqualTo(HttpStatus.FORBIDDEN);
-    }
-
-    @Test
-    void riskAlerts_emptyPracticeAreas_throws403() {
-        mockAttorney("");
-
-        assertThatThrownBy(() -> controller.getRiskAlerts(authFor(USER_ID)))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
-                .isEqualTo(HttpStatus.FORBIDDEN);
-    }
-
-    @Test
-    void crossMatter_emptyPracticeAreas_throws403() {
-        mockAttorney("");
-
-        assertThatThrownBy(() -> controller.getCrossMatter(authFor(USER_ID)))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);

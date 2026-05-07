@@ -152,13 +152,21 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             .tags(request.getTags())
             .dependencies(request.getDependencies());
         
-        // Set assigned user if provided
+        // Set assigned user if provided. Also seed the V78 multi-assignee
+        // set with the same user so the new `assignees[]` collection stays
+        // in sync with the legacy `assignedTo` pointer from creation. The
+        // Mine filter on the inbox checks `assignees[]`; without this seed,
+        // a freshly-created task assigned to me won't surface under Mine
+        // until I re-save via the assignee picker.
         if (request.getAssignedToId() != null) {
             User assignedTo = userRepository.get(request.getAssignedToId());
             if (assignedTo == null) {
                 throw new IllegalArgumentException("Assigned user not found with ID: " + request.getAssignedToId());
             }
             taskBuilder.assignedTo(assignedTo);
+            Set<User> seedAssignees = new HashSet<>();
+            seedAssignees.add(assignedTo);
+            taskBuilder.assignees(seedAssignees);
         }
         
         // Set parent task if provided
@@ -263,7 +271,12 @@ public class TaskManagementServiceImpl implements TaskManagementService {
                 task.setCompletedAt(null);
             }
         }
-        if (request.getDueDate() != null) {
+        if (Boolean.TRUE.equals(request.getClearDueDate())) {
+            // Explicit clear request — JSON null is indistinguishable from
+            // "field omitted," so the FE sends `clearDueDate: true` to mean
+            // "unset the existing dueDate".
+            task.setDueDate(null);
+        } else if (request.getDueDate() != null) {
             task.setDueDate(request.getDueDate());
         }
         if (request.getEstimatedHours() != null) {
@@ -548,6 +561,43 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         }
 
         return convertToDTO(updatedTask);
+    }
+
+    @Override
+    public CaseTaskDTO replaceAssignees(Long taskId, java.util.List<Long> userIds) {
+        Long orgId = getRequiredOrganizationId();
+
+        CaseTask task = caseTaskRepository.findById(taskId)
+            .orElseThrow(() -> new RuntimeException("Task not found: " + taskId));
+        if (!orgId.equals(task.getOrganizationId())) {
+            throw new RuntimeException("Access denied: task belongs to a different organization");
+        }
+
+        java.util.Set<User> nextAssignees = new java.util.HashSet<>();
+        if (userIds != null) {
+            for (Long uid : userIds) {
+                if (uid == null) continue;
+                User u = userRepository.get(uid);
+                if (u == null || !orgId.equals(u.getOrganizationId())) {
+                    log.warn("Skipping assignee {} — not found or wrong org", uid);
+                    continue;
+                }
+                nextAssignees.add(u);
+            }
+        }
+        task.setAssignees(nextAssignees);
+
+        // Mirror the FIRST entry into the legacy `assignedTo` pointer so
+        // existing wiring (filters, notifications, "Mine" chip) keeps working.
+        if (userIds != null && !userIds.isEmpty()) {
+            User primary = userRepository.get(userIds.get(0));
+            if (primary != null) task.setAssignedTo(primary);
+        } else {
+            task.setAssignedTo(null);
+        }
+
+        CaseTask saved = caseTaskRepository.save(task);
+        return convertToDTO(saved);
     }
 
     @Override
@@ -975,6 +1025,9 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             .caseId(task.getLegalCase() != null ? task.getLegalCase().getId() : null)
             .caseNumber(task.getLegalCase() != null ? task.getLegalCase().getCaseNumber() : null)
             .caseTitle(task.getLegalCase() != null ? task.getLegalCase().getTitle() : null)
+            // V77: parent case's billing arrangement drives time-log UI on the task.
+            // Read-only here; set on the case.
+            .caseBillingType(task.getLegalCase() != null ? task.getLegalCase().getBillingType() : null)
             .parentTaskId(task.getParentTask() != null ? task.getParentTask().getId() : null)
             .parentTaskTitle(task.getParentTask() != null ? task.getParentTask().getTitle() : null)
             .title(task.getTitle())
@@ -997,6 +1050,34 @@ public class TaskManagementServiceImpl implements TaskManagementService {
             .tags(task.getTags())
             .dependencies(task.getDependencies())
             .commentsCount(task.getComments() != null ? task.getComments().size() : 0)
+            .subtaskTotal(task.getSubtasks() != null ? task.getSubtasks().size() : 0)
+            .subtaskDoneCount(task.getSubtasks() == null ? 0 :
+                (int) task.getSubtasks().stream()
+                    .filter(s -> s.getStatus() == TaskStatus.COMPLETED)
+                    .count())
+            // Drawer's Subtasks section reads the full list (title, status,
+            // due-date, id). Project shallow children (no recursion into
+            // grandchildren — keeps the payload bounded).
+            .subtasks(task.getSubtasks() == null ? java.util.Collections.emptyList() :
+                task.getSubtasks().stream()
+                    .map(child -> CaseTaskDTO.builder()
+                        .id(child.getId())
+                        .title(child.getTitle())
+                        .status(child.getStatus())
+                        .priority(child.getPriority())
+                        .taskType(child.getTaskType())
+                        .dueDate(child.getDueDate())
+                        .build())
+                    .collect(java.util.stream.Collectors.toList()))
+            .assignees(task.getAssignees() == null ? java.util.Collections.emptyList() :
+                task.getAssignees().stream()
+                    .map(u -> com.bostoneo.bostoneosolutions.dto.TaskAssigneeRef.builder()
+                        .id(u.getId())
+                        .firstName(u.getFirstName())
+                        .lastName(u.getLastName())
+                        .email(u.getEmail())
+                        .build())
+                    .collect(java.util.stream.Collectors.toList()))
             .overdue(isOverdue)
             .blocked(task.getStatus() == TaskStatus.BLOCKED)
             .blockerReason(task.getBlockerReason())

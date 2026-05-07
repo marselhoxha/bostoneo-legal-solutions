@@ -81,6 +81,8 @@ public class LegalCaseDTOMapper {
             .defendantAddress(entity.getDefendantAddress())
             // Practice Area
             .practiceArea(entity.getPracticeArea())
+            // Billing arrangement (V77) — drives task time-log UI visibility
+            .billingType(entity.getBillingType())
             // Attorney Workflow (V61) — primarily PI cases
             .stage(entity.getStage())
             .stageManuallySet(entity.getStageManuallySet())
@@ -200,6 +202,11 @@ public class LegalCaseDTOMapper {
         entity.setDefendantAddress(dto.getDefendantAddress());
         // Practice Area
         entity.setPracticeArea(dto.getPracticeArea());
+        // Billing arrangement (V77). Guard against null so mapper doesn't
+        // overwrite a non-null DB value during partial updates — column is NOT NULL.
+        if (dto.getBillingType() != null) {
+            entity.setBillingType(dto.getBillingType());
+        }
         // Attorney Workflow (V61) — primarily PI cases
         entity.setStage(dto.getStage());
         entity.setStageManuallySet(dto.getStageManuallySet());

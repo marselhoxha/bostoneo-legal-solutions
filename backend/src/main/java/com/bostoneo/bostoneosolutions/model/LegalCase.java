@@ -1,6 +1,7 @@
 package com.bostoneo.bostoneosolutions.model;
 
 import com.bostoneo.bostoneosolutions.converter.EncryptedStringConverter;
+import com.bostoneo.bostoneosolutions.enumeration.BillingType;
 import com.bostoneo.bostoneosolutions.enumeration.CasePriority;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStage;
 import com.bostoneo.bostoneosolutions.enumeration.CaseStatus;
@@ -315,6 +316,14 @@ public class LegalCase {
     // ============================================
     @Column(name = "practice_area")
     private String practiceArea;
+
+    // ============================================
+    // Billing arrangement (V77) — drives time-log UI visibility on tasks.
+    // Default by practice area at create time; attorney can override.
+    // ============================================
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_type", nullable = false, length = 20)
+    private BillingType billingType = BillingType.HOURLY;
 
     // ============================================
     // Attorney Workflow (V61) — applies to PI cases primarily.

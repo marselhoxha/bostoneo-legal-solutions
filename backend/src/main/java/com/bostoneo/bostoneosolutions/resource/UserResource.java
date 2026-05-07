@@ -149,8 +149,11 @@ public class UserResource {
                 .ifPresent(org -> {
                     user.setOrganizationName(org.getName());
                     user.setOrganizationFirmType(org.getFirmType() != null ? org.getFirmType().name() : null);
+                    user.setEnabledPracticeAreas(org.getEnabledPracticeAreas());
                 });
         }
+        attorneyRepository.findByUserId(user.getId())
+            .ifPresent(attorney -> user.setAttorneyPracticeAreas(attorney.getPracticeAreas()));
         return ResponseEntity.ok().body(
                 HttpResponse.builder()
                         .timeStamp(now().toString())

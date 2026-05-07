@@ -55,7 +55,14 @@ public class CalendarEventDTO {
     
     // New field for deadline priority
     private Boolean highPriority;
-    
+
+    // Cal-D2 deadline tier: STATUTE | COURT | SOFT (nullable; inferred at render time when null)
+    private String deadlineTier;
+    // Free-text statutory or rule citation backing a STATUTE-tier deadline
+    private String sourceAuthority;
+    // Free-text required action to satisfy the deadline
+    private String requiredAction;
+
     private String externalId;
     private String externalCalendar;
     

@@ -25,6 +25,8 @@ public interface TaskManagementService {
     
     // Task operations
     CaseTaskDTO assignTask(Long taskId, Long userId);
+    /** V78 — replace the full multi-assignee set. First userId becomes primary. */
+    CaseTaskDTO replaceAssignees(Long taskId, java.util.List<Long> userIds);
     CaseTaskDTO updateTaskStatus(Long taskId, TaskStatus status);
     CaseTaskDTO completeTask(Long taskId, CompleteTaskRequest request);
     

@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -227,6 +228,13 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
+    // REQUIRES_NEW: notification failures (e.g. missing user, FCM outage) must not
+    // poison the caller's transaction. Without this, a notification exception
+    // marks the parent tx rollback-only — see Bug 1 in 2026-05-06 fix pass:
+    // creating a task succeeded, but the notify-on-create call failed for
+    // a missing user, rolling back the whole task creation with a 400
+    // "UnexpectedRollbackException" returned to the client.
+    @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = Exception.class)
     public void sendCrmNotification(String title, String body, Long userId, String type, Object data) {
         log.info("🔔 NOTIFICATION SERVICE: Sending CRM notification to user {}: '{}' - '{}' [type: {}]", userId, title, body, type);
 

@@ -46,7 +46,14 @@ public class UserDTO {
 
     // Permissions as a comma-separated string
     private String permissions;
-    
+
+    // Org-level: comma-delimited PracticeArea CSV (drives which tabs the dashboard shows)
+    private String enabledPracticeAreas;
+
+    // Attorney-level: comma-delimited PracticeArea CSV (this user's assignments).
+    // Only populated when the user has an attorney row; null otherwise.
+    private String attorneyPracticeAreas;
+
     // Helper method to get primary role
     public String getPrimaryRoleName() {
         return roles != null && !roles.isEmpty() ? roles.get(0) : roleName;

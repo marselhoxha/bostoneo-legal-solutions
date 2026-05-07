@@ -39,7 +39,16 @@ public class UpdateTaskRequest {
     private BigDecimal actualHours;
     
     private LocalDateTime dueDate;
-    
+
+    /**
+     * Explicit-clear flag for {@code dueDate}. JSON has no way to distinguish
+     * "field omitted" (don't touch) from "field is null" (clear it) — both
+     * deserialize to a Java null on a {@link LocalDateTime}. Sending
+     * {@code clearDueDate: true} unsets the existing value; otherwise a null
+     * dueDate means "no change."
+     */
+    private Boolean clearDueDate;
+
     private LocalDateTime reminderDate;
 
     private List<Long> dependencies;
