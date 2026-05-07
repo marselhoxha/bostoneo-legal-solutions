@@ -13,10 +13,20 @@ import { UserService } from '../../service/user.service';
  *
  * To add a new flag:
  *   1. Add the field to both `environment.ts` and `environment.prod.ts` under `features`.
- *   2. (Optional) add a per-user column + entity field + DTO field + repository toggle.
- *   3. Add a getter here that ORs the two sources.
- *   4. Consume via dependency injection in components/route guards.
+ *   2. Mirror the addition in the GitHub Secrets used by CI (ENV_TS / ENV_PROD_TS /
+ *      ENV_STAGING_TS) — CI rewrites the env files from those secrets at build time.
+ *   3. (Optional) add a per-user column + entity field + DTO field + repository toggle.
+ *   4. Add a getter here that ORs the two sources.
+ *   5. Consume via dependency injection in components/route guards.
  */
+// CI builds rewrite environment.ts from a GitHub Secret (ENV_TS / ENV_PROD_TS /
+// ENV_STAGING_TS) at build time. If the secret omits the `features` block, the
+// strict TS type for `environment` won't carry that property and a plain
+// `environment.features?` access fails type-check. Narrowing through this
+// helper type keeps the optional access valid regardless of which env shape
+// the secret carries — without resorting to `as any`.
+type EnvWithFeatures = { features?: { attorneyFacingPiView?: boolean } };
+
 @Injectable({ providedIn: 'root' })
 export class FeatureFlagService {
 
@@ -29,7 +39,7 @@ export class FeatureFlagService {
    *   - currentUser.betaAttorneyView (per-user opt-in)
    */
   isAttorneyFacingPiViewEnabled(): boolean {
-    if (environment.features?.attorneyFacingPiView) return true;
+    if ((environment as EnvWithFeatures).features?.attorneyFacingPiView) return true;
     const user = this.userService.getCurrentUser();
     return !!user?.betaAttorneyView;
   }
