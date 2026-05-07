@@ -1,0 +1,122 @@
+<!--
+  Skeleton — 3 person placeholders, each with avatar + name + capacity bar +
+  status pill. The first placeholder is "expanded" with 3 task rows so the
+  user immediately understands the visual hierarchy (person → tasks).
+-->
+<div *ngIf="loading" class="wl-skeleton" aria-busy="true" aria-live="polite">
+  <div class="wl-sk-person" *ngFor="let p of [0, 1, 2]; let pIdx = index" [attr.data-w]="pIdx">
+    <div class="wl-sk-person-head">
+      <div class="wl-sk-who">
+        <div class="sk-cell wl-sk-avatar"></div>
+        <div class="wl-sk-who-text">
+          <div class="sk-cell wl-sk-name"></div>
+          <div class="sk-cell wl-sk-count"></div>
+        </div>
+      </div>
+      <div class="wl-sk-cap">
+        <div class="sk-cell wl-sk-bar"></div>
+        <div class="sk-cell wl-sk-cap-label"></div>
+      </div>
+      <div class="sk-cell wl-sk-pill"></div>
+      <div class="sk-cell wl-sk-chevron"></div>
+    </div>
+
+    <!-- Only the first person is "expanded" with task rows beneath. -->
+    <ng-container *ngIf="pIdx === 0">
+      <div class="wl-sk-task" *ngFor="let i of [0, 1, 2]; let tIdx = index" [attr.data-w]="tIdx">
+        <div class="sk-cell wl-sk-checkbox"></div>
+        <div class="sk-cell wl-sk-task-title"></div>
+        <div class="sk-cell wl-sk-case-pill"></div>
+        <div class="sk-cell wl-sk-priority-pill"></div>
+        <div class="sk-cell wl-sk-due"></div>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<div class="wl-list" *ngIf="!loading">
+  <div class="wl-empty" *ngIf="groups.length === 0">
+    <div class="empty-title">No active tasks across the team.</div>
+    <div class="empty-sub">Workload metrics appear once tasks are assigned and have estimated hours.</div>
+  </div>
+
+  <div class="wl-person" *ngFor="let g of groups; trackBy: trackByUser">
+    <button
+      type="button"
+      class="wl-person-head"
+      [attr.data-status]="g.status"
+      (click)="toggleGroup(g.userId, $event)"
+      [attr.aria-expanded]="!isCollapsed(g.userId)"
+    >
+      <div class="wl-who">
+        <div
+          class="av-ringed lg"
+          [style.--ring]="avatarColor(g.userId)"
+          [style.--bg]="avatarColor(g.userId)"
+        >
+          <div class="inner"><div class="content">{{ g.initials }}</div></div>
+        </div>
+        <div class="wl-who-text">
+          <div class="wl-name">{{ g.name }}</div>
+          <div class="wl-task-count">{{ g.tasks.length }} task{{ g.tasks.length === 1 ? '' : 's' }}</div>
+        </div>
+      </div>
+
+      <div class="wl-cap">
+        <div class="wl-cap-bar">
+          <div
+            class="fill"
+            [class.warn]="g.status === 'near'"
+            [class.danger]="g.status === 'over'"
+            [style.width.%]="g.pct > 100 ? 100 : g.pct"
+          ></div>
+        </div>
+        <span
+          class="wl-cap-label"
+          [class.warn]="g.status === 'near'"
+          [class.danger]="g.status === 'over'"
+        >
+          {{ g.hoursAllocated | number:'1.0-1' }} / {{ g.capacity }} h · {{ g.pct }}%
+        </span>
+      </div>
+
+      <span
+        class="pill"
+        [class.pill-success]="g.status === 'available' || g.status === 'healthy'"
+        [class.pill-warning]="g.status === 'near'"
+        [class.pill-danger]="g.status === 'over'"
+      >
+        <span class="dot"></span>{{ statusLabel(g.status) }}
+      </span>
+
+      <i-lucide
+        [name]="isCollapsed(g.userId) ? 'chevron-down' : 'chevron-up'"
+        [size]="14"
+        class="wl-chevron"
+      ></i-lucide>
+    </button>
+
+    <ng-container *ngIf="!isCollapsed(g.userId)">
+      <div
+        class="wl-task"
+        *ngFor="let task of g.tasks; trackBy: trackByTask"
+        [class.selected]="task.id === selectedTaskId"
+        (click)="selectTask(task)"
+      >
+        <div class="t-checkbox" [class.checked]="task.status === 'COMPLETED'"></div>
+        <div class="wl-task-title">{{ task.title }}</div>
+        <span class="case-pill" *ngIf="task.caseTitle || task.caseNumber">
+          <span class="case-dot" [style.background]="caseDotColor(task)"></span>
+          {{ task.caseTitle || task.caseNumber }}
+        </span>
+        <span class="pill" [ngClass]="'pill-' + priorityTone(task.priority)">
+          <span class="dot"></span>{{ task.priority | titlecase }}
+        </span>
+        <div class="wl-due">
+          {{ task.dueDate | dueLabel }}
+          <ng-container *ngIf="task.estimatedHours">&middot; {{ task.estimatedHours }}h</ng-container>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

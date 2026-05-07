@@ -161,6 +161,28 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Initials for the workspace-chip avatar shown next to the Legience
+   * logo. Splits the org name on common separators (hyphen, underscore,
+   * whitespace, slash) and takes the first letter of the first two
+   * tokens. Falls back to the first two letters of the name itself for
+   * single-word orgs.
+   *
+   *   "Legience-Dev"        -> "LD"
+   *   "Bostoneo Legal"      -> "BL"
+   *   "Anderson_Wilson_PC"  -> "AW"
+   *   "Acme"                -> "AC"
+   *   ""                    -> ""
+   */
+  brandFirmInitials(orgName: string | null | undefined): string {
+    if (!orgName) return '';
+    const parts = orgName.split(/[-_\s/]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    }
+    return (parts[0] ?? '').slice(0, 2).toUpperCase();
+  }
+
+  /**
    * Stable per-user gradient (same hash approach as the dashboard's
    * getClientAvatarBg). Same person → same colour every session.
    */

@@ -1,0 +1,50 @@
+<!-- Practice-area switcher pill.
+     Hidden entirely when the attorney has no practice areas (length === 0).
+     Static pill (no chevron, no dropdown) when length === 1.
+     Interactive pill + dropdown when length >= 2. -->
+<ng-container *ngIf="practiceAreas.length > 0">
+
+  <!-- length === 1: static pill -->
+  <span class="pa-pill pa-pill-static"
+        *ngIf="practiceAreas.length === 1"
+        [attr.aria-label]="labelFor(activeTab)">
+    <span class="pa-pill-icon">
+      <i-lucide [name]="iconFor(activeTab)" [size]="14"></i-lucide>
+    </span>
+    <span class="pa-pill-name">{{ labelFor(activeTab) }}</span>
+  </span>
+
+  <!-- length >= 2: interactive pill + dropdown -->
+  <div class="pa-pill-wrap"
+       *ngIf="practiceAreas.length >= 2"
+       [class.is-open]="isOpen">
+    <button type="button"
+            class="pa-pill pa-pill-interactive"
+            (click)="togglePill(); $event.stopPropagation()"
+            [attr.aria-haspopup]="true"
+            [attr.aria-expanded]="isOpen">
+      <span class="pa-pill-icon">
+        <i-lucide [name]="iconFor(activeTab)" [size]="14"></i-lucide>
+      </span>
+      <span class="pa-pill-name">{{ labelFor(activeTab) }}</span>
+      <i-lucide name="chevron-down"
+                [size]="14"
+                class="pa-pill-chevron"
+                [class.is-open]="isOpen"></i-lucide>
+    </button>
+
+    <div class="pa-dropdown" *ngIf="isOpen" role="menu">
+      <button type="button"
+              class="pa-item"
+              *ngFor="let area of practiceAreas"
+              [class.active]="area === activeTab"
+              (click)="selectArea(area); $event.stopPropagation()"
+              role="menuitem">
+        <span class="pa-item-icon">
+          <i-lucide [name]="iconFor(area)" [size]="13"></i-lucide>
+        </span>
+        <span class="pa-item-name">{{ labelFor(area) }}</span>
+      </button>
+    </div>
+  </div>
+</ng-container>

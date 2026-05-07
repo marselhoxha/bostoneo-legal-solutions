@@ -866,6 +866,25 @@ body > div > .dropdown-menu.user-profile-dropdown {
 }
 
 // ==========================================
+// GLOBAL: Calendar event view modal window
+// ==========================================
+// Strips the Bootstrap modal-content chrome (white bg + border + 1rem padding)
+// so the calendar-event-view-modal component's `.cev-modal` div can fill the
+// surface as a Rox-styled card. Required because our component owns the full
+// header / fields / actions layout and doesn't use Bootstrap's modal-header/
+// body/footer scaffolding the way the legacy event-modal does.
+.cev-modal-window .modal-content {
+  background: transparent;
+  border: none;
+  border-radius: var(--legience-radius-lg, 12px);
+  box-shadow: none;
+  padding: 0;
+}
+.cev-modal-window .modal-dialog {
+  max-width: 540px;
+}
+
+// ==========================================
 // GLOBAL: Responsive Table Patterns
 // ==========================================
 
@@ -1650,28 +1669,44 @@ body.ai-drafting-fullpage {
 }
 
 /* ============================================================
-   Layout-shift prevention — keeps the topbar (and every other
-   horizontally-positioned element) from jumping a few pixels
-   when scroll-locking modals open/close, or when page content
-   grows/shrinks past the viewport height threshold.
+   Layout-shift prevention — keeps the topbar (sticky / fixed at
+   top) and all horizontal positioning from jumping when scroll-
+   locking modals open/close.
 
-   `scrollbar-gutter: stable` on the root scroller reserves the
-   scrollbar width permanently, so the layout never shifts when
-   the scrollbar appears/disappears. Plus we explicitly zero
-   Bootstrap's `body.modal-open { padding-right: <calculated> }`
-   compensation, which was the proximate cause of the 2-pixel
-   topbar drift the user reported.
+   Two locks:
+
+     1. `scrollbar-gutter: stable` on <html> permanently reserves
+        the page-scrollbar's width even when the scrollbar isn't
+        showing (e.g. when ng-bootstrap sets body overflow:hidden).
+        No gutter collapse, no width shift.
+     2. Force `padding-right: 0` on body (with !important) at
+        ALL times — beats any inline style ng-bootstrap or other
+        scroll-locking libraries set as compensation. Bare `body`
+        selector covers the frame between `body.style.paddingRight`
+        being set and the `body.modal-open` class being added.
+
+   NOT used: `overflow-y: scroll` on <html>. That'd change which
+   element is the scroll ancestor and break `position: sticky` on
+   the topbar (topbar.component.scss:12).
    ============================================================ */
 html {
   scrollbar-gutter: stable;
 }
 
+body,
 body.modal-open {
-  /* Bootstrap calculates and sets padding-right inline to compensate for the
-     hidden scrollbar; with stable gutter that compensation just shifts the
-     visible content. Force it to zero — the gutter handles it. */
   padding-right: 0 !important;
 }
+
+/* ============================================================
+   Swal2 confirm dialogs fired from inside our drawer/modal need
+   a higher z-index than `--legience-z-modal` (1070), or they
+   render BEHIND the drawer and the user has to close the drawer
+   to see them. Apply via `customClass: { container: 'swal-above-modal' }`
+   on the Swal.fire() call.
+   ============================================================ */
+.swal-above-modal { z-index: 9999 !important; }
+
 
 // ==========================================
 // DESIGN PREVIEW: Refero "Column" + "Rox" overrides (toggle via floating switcher)

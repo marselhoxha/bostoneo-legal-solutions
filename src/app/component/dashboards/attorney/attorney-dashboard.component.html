@@ -3,11 +3,26 @@
   <div class="col">
     <div class="h-100">
 
-      <!-- Row 1: HERO — Focus card (8 cols) + KPI tile stack (4 cols).
-           Layout unchanged. Styling matches the PI intake-stage focus card
-           pattern: soft blue gradient bg, eyebrow with icon chip, bold
-           headline with blue accent, dual CTAs. -->
-      <div class="row g-3" *ngIf="!casesLoading">
+      <!-- Row 1: HERO — Focus card (8 cols) + Urgent Items (4 cols).
+           While data loads, the SKELETON row below renders in place so
+           the layout is stable and the transition is seamless. -->
+      <div class="row g-3" *ngIf="casesLoading || !scheduleEventsLoaded || !urgentItemsLoaded">
+        <div class="col-xxl-8 col-xl-7">
+          <leg-skel-card [pills]="4" [actions]="2" label="Loading priorities"></leg-skel-card>
+        </div>
+        <div class="col-xxl-4 col-xl-5">
+          <div class="card h-100 mb-0">
+            <div class="card-header align-items-center d-flex">
+              <span class="legience-skel skel-block size-md" style="width: 38%;"></span>
+            </div>
+            <div class="card-body p-0">
+              <leg-skel-list [rows]="3" [avatar]="false" trailing="pill" label="Loading urgent items"></leg-skel-list>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3" *ngIf="!casesLoading && scheduleEventsLoaded && urgentItemsLoaded">
         <div class="col-xxl-8 col-xl-7">
           <div class="dashboard-focus-card h-100" [ngClass]="'tone-' + dashboardFocus.tone">
             <!-- Eyebrow with mini icon -->
@@ -72,91 +87,197 @@
              a client + last contact + status pill so the partner can see
              which clients are at risk of feeling neglected. -->
         <div class="col-xxl-4 col-xl-5">
-          <div class="client-comm-health client-comm-health-hero h-100"
-               *ngIf="!casesLoading && clientCommHealth.clients.length > 0">
-            <div class="cch-header">
-              <span class="cch-icon"><i class="ri-message-3-line"></i></span>
-              <span class="cch-title">Client communication</span>
-              <span class="cch-overdue" *ngIf="clientCommHealth.overdueCount > 0">
-                {{ clientCommHealth.overdueCount }} overdue
-              </span>
+          <!-- Urgent Items — promoted from the bottom right rail to sit
+               next to the Focus card so the two "what's burning right
+               now" surfaces share above-the-fold real estate. -->
+          <div class="card h-100 mb-0">
+            <div class="card-header align-items-center d-flex">
+              <h4 class="card-title mb-0 flex-grow-1">Urgent Items</h4>
+              <div class="flex-shrink-0 d-flex align-items-center gap-2">
+                <span class="badge bg-danger" *ngIf="urgentItems.length > 0">{{urgentItems.length}}</span>
+                <span class="badge bg-success" *ngIf="urgentItems.length === 0">0</span>
+              </div>
             </div>
-            <div class="cch-list">
-              <div *ngFor="let client of clientCommHealth.clients"
-                   class="cch-item">
-                <span class="cch-avatar" [style.background]="client.bg">{{ client.initials }}</span>
-                <div class="cch-meta">
-                  <div class="cch-name">{{ client.name }}</div>
-                  <div class="cch-last">Last update {{ client.lastContactLabel }}</div>
+            <div class="card-body p-0 d-flex flex-column">
+              <div class="flex-grow-1" *ngIf="urgentItems.length > 0">
+                <div *ngFor="let item of getVisibleUrgentItems(); let i = index"
+                     class="d3-urgent-item"
+                     (click)="onUrgentItemClick(item)">
+                  <span class="d3-urgent-num"
+                        [ngClass]="getD3UrgentNumModifier(item.priority)">
+                    {{ i + 1 }}
+                  </span>
+                  <div class="d3-urgent-meta">
+                    <div class="d3-urgent-title">{{item.title}}</div>
+                    <div class="d3-urgent-sub">
+                      <ng-container *ngIf="item.dueLabel">{{item.dueLabel}}</ng-container>
+                      <ng-container *ngIf="item.dueLabel && (item.caseNumber || item.client)"> · </ng-container>
+                      <ng-container *ngIf="item.caseNumber || item.client">{{item.caseNumber || item.client}}</ng-container>
+                    </div>
+                  </div>
+                  <button type="button"
+                          class="d3-urgent-cta"
+                          (click)="onUrgentItemClick(item); $event.stopPropagation()">
+                    {{ getD3UrgentCtaLabel(item) }}
+                    <i-lucide name="arrow-right" [size]="12"></i-lucide>
+                  </button>
                 </div>
-                <span class="cch-status" [ngClass]="'status-' + client.status">
-                  {{ client.status === 'on-track' ? 'on track' : client.status }}
-                </span>
               </div>
-            </div>
-            <div class="cch-action">
-              <a href="javascript:void(0);" (click)="navigateTo('/clients')">
-                View all clients <i class="ri-arrow-right-line align-middle ms-1"></i>
-              </a>
-            </div>
-          </div>
 
-          <!-- Empty state for new orgs with no client comm data yet -->
-          <div class="client-comm-health client-comm-health-hero h-100"
-               *ngIf="!casesLoading && clientCommHealth.clients.length === 0"
-               style="display:flex; align-items:center; justify-content:center; padding: 32px 20px;">
-            <div style="text-align:center;">
-              <span class="cch-icon" style="margin: 0 auto 10px;"><i class="ri-message-3-line"></i></span>
-              <strong style="display:block; font-size:14px; color:var(--legience-text-primary); margin-bottom:4px;">No client touchpoints yet</strong>
-              <span style="font-size:12px; color:var(--legience-text-muted);">Communication health appears once you have active clients.</span>
+              <div *ngIf="urgentItems.length === 0">
+                <div class="urgent-empty-inline">
+                  <span class="urgent-empty-icon">
+                    <i class="ri-checkbox-circle-line"></i>
+                  </span>
+                  <div class="urgent-empty-meta">
+                    <strong>All clear</strong>
+                    <span>No urgent items right now.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-center pt-3 mt-auto border-top" *ngIf="urgentItems.length > 4">
+                <a href="javascript:void(0);" class="text-primary fs-13 fw-medium" (click)="toggleShowAllUrgentItems()">
+                  <span *ngIf="!showAllUrgentItems">Show {{urgentItems.length - 4}} more <i class="ri-arrow-down-s-line align-middle"></i></span>
+                  <span *ngIf="showAllUrgentItems">Show less <i class="ri-arrow-up-s-line align-middle"></i></span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Row 1.6: AI Insights row (Tier 3 differentiator).
-           Vertical spacing comes from the dashboard-level rule in the
-           component SCSS (`:host > .row > .col > .h-100 > .row { margin-bottom: 1.5rem }`)
-           — no need for `mt-1` here. -->
-      <div class="row g-3" *ngIf="!casesLoading && aiInsights.length > 0">
+      <!-- Row 1.5: TODAY'S SCHEDULE — full-width hero band right under the
+           greeting. While data loads, the SKELETON row below renders in
+           place so the timeline track doesn't pop in. -->
+      <div class="row g-3" *ngIf="casesLoading">
         <div class="col-12">
-          <div class="ai-insights-grid">
-            <div *ngFor="let insight of aiInsights"
-                 class="ai-insight-card"
-                 [ngClass]="'accent-' + insight.accentColor"
-                 (click)="onInsightAction(insight)">
-              <div class="ai-insight-header">
-                <span class="ai-insight-icon">
-                  <i [class]="insight.iconClass"></i>
-                </span>
-                <span class="ai-insight-label">{{ insight.categoryLabel }}</span>
+          <div class="card mb-0">
+            <header class="h-schedule-header" aria-busy="true">
+              <span class="legience-skel skel-block" style="width: 50px; height: 56px; border-radius: 6px; flex-shrink: 0;"></span>
+              <div style="flex: 1;">
+                <span class="legience-skel skel-block size-lg" style="width: 200px; margin-bottom: 6px;"></span>
+                <span class="legience-skel skel-block size-sm" style="width: 140px;"></span>
               </div>
-              <div class="ai-insight-body">
-                <strong>{{ insight.matter }}</strong> · {{ insight.description }}
+              <div style="display: flex; gap: 8px;">
+                <span class="legience-skel skel-btn" style="width: 110px;"></span>
+                <span class="legience-skel skel-btn" style="width: 130px;"></span>
               </div>
-              <div class="ai-insight-action">
-                {{ insight.actionLabel }} <i class="ri-arrow-right-line"></i>
+            </header>
+            <div class="card-body p-0" style="padding: 18px 28px 24px !important;">
+              <div style="display: flex; gap: 10px;">
+                <span class="legience-skel skel-block" style="height: 70px; flex: 0.55; border-radius: 6px;"></span>
+                <span class="legience-skel skel-block" style="height: 70px; flex: 1; border-radius: 6px;"></span>
+                <span class="legience-skel skel-block" style="height: 70px; flex: 0.55; border-radius: 6px;"></span>
+                <span class="legience-skel skel-block" style="height: 70px; flex: 1; border-radius: 6px;"></span>
+                <span class="legience-skel skel-block" style="height: 70px; flex: 0.55; border-radius: 6px;"></span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Row 2: BODY — Single 8/4 row that runs the entire bottom of
-           the dashboard. Left column (col-xxl-8) streams the main content
-           (Cases → Schedule → Activity). Right rail (col-xxl-4) is a
-           continuous sidebar with every supporting card (Urgent → Risks →
-           Cross-Matter → Comm Health → Pending Appts → Reschedule). The
-           previous 5 separate stacked rows have been collapsed into this
-           one structure so the design reads as one cockpit, not a stack
-           of disconnected pairs. -->
-      <div class="row g-3">
-        <div class="col-xxl-8 col-xl-7">
-          <!-- Cases card sizes naturally to its content. No `h-100`
-               because the right rail stacks 6 sections and will always
-               be taller than the left column's top section. Spacing
-               between left-column cards is provided by `mb-3` on each. -->
-          <div class="card mb-3 d-flex flex-column">
+      <div class="row g-3" *ngIf="!casesLoading">
+        <div class="col-12">
+          <div class="card mb-0">
+            <header class="h-schedule-header">
+              <div class="h-schedule-date-tile" aria-hidden="true">
+                <span class="h-schedule-date-day">{{currentDate.getDate()}}</span>
+                <span class="h-schedule-date-month">{{currentDate.toLocaleString('default', { month: 'short' }).toUpperCase()}}</span>
+              </div>
+
+              <div class="h-schedule-titles">
+                <h3 class="h-schedule-title">Today's Schedule</h3>
+                <div class="h-schedule-meta">
+                  <span class="h-schedule-day">{{getCurrentDayFormatted()}}</span>
+                  <span class="h-schedule-chip h-schedule-chip-remaining" *ngIf="getActiveEventsCount() > 0">
+                    <span class="h-schedule-chip-num">{{getActiveEventsCount()}}</span> remaining
+                  </span>
+                  <span class="h-schedule-chip h-schedule-chip-completed" *ngIf="getCompletedEventsCount() > 0">
+                    <span class="h-schedule-chip-num">{{getCompletedEventsCount()}}</span> completed
+                  </span>
+                  <span class="h-schedule-chip h-schedule-chip-hours" *ngIf="scheduleEvents.length > 0">
+                    <span class="h-schedule-chip-num">{{getTotalScheduledHours()}}</span> hrs
+                  </span>
+                </div>
+              </div>
+
+              <div class="h-schedule-actions">
+                <button type="button" class="rox-btn rox-btn-ghost"
+                        (click)="openAvailabilitySettings()"
+                        title="Set your availability for appointments">
+                  <i class="ri-time-line"></i> Availability
+                </button>
+                <button type="button" class="rox-btn rox-btn-secondary"
+                        (click)="openCalendar()">
+                  <i class="ri-calendar-line"></i> Open calendar
+                </button>
+              </div>
+            </header>
+            <div class="card-body p-0">
+              <!-- Horizontal timeline. Hour ticks 8 AM → 6 PM across the
+                   top, event blocks absolute-positioned by start/duration
+                   with a colored left-edge accent. A red NOW vertical line
+                   marks the current time; the labelled chip sits above it. -->
+              <div class="h-timeline" *ngIf="scheduleEvents.length > 0">
+                <div class="h-timeline-axis">
+                  <div *ngFor="let tick of getHourTicks()"
+                       class="h-tick"
+                       [style.left.%]="tick.leftPct">
+                    <span class="h-tick-label">{{tick.label}}</span>
+                    <span class="h-tick-mark"></span>
+                  </div>
+                </div>
+
+                <div class="h-timeline-track">
+                  <div *ngFor="let item of getTimelineEventLayout()"
+                       class="h-event"
+                       [ngClass]="getEventToneClass(item.event)"
+                       [class.is-now]="item.event.isInProgress"
+                       [class.is-past]="item.event.isPast && !item.event.isInProgress"
+                       [style.left.%]="item.leftPct"
+                       [style.width.%]="item.widthPct"
+                       (click)="onEventClick(item.event)">
+                    <div class="h-event-title">{{item.event.title}}</div>
+                    <div class="h-event-time">{{item.event.startTime}}</div>
+                  </div>
+
+                  <ng-container *ngIf="getNowTimelinePosition() as now">
+                    <span class="h-now-chip" [style.left.%]="now.leftPct">
+                      NOW · {{now.label}}
+                    </span>
+                    <span class="h-now-line" [style.left.%]="now.leftPct"></span>
+                  </ng-container>
+                </div>
+              </div>
+
+              <div class="schedule-empty-wrap" *ngIf="scheduleEvents.length === 0">
+                <div class="schedule-empty-inline">
+                  <span class="schedule-empty-icon">
+                    <i class="ri-calendar-check-line"></i>
+                  </span>
+                  <div class="schedule-empty-meta">
+                    <strong>All clear for {{ getCurrentDayFormatted() }}</strong>
+                    <span>Schedule is empty — use this time for case prep or follow-ups.</span>
+                  </div>
+                  <button class="btn btn-soft-primary btn-sm" (click)="openCalendar()">
+                    <i class="ri-add-line me-1"></i>Add Event
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: MY ONGOING CASES — promoted to a full-width row of its
+           own so the case-card grid has horizontal space. The Cases card
+           used to sit in the left col of the bottom 8/4 row; that slot
+           is now occupied by the action queue (Appointment + Reschedule
+           Requests) below. -->
+      <div class="row g-3" *ngIf="!casesLoading">
+        <div class="col-12">
+          <div class="card mb-0 d-flex flex-column">
             <div class="card-header border-0 d-flex align-items-center">
               <div class="flex-grow-1">
                 <h4 class="card-title mb-0 fs-18">My Ongoing Cases</h4>
@@ -167,42 +288,18 @@
                 </a>
               </div>
             </div>
-            <!-- card-body: was `pt-0` which made the first row of case cards
-                 sit flush against the header border (overlap). Default top
-                 padding restores the breathing room between header and the
-                 case-card grid. -->
             <div class="card-body d-flex flex-column flex-grow-1">
-              <!-- Three mutually-exclusive states for the cases panel:
-                   1. casesLoading           → skeleton placeholders
-                   2. !casesLoading + cases  → real card grid + show-more
-                   3. !casesLoading + empty  → "No Cases Yet" CTA
-                   Don't gate cards on length>0 alone — that lets the empty
-                   state flash on first paint before the API resolves. -->
-
-              <!-- 1. Loading skeleton -->
-              <div class="row g-4" *ngIf="casesLoading">
-                <div class="col-xl-6 col-md-6" *ngFor="let _ of [1,2,3]">
-                  <div class="case-card-minimal case-card-skeleton rounded-4 p-3 h-100">
-                    <div class="d-flex align-items-start justify-content-between mb-3">
-                      <div class="skeleton-circle"></div>
-                      <div class="skeleton-arrow"></div>
-                    </div>
-                    <div class="skeleton-line skeleton-line-lg mb-2"></div>
-                    <div class="skeleton-line skeleton-line-md mb-3"></div>
-                    <div class="d-flex align-items-center gap-2">
-                      <div class="skeleton-pill"></div>
-                      <div class="skeleton-pill skeleton-pill-sm"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <!-- 1. Loading skeleton — uses the global leg-skel-grid
+                   (Layer 2 of the skeleton system). Replaces the legacy
+                   bespoke case-card-skeleton markup. -->
+              <leg-skel-grid *ngIf="casesLoading" [count]="3" [cols]="3"
+                             label="Loading cases"></leg-skel-grid>
 
               <!-- 2. Loaded with data: card grid -->
               <div class="row g-4" *ngIf="!casesLoading && recentCases.length > 0">
                 <div class="col-xl-4 col-md-6" *ngFor="let caseItem of getVisibleCases()">
                   <div class="case-card-minimal rounded-4 p-3 h-100 cursor-pointer"
                        (click)="viewCase(caseItem.id)">
-                    <!-- Top Row: Avatar & Arrow -->
                     <div class="d-flex align-items-start justify-content-between mb-3">
                       <div class="avatar-md">
                         <span class="avatar-title rounded-circle fs-16 fw-semibold"
@@ -216,15 +313,12 @@
                         <i class="ri-arrow-right-up-line fs-18"></i>
                       </a>
                     </div>
-                    <!-- Client Name -->
                     <h5 class="fs-16 fw-semibold mb-1 text-truncate" title="{{caseItem.clientName}}">
                       {{caseItem.clientName}}
                     </h5>
-                    <!-- Case Title -->
                     <p class="text-muted fs-13 mb-3 text-truncate" title="{{caseItem.title}}">
                       {{caseItem.title}}
                     </p>
-                    <!-- Status Badges -->
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                       <span class="case-badge" [ngClass]="getCaseStatusBadgeStyle(caseItem.status)">
                         {{formatCaseStatus(caseItem.status)}}
@@ -237,7 +331,7 @@
                 </div>
 
                 <!-- Add Case Placeholder (when less than 3 cases and not expanded) -->
-                <div class="col-xl-6 col-md-6" *ngIf="recentCases.length < 3 && !showAllCases">
+                <div class="col-xl-4 col-md-6" *ngIf="recentCases.length < 3 && !showAllCases">
                   <div class="case-card-minimal case-card-add rounded-4 p-3 h-100 d-flex align-items-center justify-content-center cursor-pointer"
                        (click)="navigateTo('/legal/cases/new')">
                     <div class="text-center">
@@ -253,8 +347,6 @@
                 </div>
               </div>
 
-              <!-- Show More/Less Link — sits naturally below the case grid
-                   now that the cases card sizes to content (no h-100). -->
               <div class="text-center pt-3" *ngIf="!casesLoading && recentCases.length > 3">
                 <a href="javascript:void(0);" class="text-primary fw-medium fs-13" (click)="toggleShowAllCases()">
                   <span *ngIf="!showAllCases">Show {{(recentCases.length > 6 ? 3 : recentCases.length - 3)}} more <i class="ri-arrow-down-s-line align-middle"></i></span>
@@ -277,85 +369,151 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- TODAY'S SCHEDULE — moved into the left column under Cases.
-               Was previously in its own row (Row 4) paired with Urgent.
-               Now lives here so the left column reads as a single content
-               stream: Cases → Schedule → Activity. -->
-          <div class="card mb-3">
-            <div class="card-header border-0 d-flex align-items-center">
-              <div class="flex-shrink-0 me-3">
-                <div class="schedule-date-badge">
-                  <span class="day">{{currentDate.getDate()}}</span>
-                  <span class="month">{{currentDate.toLocaleString('default', { month: 'short' }).toUpperCase()}}</span>
+      <!-- Row 1.7: Practice-area lazy-loaded layer.
+           Tabs moved out of the dashboard — the practice-area switcher now
+           lives in the topbar (next to the Legience logo). The outlet
+           projects the active practice area's module. State is shared
+           through PracticeAreaContextService so the topbar pill and this
+           outlet stay in sync. -->
+      <ng-container *ngIf="practiceAreas$ | async as practiceAreas">
+        <div class="row g-3" *ngIf="!casesLoading && practiceAreas.length > 0">
+          <div class="col-12">
+            <app-practice-area-outlet
+              [activePracticeArea]="(activeTab$ | async) ?? null">
+            </app-practice-area-outlet>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Row 2: BODY — Single 8/4 row that runs the entire bottom of
+           the dashboard. Left column (col-xxl-8) streams the main content
+           (Cases → Schedule → Activity). Right rail (col-xxl-4) is a
+           continuous sidebar with the cross-cutting cards that aren't
+           tied to a specific practice area (Urgent → Pending Appts →
+           Reschedule). Practice-area-specific cards (Risk Alerts,
+           Cross-Matter Intelligence) live inside the practice-area
+           outlet above. -->
+      <div class="row g-3">
+        <div class="col-xxl-8 col-xl-7">
+          <!-- Action queue — Appointment Requests + Reschedule Requests
+               occupy the slot My Cases used to sit in. Each card has its
+               own *ngIf on data presence + loading state, so they self-hide
+               when there's nothing to action. mb-3 stacks them with
+               consistent spacing above Recent Activity below. -->
+          <div class="appt-action-card appt-action-card-warning mb-3"
+               *ngIf="pendingAppointments.length > 0 || loadingPendingAppointments">
+            <div class="appt-action-head">
+              <span class="appt-action-icon"><i class="ri-calendar-todo-line"></i></span>
+              <div class="appt-action-meta">
+                <h4>Appointment requests</h4>
+                <span class="appt-action-sub">Clients waiting for your confirmation</span>
+              </div>
+              <span class="appt-action-count" *ngIf="pendingAppointmentsCount > 0">
+                {{ pendingAppointmentsCount }}
+              </span>
+              <button type="button" class="appt-action-refresh" (click)="loadPendingAppointments()" title="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+            <div class="appt-action-body">
+              <leg-skel-list *ngIf="loadingPendingAppointments"
+                             [rows]="2" [avatar]="true" trailing="pill"
+                             label="Loading appointment requests"></leg-skel-list>
+
+              <div *ngIf="!loadingPendingAppointments && pendingAppointments.length > 0">
+                <div *ngFor="let appt of pendingAppointments.slice(0, 3)" class="d3-req">
+                  <span class="d3-req-avatar"
+                        [style.background]="getClientAvatarBg(appt.clientName)">
+                    {{ getClientInitials(appt.clientName || 'Client') }}
+                  </span>
+                  <div class="d3-req-meta">
+                    <span class="d3-req-name">{{ appt.clientName || 'Client' }}</span>
+                    <span class="d3-req-detail">
+                      {{ formatAppointmentDate(appt.preferredDatetime) }}
+                      ·
+                      {{ formatAppointmentTime(appt.preferredDatetime) }}
+                      <ng-container *ngIf="appt.appointmentType">
+                        · {{ getAppointmentTypeLabel(appt.appointmentType) }}
+                      </ng-container>
+                    </span>
+                  </div>
+                  <div class="d3-req-cluster">
+                    <button type="button"
+                            class="d3-pill-btn danger"
+                            (click)="openDeclineModal(appt)">
+                      Decline
+                    </button>
+                    <button type="button"
+                            class="d3-pill-btn primary"
+                            (click)="openApproveModal(appt)">
+                      Accept
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div class="flex-grow-1">
-                <h4 class="card-title mb-1">Today's Schedule</h4>
-                <div class="d-flex align-items-center gap-3">
-                  <span class="text-muted fs-13">{{getCurrentDayFormatted()}}</span>
-                  <span class="badge bg-primary-subtle text-primary" *ngIf="getActiveEventsCount() > 0">{{getActiveEventsCount()}} Remaining</span>
-                  <span class="badge bg-secondary-subtle text-secondary" *ngIf="getCompletedEventsCount() > 0">{{getCompletedEventsCount()}} Completed</span>
-                  <span class="badge bg-success-subtle text-success" *ngIf="scheduleEvents.length > 0">{{getTotalScheduledHours()}} hrs</span>
-                </div>
-              </div>
-              <div class="flex-shrink-0 d-flex gap-2">
-                <button type="button" class="btn btn-soft-info btn-sm" (click)="openAvailabilitySettings()" title="Set your availability for appointments">
-                  <i class="ri-time-line align-middle me-1"></i> Availability
-                </button>
-                <button type="button" class="btn btn-soft-success btn-sm" (click)="openCalendar()">
-                  <i class="ri-add-line align-middle"></i> Add Event
-                </button>
-                <button type="button" class="btn btn-soft-primary btn-sm" (click)="openCalendar()">
-                  <i class="ri-calendar-line align-middle me-1"></i> Calendar
-                </button>
+
+              <div class="appt-view-all" *ngIf="pendingAppointments.length > 3">
+                <a href="javascript:void(0)" (click)="navigateTo('/legal/calendar')">
+                  View all {{ pendingAppointments.length }} requests <i class="ri-arrow-right-line align-middle ms-1"></i>
+                </a>
               </div>
             </div>
-            <div class="card-body p-0">
-              <div class="sched-list" *ngIf="scheduleEvents.length > 0">
-                <div *ngFor="let event of getVisibleScheduleEvents(); let i = index"
-                     class="sched-item"
-                     [class.is-past]="event.isPast"
-                     [class.is-now]="event.isInProgress"
-                     (click)="onEventClick(event)">
-                  <div class="sched-time">
-                    {{event.startTime}}<small>{{event.endTime}}</small>
-                  </div>
-                  <div class="sched-body">
-                    <div class="sched-title">{{event.title}}</div>
-                    <div class="sched-sub">
-                      <ng-container *ngIf="event.client">{{event.client}}</ng-container>
-                      <ng-container *ngIf="event.client && event.caseInfo"> · </ng-container>
-                      <ng-container *ngIf="event.caseInfo">{{event.caseInfo}}</ng-container>
-                      <ng-container *ngIf="!event.client && !event.caseInfo">{{event.description}}</ng-container>
-                    </div>
-                  </div>
-                  <span class="sched-tag" [ngClass]="getScheduleTagClass(event)">
-                    <ng-container *ngIf="event.isInProgress">NOW</ng-container>
-                    <ng-container *ngIf="!event.isInProgress">{{getScheduleTagLabel(event)}}</ng-container>
+          </div>
+
+          <div class="appt-action-card appt-action-card-info mb-3"
+               *ngIf="pendingRescheduleRequests.length > 0 || loadingRescheduleRequests">
+            <div class="appt-action-head">
+              <span class="appt-action-icon"><i class="ri-calendar-2-line"></i></span>
+              <div class="appt-action-meta">
+                <h4>Reschedule requests</h4>
+                <span class="appt-action-sub">Time-change requests from clients</span>
+              </div>
+              <span class="appt-action-count" *ngIf="pendingRescheduleCount > 0">
+                {{ pendingRescheduleCount }}
+              </span>
+              <button type="button" class="appt-action-refresh" (click)="loadPendingRescheduleRequests()" title="Refresh">
+                <i class="ri-refresh-line"></i>
+              </button>
+            </div>
+            <div class="appt-action-body">
+              <leg-skel-list *ngIf="loadingRescheduleRequests"
+                             [rows]="2" [avatar]="true" trailing="pill"
+                             label="Loading reschedule requests"></leg-skel-list>
+
+              <div *ngIf="!loadingRescheduleRequests && pendingRescheduleRequests.length > 0">
+                <div *ngFor="let appt of pendingRescheduleRequests.slice(0, 3)" class="d3-req">
+                  <span class="d3-req-avatar orange">
+                    {{ getClientInitials(appt.clientName || 'Client') }}
                   </span>
+                  <div class="d3-req-meta">
+                    <span class="d3-req-name">{{ appt.clientName || 'Client' }}</span>
+                    <span class="d3-req-detail">
+                      Move
+                      <s>{{ formatRescheduleTime(appt.originalConfirmedTime || appt.confirmedDatetime) }}</s>
+                      → {{ formatRescheduleTime(appt.requestedRescheduleTime) }}
+                    </span>
+                  </div>
+                  <div class="d3-req-cluster">
+                    <button type="button"
+                            class="d3-pill-btn danger"
+                            (click)="openRescheduleDeclineModal(appt)">
+                      Decline
+                    </button>
+                    <button type="button"
+                            class="d3-pill-btn primary"
+                            (click)="openRescheduleApproveModal(appt)">
+                      Approve
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div class="schedule-empty-wrap" *ngIf="scheduleEvents.length === 0">
-                <div class="schedule-empty-inline">
-                  <span class="schedule-empty-icon">
-                    <i class="ri-calendar-check-line"></i>
-                  </span>
-                  <div class="schedule-empty-meta">
-                    <strong>All clear for {{ getCurrentDayFormatted() }}</strong>
-                    <span>Schedule is empty — use this time for case prep or follow-ups.</span>
-                  </div>
-                  <button class="btn btn-soft-primary btn-sm" (click)="openCalendar()">
-                    <i class="ri-add-line me-1"></i>Add Event
-                  </button>
-                </div>
-              </div>
-
-              <div class="text-center mt-3" *ngIf="scheduleEvents.length > 3">
-                <a href="javascript:void(0);" class="text-primary fw-medium fs-13" (click)="toggleShowAllScheduleEvents()">
-                  <span *ngIf="!showAllScheduleEvents">Show {{scheduleEvents.length > 6 ? 3 : scheduleEvents.length - 3}} more <i class="ri-arrow-down-s-line align-middle"></i></span>
-                  <span *ngIf="showAllScheduleEvents">Show less <i class="ri-arrow-up-s-line align-middle"></i></span>
+              <div class="appt-view-all" *ngIf="pendingRescheduleRequests.length > 3">
+                <a href="javascript:void(0)" (click)="navigateTo('/legal/calendar')">
+                  View all {{ pendingRescheduleRequests.length }} reschedule requests <i class="ri-arrow-right-line align-middle ms-1"></i>
                 </a>
               </div>
             </div>
@@ -422,233 +580,51 @@
              (warnings) → Cross-Matter (insights) → Comm Health (client
              state) → Pending Appts (conditional) → Reschedule (conditional). -->
         <div class="col-xxl-4 col-xl-5">
-          <!-- Urgent Items — first in the rail because it's the most
-               action-oriented signal. Was previously paired with Schedule
-               in its own row (Row 4); moved here so all action/attention
-               cards live in one continuous column. -->
-          <div class="card mb-3">
-            <div class="card-header align-items-center d-flex">
-              <h4 class="card-title mb-0 flex-grow-1">Urgent Items</h4>
-              <div class="flex-shrink-0 d-flex align-items-center gap-2">
-                <span class="badge bg-danger" *ngIf="urgentItems.length > 0">{{urgentItems.length}}</span>
-                <span class="badge bg-success" *ngIf="urgentItems.length === 0">0</span>
-              </div>
-            </div>
-            <div class="card-body p-0 d-flex flex-column">
-              <div class="queue-list flex-grow-1" *ngIf="urgentItems.length > 0">
-                <div *ngFor="let item of getVisibleUrgentItems()"
-                     class="queue-item"
-                     [ngClass]="'priority-' + item.priority"
-                     (click)="onUrgentItemClick(item)">
-                  <span class="queue-dot"></span>
-                  <div class="queue-body">
-                    <div class="queue-title">{{item.title}}</div>
-                    <div class="queue-meta">
-                      <strong>{{item.dueLabel}}</strong>
-                      <span class="queue-due-chip" *ngIf="item.caseNumber || item.client">
-                        {{item.caseNumber || item.client}}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div *ngIf="urgentItems.length === 0">
-                <div class="urgent-empty-inline">
-                  <span class="urgent-empty-icon">
-                    <i class="ri-checkbox-circle-line"></i>
-                  </span>
-                  <div class="urgent-empty-meta">
-                    <strong>All clear</strong>
-                    <span>No urgent items right now.</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-center pt-3 mt-auto border-top" *ngIf="urgentItems.length > 4">
-                <a href="javascript:void(0);" class="text-primary fs-13 fw-medium" (click)="toggleShowAllUrgentItems()">
-                  <span *ngIf="!showAllUrgentItems">Show {{urgentItems.length - 4}} more <i class="ri-arrow-down-s-line align-middle"></i></span>
-                  <span *ngIf="showAllUrgentItems">Show less <i class="ri-arrow-up-s-line align-middle"></i></span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pending Appointment Requests — promoted to second-from-top
-               in the rail because clients waiting on attorney confirmation
-               is high-priority action. Was previously buried at the bottom
-               of the rail where attorneys couldn't see it without
-               scrolling. -->
-          <div class="appt-action-card appt-action-card-warning mb-3"
-               *ngIf="pendingAppointments.length > 0 || loadingPendingAppointments">
-            <div class="appt-action-head">
-              <span class="appt-action-icon"><i class="ri-calendar-todo-line"></i></span>
-              <div class="appt-action-meta">
-                <h4>Appointment requests</h4>
-                <span class="appt-action-sub">Clients waiting for your confirmation</span>
-              </div>
-              <span class="appt-action-count" *ngIf="pendingAppointmentsCount > 0">
-                {{ pendingAppointmentsCount }}
-              </span>
-              <button type="button" class="appt-action-refresh" (click)="loadPendingAppointments()" title="Refresh">
-                <i class="ri-refresh-line"></i>
-              </button>
-            </div>
-            <div class="appt-action-body">
-              <div *ngIf="loadingPendingAppointments" class="appt-loading">
-                <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
-                <p>Loading requests…</p>
-              </div>
-
-              <div *ngIf="!loadingPendingAppointments && pendingAppointments.length > 0" class="appt-list">
-                <div *ngFor="let appt of pendingAppointments.slice(0, 3)" class="appt-item">
-                  <div class="appt-item-row">
-                    <span class="appt-avatar" [style.background]="getClientAvatarBg(appt.clientName)">
-                      {{ getClientInitials(appt.clientName || 'Client') }}
-                    </span>
-                    <div class="appt-item-meta">
-                      <div class="appt-name">{{ appt.clientName || 'Client' }}</div>
-                      <div class="appt-when">
-                        <i class="ri-calendar-event-line"></i>
-                        {{ formatAppointmentDate(appt.preferredDatetime) }}
-                        <span class="appt-when-sep">·</span>
-                        {{ formatAppointmentTime(appt.preferredDatetime) }}
-                      </div>
-                    </div>
-                    <span class="appt-type-pill">{{ getAppointmentTypeLabel(appt.appointmentType) }}</span>
-                  </div>
-                  <div class="appt-actions">
-                    <button class="appt-btn appt-btn-approve" (click)="openApproveModal(appt)">
-                      <i class="ri-check-line"></i> Approve
-                    </button>
-                    <button class="appt-btn appt-btn-decline" (click)="openDeclineModal(appt)">
-                      <i class="ri-close-line"></i> Decline
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="appt-view-all" *ngIf="pendingAppointments.length > 3">
-                <a href="javascript:void(0)" (click)="navigateTo('/legal/calendar')">
-                  View all {{ pendingAppointments.length }} requests <i class="ri-arrow-right-line align-middle ms-1"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Reschedule Requests — also high-priority client action,
-               sits below Pending Appointments. -->
-          <div class="appt-action-card appt-action-card-info mb-3"
-               *ngIf="pendingRescheduleRequests.length > 0 || loadingRescheduleRequests">
-            <div class="appt-action-head">
-              <span class="appt-action-icon"><i class="ri-calendar-2-line"></i></span>
-              <div class="appt-action-meta">
-                <h4>Reschedule requests</h4>
-                <span class="appt-action-sub">Time-change requests from clients</span>
-              </div>
-              <span class="appt-action-count" *ngIf="pendingRescheduleCount > 0">
-                {{ pendingRescheduleCount }}
-              </span>
-              <button type="button" class="appt-action-refresh" (click)="loadPendingRescheduleRequests()" title="Refresh">
-                <i class="ri-refresh-line"></i>
-              </button>
-            </div>
-            <div class="appt-action-body">
-              <div *ngIf="loadingRescheduleRequests" class="appt-loading">
-                <div class="spinner-border spinner-border-sm text-info" role="status"></div>
-                <p>Loading requests…</p>
-              </div>
-
-              <div *ngIf="!loadingRescheduleRequests && pendingRescheduleRequests.length > 0" class="appt-list">
-                <div *ngFor="let appt of pendingRescheduleRequests.slice(0, 3)" class="appt-item">
-                  <div class="appt-item-row">
-                    <span class="appt-avatar" [style.background]="getClientAvatarBg(appt.clientName)">
-                      {{ getClientInitials(appt.clientName || 'Client') }}
-                    </span>
-                    <div class="appt-item-meta">
-                      <div class="appt-name">{{ appt.clientName || 'Client' }}</div>
-                      <div class="appt-reschedule">
-                        <span class="appt-old"><i class="ri-close-line"></i>{{ formatRescheduleTime(appt.originalConfirmedTime || appt.confirmedDatetime) }}</span>
-                        <i class="ri-arrow-right-line appt-arr"></i>
-                        <span class="appt-new"><i class="ri-check-line"></i>{{ formatRescheduleTime(appt.requestedRescheduleTime) }}</span>
-                      </div>
-                    </div>
-                    <span class="appt-type-pill appt-type-pill-info">Reschedule</span>
-                  </div>
-                  <div class="appt-actions">
-                    <button class="appt-btn appt-btn-approve" (click)="openRescheduleApproveModal(appt)">
-                      <i class="ri-check-line"></i> Approve
-                    </button>
-                    <button class="appt-btn appt-btn-decline" (click)="openRescheduleDeclineModal(appt)">
-                      <i class="ri-close-line"></i> Decline
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="appt-view-all" *ngIf="pendingRescheduleRequests.length > 3">
-                <a href="javascript:void(0)" (click)="navigateTo('/legal/calendar')">
-                  View all {{ pendingRescheduleRequests.length }} reschedule requests <i class="ri-arrow-right-line align-middle ms-1"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Risk Alerts (rail variant — same component, narrower container) -->
-          <div class="risk-alerts-band mb-3"
-               *ngIf="!casesLoading && riskAlerts.length > 0"
-               [ngClass]="{'has-critical': riskAlerts[0]?.severity === 'critical'}">
-            <div class="risk-alerts-header">
-              <span class="risk-alerts-icon"><i class="ri-shield-flash-line"></i></span>
-              <span class="risk-alerts-title">{{ riskAlerts.length }} risk alert<ng-container *ngIf="riskAlerts.length !== 1">s</ng-container></span>
-              <button class="btn btn-soft-danger btn-sm" (click)="onRiskAction()" *ngIf="riskAlerts[0]?.severity === 'critical'">
-                Review now <i class="ri-arrow-right-line align-middle ms-1"></i>
-              </button>
-              <button class="btn btn-soft-secondary btn-sm" (click)="onRiskAction()" *ngIf="riskAlerts[0]?.severity !== 'critical'">
-                Review <i class="ri-arrow-right-line align-middle ms-1"></i>
-              </button>
-            </div>
-            <div class="risk-alerts-list">
-              <div *ngFor="let alert of riskAlerts" class="risk-alert-item" [ngClass]="'severity-' + alert.severity">
-                <div class="risk-alert-dot"></div>
-                <div class="risk-alert-content">
-                  <div class="risk-alert-title">{{ alert.title }}</div>
-                  <div class="risk-alert-desc">{{ alert.description }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cross-Matter Intelligence (rail variant) -->
-          <div class="cross-matter-intel" *ngIf="!casesLoading && crossMatterPattern">
-            <div class="cmi-header">
-              <span class="cmi-icon"><i class="ri-pulse-line"></i></span>
-              <h4>{{ crossMatterPattern.title }}</h4>
-            </div>
-            <p class="cmi-summary">{{ crossMatterPattern.summary }}</p>
-            <div class="cmi-matters">
-              <span *ngFor="let m of crossMatterPattern.matters" class="cmi-matter-pill">
-                <span class="cmi-matter-avatar" [style.background]="m.bg">{{ m.initials }}</span>
-                {{ m.label }}
+          <!-- Client Communication Health — demoted from the hero right
+               column to the bottom right rail. Above-the-fold real estate
+               there now goes to Urgent Items. Comm health is passive
+               reference info; partners scanning relationship health
+               typically scroll regardless. Urgent Items + Pending
+               Appointments + Reschedule Requests are now in Rows 1 and 3. -->
+          <div class="client-comm-health client-comm-health-hero h-100"
+               *ngIf="!casesLoading && clientCommHealth.clients.length > 0">
+            <div class="cch-header">
+              <span class="cch-icon"><i class="ri-message-3-line"></i></span>
+              <span class="cch-title">Client communication</span>
+              <span class="cch-overdue" *ngIf="clientCommHealth.overdueCount > 0">
+                {{ clientCommHealth.overdueCount }} overdue
               </span>
             </div>
-            <div class="cmi-actions">
-              <button class="cmi-btn cmi-btn-pri" (click)="onCrossMatterPrimary()">
-                <i class="ri-file-text-line"></i> {{ crossMatterPattern.primaryLabel }}
-              </button>
-              <button class="cmi-btn cmi-btn-out" (click)="onCrossMatterSecondary()">
-                {{ crossMatterPattern.secondaryLabel }}
-              </button>
+            <div class="cch-list">
+              <div *ngFor="let client of clientCommHealth.clients"
+                   class="cch-item">
+                <span class="cch-avatar" [style.background]="client.bg">{{ client.initials }}</span>
+                <div class="cch-meta">
+                  <div class="cch-name">{{ client.name }}</div>
+                  <div class="cch-last">Last update {{ client.lastContactLabel }}</div>
+                </div>
+                <span class="cch-status" [ngClass]="'status-' + client.status">
+                  {{ client.status === 'on-track' ? 'on track' : client.status }}
+                </span>
+              </div>
+            </div>
+            <div class="cch-action">
+              <a href="javascript:void(0);" (click)="navigateTo('/clients')">
+                View all clients <i class="ri-arrow-right-line align-middle ms-1"></i>
+              </a>
             </div>
           </div>
 
-          <!-- Client Communication Health was moved out of this rail and
-               into the hero right column (replacing the KPI tile stack)
-               so it has full prominence. -->
-
-          <!-- Pending Appointment Requests + Reschedule Requests moved up
-               in the rail (now sit right after Urgent Items) so client-action
-               cards are immediately visible without scrolling. -->
+          <!-- Empty state for new orgs with no client comm data yet -->
+          <div class="client-comm-health client-comm-health-hero h-100"
+               *ngIf="!casesLoading && clientCommHealth.clients.length === 0"
+               style="display:flex; align-items:center; justify-content:center; padding: 32px 20px;">
+            <div style="text-align:center;">
+              <span class="cch-icon" style="margin: 0 auto 10px;"><i class="ri-message-3-line"></i></span>
+              <strong style="display:block; font-size:14px; color:var(--legience-text-primary); margin-bottom:4px;">No client touchpoints yet</strong>
+              <span style="font-size:12px; color:var(--legience-text-muted);">Communication health appears once you have active clients.</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -911,6 +887,89 @@
   </div>
 </div>
 <div class="modal-backdrop fade" [class.show]="showRescheduleDeclineModal" *ngIf="showRescheduleDeclineModal"></div>
+
+<!-- Event Details Modal — Rox/Legience pattern (NOT Bootstrap .modal).
+     Read-only view of a schedule event opened from the horizontal
+     timeline. Surface uses --legience-bg-elevated for full opacity,
+     hairline border, radius-lg, shadow-lg. Backdrop matches the
+     command-palette overlay scrim. -->
+<div class="rox-modal-backdrop" *ngIf="showEventDetailsModal" (click)="closeEventDetailsModal()">
+  <div class="rox-modal rox-modal-event" *ngIf="selectedScheduleEvent as ev" (click)="$event.stopPropagation()">
+    <div class="rox-modal-head">
+      <div class="rox-modal-eyebrow">
+        <span class="rox-event-type-chip" [ngClass]="getEventToneClass(ev)">
+          {{ getEventTypeLabel(ev.type) }}
+        </span>
+        <span class="rox-modal-date">{{ getEventDateLabel(ev) }}</span>
+      </div>
+      <button type="button" class="rox-modal-close" (click)="closeEventDetailsModal()" aria-label="Close">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <h3 class="rox-modal-title">{{ ev.title }}</h3>
+
+    <div class="rox-modal-body">
+      <div class="rox-event-row">
+        <span class="rox-event-row-icon"><i class="ri-time-line"></i></span>
+        <div class="rox-event-row-meta">
+          <div class="rox-event-row-label">Time</div>
+          <div class="rox-event-row-value">
+            {{ ev.startTime }} – {{ ev.endTime }}
+            <span class="rox-event-row-sub">· {{ ev.duration }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rox-event-row" *ngIf="ev.client">
+        <span class="rox-event-row-icon"><i class="ri-user-3-line"></i></span>
+        <div class="rox-event-row-meta">
+          <div class="rox-event-row-label">Client</div>
+          <div class="rox-event-row-value">{{ ev.client }}</div>
+        </div>
+      </div>
+
+      <div class="rox-event-row" *ngIf="ev.caseInfo">
+        <span class="rox-event-row-icon"><i class="ri-briefcase-line"></i></span>
+        <div class="rox-event-row-meta">
+          <div class="rox-event-row-label">Case</div>
+          <div class="rox-event-row-value">{{ ev.caseInfo }}</div>
+        </div>
+      </div>
+
+      <div class="rox-event-row" *ngIf="ev.location">
+        <span class="rox-event-row-icon">
+          <i class="ri-map-pin-line" *ngIf="ev.meetingType !== 'video'"></i>
+          <i class="ri-vidicon-line" *ngIf="ev.meetingType === 'video'"></i>
+        </span>
+        <div class="rox-event-row-meta">
+          <div class="rox-event-row-label">{{ ev.meetingType === 'video' ? 'Meeting link' : 'Location' }}</div>
+          <div class="rox-event-row-value">{{ ev.location }}</div>
+        </div>
+      </div>
+
+      <div class="rox-event-row" *ngIf="ev.description">
+        <span class="rox-event-row-icon"><i class="ri-file-text-line"></i></span>
+        <div class="rox-event-row-meta">
+          <div class="rox-event-row-label">Notes</div>
+          <div class="rox-event-row-value rox-event-row-desc">{{ ev.description }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rox-modal-foot">
+      <button type="button" class="rox-btn rox-btn-ghost" (click)="closeEventDetailsModal()">
+        Close
+      </button>
+      <button type="button" class="rox-btn rox-btn-secondary" (click)="openCalendarFromEvent()">
+        <i class="ri-calendar-line"></i> Open in calendar
+      </button>
+      <button type="button" class="rox-btn rox-btn-primary" *ngIf="ev.caseId" (click)="openCaseFromEvent()">
+        Go to case <i class="ri-arrow-right-line"></i>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Floating Action Button -->
 <div class="fab-container" [class.fab-expanded]="fabExpanded">

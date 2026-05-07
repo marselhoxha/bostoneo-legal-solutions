@@ -23,6 +23,21 @@ export enum PaymentStatus {
   OVERDUE = 'OVERDUE'
 }
 
+/**
+ * Billing arrangement on a legal case (V77).
+ * Drives whether the time-tracking UI is surfaced on tasks linked to the case.
+ *  - CONTINGENCY: % of recovery (common for PI). Time-log UI hidden by default.
+ *  - HOURLY: billed by the hour. Time-log UI shown.
+ *  - FLAT_FEE: fixed total fee. Time-log shown for internal cost tracking.
+ *  - PRO_BONO: no fee; time-log shown for value-given reporting.
+ */
+export enum BillingType {
+  CONTINGENCY = 'CONTINGENCY',
+  HOURLY = 'HOURLY',
+  FLAT_FEE = 'FLAT_FEE',
+  PRO_BONO = 'PRO_BONO'
+}
+
 export interface CourtInfo {
   countyName: string;
   judgeName: string;
@@ -152,6 +167,10 @@ export interface LegalCase {
 
   // Practice Area Identifier
   practiceArea?: string;
+
+  // Billing arrangement (V77) — drives time-log UI visibility on linked tasks.
+  // Default applied by practice area at case-create time; attorney can override.
+  billingType?: BillingType;
 
   // Attorney Workflow (V61) — primarily PI cases.
   // stage is auto-derived; manual overrides sticky.

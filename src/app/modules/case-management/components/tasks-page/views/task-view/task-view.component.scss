@@ -1,0 +1,875 @@
+.inbox-counts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px 0;
+  font: 500 13px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  background: var(--legience-bg-elevated);
+
+  strong { color: var(--legience-text-primary); font-weight: 600; }
+  .overdue-count strong { color: var(--legience-danger); }
+  .dot { color: var(--legience-text-muted); }
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 28px;
+  background: var(--legience-bg-elevated);
+  border-bottom: 1px solid var(--legience-border-hairline);
+}
+.filter-divider {
+  height: 16px;
+  width: 1px;
+  background: var(--legience-border-hairline);
+  margin: 0 4px;
+}
+.filter-spacer { flex: 1; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--legience-radius-pill);
+  font: 500 12.5px/1 var(--legience-font-sans);
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  color: var(--legience-text-secondary);
+  cursor: pointer;
+
+  &.active {
+    background: var(--legience-accent-bg-subtle);
+    border-color: rgba(var(--legience-accent-rgb), 0.30);
+    color: var(--legience-accent);
+    font-weight: 600;
+  }
+
+  // Clear-all chip — muted by default, danger tint on hover so the user
+  // sees they're about to wipe their filter state.
+  &.chip-clear {
+    color: var(--legience-text-muted);
+    background: transparent;
+    border-color: var(--legience-border-hairline);
+
+    &:hover {
+      color: var(--legience-danger);
+      background: var(--legience-danger-bg-subtle);
+      border-color: rgba(var(--legience-danger-rgb), 0.25);
+    }
+  }
+
+  .count { color: var(--legience-text-muted); font-weight: 500; }
+  .chip-icon { font-size: 13px; opacity: 0.85; line-height: 1; }
+}
+
+// ---------------------------------------------------------------------------
+// Empty state — context-aware. Two flavors share the same vertical scaffold
+// (icon → title → subtitle → CTAs) and differ only by icon color and copy.
+// `filtered` uses a muted/info tone (filters are recoverable); `done` uses a
+// success tone (celebrating an empty inbox).
+// ---------------------------------------------------------------------------
+.t-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 80px 28px;
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-muted);
+  gap: 14px;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+
+  i-lucide {
+    line-height: 0;
+  }
+
+  // "Done / nice work" tone — soft success-tinted circle.
+  &.empty-icon--done {
+    background: var(--legience-success-bg-subtle);
+    color: var(--legience-success);
+  }
+
+  // "Filtered out" tone — muted neutral, signals "there's stuff, you just
+  // can't see it" rather than celebrating completion.
+  &.empty-icon--filtered {
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-subtle);
+    border: 1px solid var(--legience-border-hairline);
+  }
+}
+
+.empty-title {
+  font: 600 18px/1.3 var(--legience-font-sans);
+  letter-spacing: -0.01em;
+  color: var(--legience-text-primary);
+}
+
+.empty-subtitle {
+  font: 400 13.5px/1.5 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  max-width: 380px;
+}
+
+.empty-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton loader — matches the real D3 row shape exactly.
+//
+// Layout strategy: every cell is `flex: 0 0 auto` (fixed-width placeholder).
+// The first right-side cell (.sk-status) gets `margin-left: auto`, which
+// absorbs the row's slack and pushes the entire right cluster to the right
+// edge — same visual termination as the real D3 row (menu button at far
+// right). Title bar stays at a realistic 200-360px (varies by row index),
+// not the full row width — real titles aren't 1000px wide.
+//
+// Without margin-left:auto, fixed-width cells would left-align with all the
+// slack at the right edge of the row. With it, the slack moves between the
+// title and the right cluster — exactly like a real row's flex behavior.
+// ---------------------------------------------------------------------------
+@keyframes sk-shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position:  100% 0; }
+}
+
+.t-skeleton {
+  background: var(--legience-bg-elevated);
+}
+
+// Group header placeholder — matches `.t-group-head` padding/height so
+// the swap to a real "Overdue · 3" header doesn't shift rows below.
+.sk-group-head {
+  padding: 14px 28px 8px;
+}
+.sk-grouplabel {
+  width: 90px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 28px;
+  border-top: 1px solid var(--legience-border-hairline);
+}
+
+.sk-cell {
+  // Subtle highlight gradient — peaks at `border-hairline` mid-stop, rests
+  // on `bg-subtle`. Reads as quiet scaffolding, not foreground animation.
+  background:
+    linear-gradient(
+      90deg,
+      var(--legience-bg-subtle) 0%,
+      var(--legience-bg-subtle) 35%,
+      var(--legience-border-hairline) 50%,
+      var(--legience-bg-subtle) 65%,
+      var(--legience-bg-subtle) 100%
+    );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.8s linear infinite;
+  border-radius: 4px;
+  // Fixed width — cells don't grow. The right cluster is anchored by the
+  // `margin-left: auto` rule on `.sk-status` below; without that, the slack
+  // would sit at the row's right edge instead of between the title and
+  // right cluster.
+  flex: 0 0 auto;
+}
+
+// Cell dimensions mirror the real D3 row.
+.sk-checkbox { width: 16px;  height: 16px; border-radius: 4px; }
+.sk-title    { width: 280px; height: 12px; }
+.sk-status   { width: 80px;  height: 22px; border-radius: 6px; }
+.sk-case     { width: 110px; height: 22px; border-radius: 6px; }
+.sk-pill     { width: 64px;  height: 20px; border-radius: 100px; }
+.sk-avatar   { width: 28px;  height: 28px; border-radius: 50%; }
+.sk-menu     { width: 28px;  height: 28px; border-radius: 6px; }
+
+// Anchor the right cluster to the row's right edge. `auto` margin on a flex
+// item absorbs all available slack — pushing this cell (and everything after
+// it) to the far right. Equivalent to having `flex: 1` on title in a real
+// row, but without the title placeholder ballooning to 1000px wide.
+.sk-status { margin-left: auto; }
+
+// Vary title bar widths per row so the placeholders look like real,
+// variable-length task titles. The `data-w` attr is set from the *ngFor
+// index — using attribute selectors here (not :nth-child) because the
+// skeleton interleaves group-header divs with row divs, which breaks
+// :nth-child counting.
+.sk-row[data-w="0"] .sk-title { width: 280px; }
+.sk-row[data-w="1"] .sk-title { width: 200px; }
+.sk-row[data-w="2"] .sk-title { width: 360px; }
+.sk-row[data-w="3"] .sk-title { width: 240px; }
+
+// Stagger shimmer phase across rows so the wave ripples across the list
+// instead of pulsing in lockstep — organic, not mechanical.
+.sk-row[data-w="1"] .sk-cell { animation-delay: 0.20s; }
+.sk-row[data-w="2"] .sk-cell { animation-delay: 0.40s; }
+.sk-row[data-w="3"] .sk-cell { animation-delay: 0.60s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-cell {
+    animation: none;
+    background: var(--legience-bg-subtle);
+  }
+}
+
+.t-list { background: var(--legience-bg-elevated); }
+
+.t-group + .t-group { border-top: 1px solid var(--legience-border-hairline); }
+
+// ---------------------------------------------------------------------------
+// Group section — clean borders between groups, tone-coded headers, all
+// click-to-collapse. Each header has THREE tone-coordinated signals:
+//   1. leading dot (●) — tonal hue
+//   2. label color    — tonal hue
+//   3. count badge    — bg-{tone}-subtle background + matching border + text
+// All three reinforce the same semantic ("this group is overdue / urgent /
+// done"). Collapsed state rotates the chevron -90° and hides rows via *ngIf.
+// ---------------------------------------------------------------------------
+
+// Hairline divider between groups (not under each header) so each section
+// reads as one cohesive block rather than header + detached body.
+.t-group + .t-group {
+  border-top: 1px solid var(--legience-border-hairline);
+}
+
+.t-group-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 28px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: 700 12.5px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-secondary);
+  transition: background 100ms ease, color 100ms ease;
+  user-select: none;
+
+  // Color-coded leading dot via pseudo-element. Default tone = muted gray.
+  &::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--legience-text-muted);
+    flex-shrink: 0;
+    transition: background 100ms ease;
+  }
+
+  &:hover {
+    background: var(--legience-bg-row-hover);
+  }
+
+  // Count badge — neutral default, tone-overridden per group below.
+  .count {
+    font-weight: 600;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    padding: 3px 9px;
+    border-radius: var(--legience-radius-pill);
+    border: 1px solid var(--legience-border-hairline);
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-secondary);
+    line-height: 1;
+  }
+
+  // Tone variants per group key — dot + label + count badge all coordinate.
+  &[data-key='overdue'] {
+    color: var(--legience-danger);
+    &::before { background: var(--legience-danger); }
+    .count {
+      background: var(--legience-danger-bg-subtle);
+      border-color: rgba(var(--legience-danger-rgb), 0.30);
+      color: var(--legience-danger);
+    }
+  }
+  &[data-key='today'] {
+    color: var(--legience-accent);
+    &::before { background: var(--legience-accent); }
+    .count {
+      background: var(--legience-accent-bg-subtle);
+      border-color: rgba(var(--legience-accent-rgb), 0.30);
+      color: var(--legience-accent);
+    }
+  }
+  // This week — amber/warning. "Coming up soon, plan ahead." Echoes the
+  // universal traffic-light "approaching" signal. Distinct from red
+  // (Overdue) but warmer/more attention-getting than the neutral gray it
+  // used to share with Later.
+  &[data-key='thisWeek'] {
+    color: #b45309; // amber-700 — same readable text shade pill-warning uses
+    &::before { background: var(--legience-warning); }
+    .count {
+      background: var(--legience-warning-bg-subtle);
+      border-color: rgba(var(--legience-warning-rgb), 0.30);
+      color: #b45309;
+    }
+  }
+
+  // Later — info violet. "Organized future, on the calendar." A cool tone
+  // creates visual distance from the warm urgency-ladder (red→amber) so
+  // the eye reads it as "further away, not urgent."
+  &[data-key='later'] {
+    color: var(--legience-info);
+    &::before { background: var(--legience-info); }
+    .count {
+      background: var(--legience-info-bg-subtle);
+      border-color: rgba(var(--legience-info-rgb), 0.30);
+      color: var(--legience-info);
+    }
+  }
+
+  // No due date — neutral gray. The only group with no temporal commitment;
+  // intentionally muted to read as "unscheduled / ungroupable."
+  &[data-key='noDate'] {
+    color: var(--legience-text-secondary);
+    &::before { background: var(--legience-border-emphasis); }
+    // count keeps the neutral default styling
+  }
+  &[data-key='done'] {
+    color: var(--legience-success);
+    &::before { background: var(--legience-success); }
+    .count {
+      background: var(--legience-success-bg-subtle);
+      border-color: rgba(var(--legience-success-rgb), 0.30);
+      color: var(--legience-success);
+    }
+  }
+
+  // Legacy `.danger` class kept for any callers that still apply it.
+  &.danger { color: var(--legience-danger); }
+
+  .t-group-label {
+    line-height: 1;
+  }
+
+  // Chevron pinned to the right edge. Rotates -90° when the group is
+  // collapsed (points at the label area, "click here to expand").
+  .t-group-chevron {
+    margin-left: auto;
+    color: var(--legience-text-muted);
+    transition: transform 150ms ease, color 100ms ease;
+  }
+  &:hover .t-group-chevron { color: var(--legience-text-primary); }
+  &.is-collapsed .t-group-chevron { transform: rotate(-90deg); }
+}
+
+// Shared row affordances — hover, selected, cursor, transition. Layout
+// specifics live in `.d3-row` below so the row can be swapped without
+// touching the click/hover plumbing.
+.t-row {
+  cursor: pointer;
+  transition: background 100ms ease;
+
+  &:hover { background: var(--legience-bg-row-hover); }
+  &.selected { background: var(--legience-accent-bg-subtle); }
+}
+
+// ---------------------------------------------------------------------------
+// D3 row — preview match (tasks-listview-row-redesign-options.html#d3).
+// Single-line layout, ~51px tall. Title flexes to fill, chip indicators
+// + pills + due + avatars + menu sit at natural width on the right.
+// ---------------------------------------------------------------------------
+.d3-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 28px;
+  border-top: 1px solid var(--legience-border-hairline);
+}
+
+.d3-title {
+  flex: 1 1 auto;
+  min-width: 0; // allow shrink for ellipsis inside flex
+  font: 500 13.5px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.done {
+    text-decoration: line-through;
+    color: var(--legience-text-muted);
+  }
+}
+
+// Chip indicator (subtask count, time logged). Default is neutral; the
+// `complete` class flips it green (subtasks all done), `warn` flips it
+// amber (time exceeds estimate). Tabular numerics keep counts aligned
+// across rows.
+.d3-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 3px 8px;
+  font: 500 11.5px/1 var(--legience-font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--legience-text-muted);
+  background: var(--legience-bg-subtle);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+
+  i-lucide { opacity: 0.85; }
+
+  &.complete {
+    color: var(--legience-success);
+    background: var(--legience-success-bg-subtle);
+    border-color: rgba(var(--legience-success-rgb), 0.25);
+  }
+
+  &.warn {
+    color: #b45309;
+    background: var(--legience-warning-bg-subtle);
+    border-color: rgba(var(--legience-warning-rgb), 0.25);
+  }
+
+  // Status chip variant — uppercase, slightly tighter for status names so
+  // it reads as a "label" rather than a count. Tone classes drive the
+  // color (matched to the V1 stepper's active-pill tones inside the modal).
+  &.status-chip {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+
+    &.tone-muted {
+      color: var(--legience-text-subtle);
+      background: var(--legience-bg-subtle);
+      border-color: var(--legience-border-hairline);
+    }
+    &.tone-accent {
+      color: var(--legience-accent);
+      background: var(--legience-accent-bg-subtle);
+      border-color: rgba(var(--legience-accent-rgb), 0.30);
+    }
+    &.tone-info {
+      color: var(--legience-info);
+      background: var(--legience-info-bg-subtle);
+      border-color: rgba(var(--legience-info-rgb), 0.30);
+    }
+    &.tone-danger {
+      color: var(--legience-danger);
+      background: var(--legience-danger-bg-subtle);
+      border-color: rgba(var(--legience-danger-rgb), 0.30);
+    }
+    &.tone-success {
+      color: var(--legience-success);
+      background: var(--legience-success-bg-subtle);
+      border-color: rgba(var(--legience-success-rgb), 0.30);
+    }
+  }
+}
+
+.d3-due {
+  font: 500 11.5px/1 var(--legience-font-sans);
+  color: var(--legience-text-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.overdue { color: var(--legience-danger); font-weight: 600; }
+  &.today { color: var(--legience-accent); font-weight: 600; }
+
+  // Terminal tasks (in the Done group) — muted success tint to match the
+  // green COMPLETED status chip, but quiet so it doesn't compete for
+  // attention. Cancelled tasks share the same rule (also terminal).
+  &.done {
+    color: var(--legience-text-muted);
+    font-weight: 500;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pagination footer — mirrors the case-list `.cl-pagination` pattern so the
+// inbox feels consistent with the cases page. "Showing X of Y" + ‹ Page N/M ›
+// + "X per page", with disabled state on the prev/next anchors when at
+// either bound.
+// ---------------------------------------------------------------------------
+.t-pagination {
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--legience-text-muted);
+  flex-wrap: wrap;
+  gap: 10px;
+  border-top: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+}
+
+.t-pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  a {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--legience-radius);
+    color: var(--legience-text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    user-select: none;
+    transition: background 80ms ease;
+
+    &:hover { background: var(--legience-bg-card-hover); }
+    &.disabled { opacity: 0.35; pointer-events: none; }
+  }
+
+  .t-page-current {
+    padding: 0 8px;
+    color: var(--legience-text-primary);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Avatar stack — V78 multi-assignee. Up to 3 overlapping circles + "+N".
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar-stack .av-ringed {
+  margin-left: -6px;
+  position: relative;
+  z-index: 1;
+}
+.avatar-stack .av-ringed:first-child { margin-left: 0; }
+.avatar-stack .av-ringed:nth-child(2) { z-index: 2; }
+.avatar-stack .av-ringed:nth-child(3) { z-index: 3; }
+
+.avatar-stack-extra {
+  margin-left: 4px;
+  padding: 2px 6px;
+  border-radius: var(--legience-radius-pill);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-muted);
+  font: 600 10px/1 var(--legience-font-sans);
+}
+
+.row-actions {
+  position: relative;
+  display: inline-flex;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.t-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--legience-border-emphasis);
+  border-radius: 4px;
+  background: var(--legience-bg-elevated);
+
+  &.checked {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+  }
+}
+
+.t-title {
+  font: 500 13.5px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.done {
+    text-decoration: line-through;
+    color: var(--legience-text-muted);
+  }
+}
+
+.case-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font: 500 11px/1.5 var(--legience-font-sans);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-secondary);
+  border: 1px solid var(--legience-border-hairline);
+  white-space: nowrap;
+
+  .case-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--legience-accent);
+  }
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font: 600 10.5px/1.4 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+
+  .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+.pill-info    { background: var(--legience-info-bg-subtle);    color: var(--legience-info);    border-color: rgba(var(--legience-info-rgb), 0.25); }
+.pill-warning { background: var(--legience-warning-bg-subtle); color: #b45309;                 border-color: rgba(var(--legience-warning-rgb), 0.25); }
+.pill-danger  { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger);  border-color: rgba(var(--legience-danger-rgb), 0.25); }
+.pill-orange  { background: var(--legience-orange-soft);       color: var(--legience-orange);  border-color: rgba(var(--legience-orange-rgb), 0.25); }
+.pill-subtle  { background: var(--legience-bg-subtle);         color: var(--legience-text-subtle); border-color: var(--legience-border-hairline); }
+
+.t-due {
+  font: 500 11.5px/1 var(--legience-font-sans);
+  color: var(--legience-text-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &.overdue { color: var(--legience-danger); font-weight: 600; }
+  &.today { color: var(--legience-accent); font-weight: 600; }
+}
+
+.av-ringed {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ring, var(--legience-accent));
+  flex-shrink: 0;
+
+  .inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--legience-bg-elevated);
+    padding: 1.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inner .content {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--bg, var(--legience-accent));
+    color: #fff;
+    font: 600 9px/1 var(--legience-font-sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Smaller variant used by the D2 row aside — a touch tighter than default.
+  &.sm {
+    width: 22px;
+    height: 22px;
+    padding: 1px;
+
+    .inner { padding: 1px; }
+    .inner .content { font-size: 8.5px; }
+  }
+}
+
+// ── Buttons (per the brainstorm preview's `.btn`/`.btn-primary`/etc) ─
+// Scoped to inbox-view; the parent `tasks-page.scss` provides a fallback
+// for the page-head row.
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  color: var(--legience-text-primary);
+  border-radius: var(--legience-radius-buttons);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: all 120ms ease;
+
+  &:hover {
+    background: var(--legience-bg-card-hover);
+    border-color: var(--legience-border-emphasis);
+  }
+
+  &.btn-primary {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+    box-shadow: var(--legience-shadow-button);
+
+    &:hover {
+      background: var(--legience-accent-hover);
+      border-color: var(--legience-accent-hover);
+    }
+  }
+
+  &.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  &.btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  &.btn-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--legience-text-secondary);
+
+    &:hover {
+      background: var(--legience-bg-row-hover);
+      border-color: transparent;
+      color: var(--legience-text-primary);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Filter chip dropdowns + row action menu
+// ---------------------------------------------------------------------------
+
+.chip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+// Bootstrap's global `.dropdown-menu { display: none }` would otherwise hide
+// these popovers because the component-scoped rule below doesn't redefine
+// `display` (only position/size/styling). Explicit `display: block` reclaims
+// the rule so the dropdown is visible whenever Angular `*ngIf` mounts it.
+// Same fix-shape as the `.progress` → `.t-progress*` rename earlier; we
+// could rename to `.t-dropdown` long-term, but for now override is enough.
+.dropdown-menu {
+  display: block;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.10);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+
+  &.row-menu {
+    left: auto;
+    right: 0;
+    min-width: 160px;
+    top: calc(100% + 4px);
+  }
+}
+
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  color: var(--legience-text-primary);
+
+  &:hover {
+    background: var(--legience-bg-row-hover);
+  }
+
+  &.selected {
+    color: var(--legience-text-primary);
+  }
+
+  &.danger {
+    color: var(--legience-danger);
+
+    &:hover {
+      background: var(--legience-danger-bg-subtle);
+      color: var(--legience-danger);
+    }
+  }
+}
+
+.dd-check {
+  width: 14px;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--legience-accent);
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.dd-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dd-sep {
+  height: 1px;
+  background: var(--legience-border-hairline);
+  margin: 4px 2px;
+}
+
+.dd-empty {
+  padding: 6px 10px;
+  color: var(--legience-text-muted);
+  font-style: italic;
+}
+
+.row-action-wrap {
+  position: relative;
+  display: inline-flex;
+}

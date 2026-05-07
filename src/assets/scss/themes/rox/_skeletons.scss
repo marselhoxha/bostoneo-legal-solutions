@@ -1,0 +1,84 @@
+// =====================================================================
+// Skeleton primitives — Rox/Legience theme
+// ---------------------------------------------------------------------
+// Single source of truth for loading-state placeholder shapes used by
+// the <leg-skel-*> shared components and by ad-hoc atomic placements.
+//
+// Three layers (see docs/superpowers/specs for system rationale):
+//   Layer 1 (this file)  — tokens + animation + atomic primitives
+//   Layer 2 (Angular)    — generic shape components (text/list/card/...)
+//   Layer 3 (escape hatch) — drop the .legience-skel class on a div
+//                            for one-off cases not covered by Layer 2
+//
+// Motion: Variant A (refined shimmer, neutral) — 1.6s ease-in-out
+// horizontal sweep between --legience-bg-subtle and --legience-bg-elevated.
+// Reduced-motion users get a static --legience-bg-subtle fill.
+// =====================================================================
+
+@keyframes legience-skel-shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.legience-skel {
+  // Gradient uses --legience-text-subtle-rgb with alpha so it adapts to
+  // both light and dark modes (the "subtle" color is dark in light mode
+  // and light in dark mode — the rgba math keeps contrast usable in
+  // both). This is the same approach proven on the legacy case-card
+  // skeleton; using the bg-subtle/bg-elevated tokens directly produces
+  // near-zero contrast in light mode and the shimmer becomes invisible.
+  background: linear-gradient(
+    90deg,
+    rgba(var(--legience-text-subtle-rgb), 0.08) 0%,
+    rgba(var(--legience-text-subtle-rgb), 0.20) 50%,
+    rgba(var(--legience-text-subtle-rgb), 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: legience-skel-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--legience-radius, 6px);
+  display: inline-block;
+  pointer-events: none;
+  user-select: none;
+
+  // Default text-line height; size modifiers below override.
+  height: 12px;
+
+  // ── Shapes ─────────────────────────────────────────────────────────
+  &.skel-block  { display: block; width: 100%; }
+  &.skel-circle { border-radius: 50%; }
+  &.skel-pill   { border-radius: 14px; height: 22px; }
+  &.skel-btn    { border-radius: 8px;  height: 36px; }
+
+  // ── Size modifiers (apply to text lines) ───────────────────────────
+  &.size-xs { height: 8px;  }
+  &.size-sm { height: 11px; }
+  &.size-md { height: 14px; }
+  &.size-lg { height: 18px; }
+  &.size-xl { height: 24px; }
+
+  // ── Width helpers (text-line widths feel less rigid than fixed px) ─
+  &.w-25  { width: 25%; }
+  &.w-40  { width: 40%; }
+  &.w-55  { width: 55%; }
+  &.w-70  { width: 70%; }
+  &.w-90  { width: 90%; }
+  &.w-100 { width: 100%; }
+}
+
+// Container — pages can wrap a region with this so screen readers know
+// loading is in progress. The Layer-2 components apply role/aria-busy
+// themselves; this hook is for the escape-hatch atomic case.
+.legience-skel-region {
+  &[aria-busy="true"] { /* perf hook for future per-region tweaks */ }
+}
+
+// ── Reduced-motion fallback ────────────────────────────────────────
+// Users with prefers-reduced-motion get a static, dim placeholder
+// instead of the shimmer sweep. Still gives the layout-stability
+// benefit, just without the animation.
+@media (prefers-reduced-motion: reduce) {
+  .legience-skel {
+    animation: none;
+    background: rgba(var(--legience-text-subtle-rgb), 0.12);
+  }
+}

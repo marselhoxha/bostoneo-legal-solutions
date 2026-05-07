@@ -25,17 +25,20 @@ import { TosAcceptanceModalComponent } from './component/tos-acceptance-modal/to
 
 import { PreloaderComponent } from './component/preloader/preloader.component';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { DesignSwitcherComponent } from './component/dev-tools/design-switcher/design-switcher.component';
 import { CommandPaletteComponent } from './shared/components/command-palette/command-palette.component';
 import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
          Clock, FolderOpen, LayoutDashboard, Folder, Calendar, CheckSquare,
          Wrench, Users, DollarSign, Headphones, PenTool, Briefcase,
-         X, ChevronDown, Building2, BarChart2, Settings, Megaphone,
+         X, ChevronDown, ChevronRight, Building2, BarChart2, Settings, Megaphone,
          FileText, CalendarCheck, MessageCircle, UserCog,
          BookOpen, Receipt, ScrollText, Square,
          // Command-palette icons
          Home, CreditCard, Edit, CheckCircle, Tag, PieChart, UserPlus,
-         Inbox, Edit3, Zap, Shield, File, User, Building, CornerDownLeft } from 'lucide-angular';
+         Inbox, Edit3, Zap, Shield, File, User, Building, CornerDownLeft,
+         // Practice-area switcher + Direction 3 dashboard icons
+         HeartPulse, Gavel, Globe, Scale, Lightbulb, Wallet, HardHat,
+         Leaf, UsersRound, ArrowRight, AlertTriangle, MailPlus,
+         Repeat, CalendarClock } from 'lucide-angular';
 
 @NgModule({
   declarations: [
@@ -59,17 +62,20 @@ import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
     NgChartsModule,
     CountUpModule,
     NgbAccordionModule,
-    DesignSwitcherComponent,
     CommandPaletteComponent,
     LucideAngularModule.pick({
       Search, Bell, MessageSquare, Moon, Sun, Sparkles, Clock, FolderOpen,
       LayoutDashboard, Folder, Calendar, CheckSquare, Wrench, Users,
-      DollarSign, Headphones, PenTool, Briefcase, X, ChevronDown,
+      DollarSign, Headphones, PenTool, Briefcase, X, ChevronDown, ChevronRight,
       Building2, BarChart2, Settings, Megaphone, FileText, CalendarCheck,
       MessageCircle, UserCog, BookOpen, Receipt, ScrollText, Square,
       // Command-palette icons
       Home, CreditCard, Edit, CheckCircle, Tag, PieChart, UserPlus,
-      Inbox, Edit3, Zap, Shield, File, User, Building, CornerDownLeft
+      Inbox, Edit3, Zap, Shield, File, User, Building, CornerDownLeft,
+      // Practice-area switcher + Direction 3 dashboard icons
+      HeartPulse, Gavel, Globe, Scale, Lightbulb, Wallet, HardHat,
+      Leaf, UsersRound, ArrowRight, AlertTriangle, MailPlus,
+      Repeat, CalendarClock
     }),
     // JwtModule removed - custom TokenInterceptor handles auth to avoid conflicts
     StoreModule.forRoot(rootReducer)

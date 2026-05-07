@@ -1,40 +1,42 @@
 // =====================================================
-// Task drawer · D1 Inbox
-// Mirrors the brainstorm preview's `.drawer` styles, adapted to a
-// fixed right-side overlay with backdrop. Class names are scoped under
-// `.t-drawer` to avoid collision with any global `.drawer` styles.
+// Task drawer · D1 Inbox — rendered as a centered modal
+// Mirrors the brainstorm preview's `.drawer` content styles, but the
+// outer surface is a centered modal (not a right-side slide-in) per
+// user preference. Class names stay scoped under `.t-drawer` for
+// continuity with the rest of the component.
 // =====================================================
 
 // ── Backdrop ─────────────────────────────────────────────────
-// Sits one z-layer below the drawer. Covers the rest of the viewport
-// with the standard scrim token so the drawer is clearly modal.
+// Full-viewport scrim, click-through to close. Sits one z-layer
+// below the modal surface.
 .t-drawer-backdrop {
   position: fixed;
   inset: 0;
   background: var(--legience-overlay-backdrop);
   border: none;
   cursor: default;
-  // One below the drawer (modal layer = 1070).
   z-index: calc(var(--legience-z-modal) - 1);
   animation: t-drawer-fade-in var(--legience-motion-medium) var(--legience-ease-out);
   padding: 0;
   margin: 0;
 }
 
-// ── Drawer ───────────────────────────────────────────────────
+// ── Modal surface ────────────────────────────────────────────
 .t-drawer {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(520px, 100vw);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(640px, 92vw);
+  max-height: 88vh;
   background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-lg, 12px);
   box-shadow: var(--legience-shadow-lg);
-  border-left: 1px solid var(--legience-border-hairline);
-  padding: 20px 24px;
+  padding: 22px 24px;
   overflow-y: auto;
   z-index: var(--legience-z-modal);
-  animation: t-drawer-slide-in var(--legience-motion-medium) var(--legience-ease-out);
+  animation: t-drawer-modal-in var(--legience-motion-medium) var(--legience-ease-out);
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -44,19 +46,21 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-@keyframes t-drawer-slide-in {
-  from { transform: translateX(20px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+@keyframes t-drawer-modal-in {
+  from { transform: translate(-50%, -48%) scale(0.98); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 // ── Header ───────────────────────────────────────────────────
+// V1 modal-head equivalent — sits flush against the banded stepper
+// stripe below, so it carries no margin-bottom or border-bottom of
+// its own (the .s1-wrap below provides the divider via its border-top
+// and the bg-card-hover tint).
 .drawer-head {
   display: flex;
   align-items: center;
   gap: 10px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--legience-border-hairline);
-  margin-bottom: 16px;
 
   .drawer-title {
     margin: 0;
@@ -64,22 +68,6 @@
     font: 600 16px/1.3 var(--legience-font-sans);
     letter-spacing: -0.02em;
     color: var(--legience-text-primary);
-  }
-
-  .icon-x {
-    background: transparent;
-    border: none;
-    color: var(--legience-text-muted);
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--legience-radius-sm);
-
-    &:hover {
-      color: var(--legience-text-primary);
-      background: var(--legience-bg-row-hover);
-    }
   }
 }
 
@@ -147,6 +135,9 @@
   border-radius: var(--legience-radius);
 
   .blocker-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font: 600 10.5px/1 var(--legience-font-sans);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -168,68 +159,514 @@
   }
 }
 
-// ── View-driven stubs (Phase 2 / Phase 3) ────────────────────
-// These elements are hidden via *ngIf="false" today; styles are
-// here so the markup is testable when the flags flip.
-.status-changer {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 14px;
-  padding: 4px;
+// ── Status / Assignee / Due triggers + dropdowns ─────────────
+.status-wrap,
+.assignee-wrap,
+.due-wrap {
+  position: relative;
+}
+
+.status-trigger,
+.assignee-trigger,
+.due-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  // Negative margin equal to padding so the trigger's CONTENT (icon + text)
+  // aligns flush with the `.field-label` directly above it. The hover
+  // background still extends to where the padding sits — content alignment
+  // and hit-area expansion are decoupled. The grid's 16px gap absorbs the
+  // 6px horizontal overflow.
+  margin: -4px -6px;
   border-radius: var(--legience-radius-buttons);
-  background: var(--legience-bg-subtle);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 100ms ease;
+  user-select: none;
 
-  .opt {
-    flex: 1;
-    text-align: center;
-    padding: 6px 10px;
-    font: 500 11.5px/1 var(--legience-font-sans);
-    color: var(--legience-text-subtle);
-    cursor: pointer;
-    border-radius: var(--legience-radius-sm);
+  &:hover {
+    background: var(--legience-bg-row-hover);
+    border-color: var(--legience-border-hairline);
+  }
 
-    &.active {
-      background: var(--legience-bg-elevated);
-      color: var(--legience-text-primary);
-      box-shadow: var(--legience-shadow-sm);
-      font-weight: 600;
-    }
+  i-lucide {
+    color: var(--legience-text-muted);
+    line-height: 0;
   }
 }
 
-.reassign-box {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  background: var(--legience-accent-bg-subtle);
-  border: 1px solid rgba(var(--legience-accent-rgb), 0.25);
-  border-radius: var(--legience-radius);
+.assignee-trigger {
+  .assignee-name {
+    font: 500 13.5px/1 var(--legience-font-sans);
+    color: var(--legience-text-primary);
+    &.muted { color: var(--legience-text-muted); font-weight: 400; }
+  }
+}
 
-  .reassign-head {
-    font: 600 12px/1 var(--legience-font-sans);
-    color: var(--legience-accent);
-    margin-bottom: 6px;
+// Due trigger uses the existing field-value style by default; muted state
+// surfaces "Set due date" placeholder when no date is set.
+.due-trigger {
+  font: 500 13px/1 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  &.muted { color: var(--legience-text-muted); font-style: italic; }
+}
+
+// Inline date editor — appears below the trigger like the assignee menu.
+.due-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 240px;
+  padding: 10px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.10);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.due-input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--legience-radius-inputs, 6px);
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-primary);
+  font: 500 13px/1.4 var(--legience-font-sans);
+
+  &:focus {
+    outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+    outline-offset: 1px;
+    border-color: var(--legience-accent);
   }
 
-  .reassign-body {
-    font: 400 13px/1.5 var(--legience-font-sans);
-    color: var(--legience-text-secondary);
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.due-menu-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+// ── V1 Segmented Pills stepper (preview match: s1-wrap, s1-stepper) ─────
+// Renders as a full-bleed banded stripe: tinted bg-card-hover, hairline top
+// + bottom borders, sits BELOW .drawer-head and ABOVE .row-stack so status
+// reads as the primary control before metadata. Bleeds horizontally past the
+// modal's inner padding via negative margins.
+//
+// On-track flow: TODO → IN_PROGRESS → REVIEW → COMPLETED.
+// Active pill is accent-tinted; past pills carry the success ✓; future pills
+// stay muted. Off-track transitions (BLOCKED, CANCELLED) live below in
+// `.s1-offtrack`.
+.s1-wrap {
+  margin: 0 -24px 18px;
+  padding: 14px 24px;
+  background: var(--legience-bg-card-hover);
+  border-top: 1px solid var(--legience-border-hairline);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.s1-stepper {
+  display: flex;
+  gap: 4px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-buttons);
+  padding: 3px;
+  width: 100%;
+}
+
+.s1-step {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: var(--legience-radius);
+  font: 500 12px/1 var(--legience-font-sans);
+  text-align: center;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: inherit;
+  transition: all 100ms ease;
+
+  &:hover:not(.active) { background: var(--legience-bg-row-hover); }
+}
+
+.s1-step .step-tick {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.s1-step.past {
+  color: var(--legience-success);
+  background: rgba(var(--legience-success-rgb), 0.10);
+}
+.s1-step.past .step-tick {
+  background: var(--legience-success);
+  color: #fff;
+}
+
+.s1-step.active {
+  color: var(--legience-accent);
+  font-weight: 600;
+  background: var(--legience-accent-bg-subtle);
+  border: 1px solid rgba(var(--legience-accent-rgb), 0.30);
+  padding: 6px 9px; // compensate for the border so heights match siblings
+}
+.s1-step.active .step-tick {
+  background: var(--legience-accent);
+  color: #fff;
+}
+
+.s1-step.future { color: var(--legience-text-muted); }
+.s1-step.future .step-tick {
+  border: 1.5px solid var(--legience-border-emphasis);
+  background: transparent;
+}
+
+// ── Off-track transition links (BLOCKED + CANCELLED) ──────────
+// Sits below the stepper inside the same banded stripe. The two links sit
+// on a single row with comfortable gap so they read as distinct affordances
+// (not a single button cluster). Hover surfaces a subtle background so they
+// feel tappable without competing visually with the stepper above.
+.s1-offtrack {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font: 500 12px/1 var(--legience-font-sans);
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--legience-radius);
+  font: inherit;
+  cursor: pointer;
+  color: var(--legience-text-subtle);
+  transition: background 100ms ease, color 100ms ease;
+
+  &:hover:not(:disabled) {
+    color: var(--legience-text-primary);
+    background: var(--legience-bg-row-hover);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.link-blocked {
+    color: var(--legience-danger);
+
+    &:hover:not(:disabled) {
+      color: var(--legience-danger);
+      background: var(--legience-danger-bg-subtle);
+    }
+    &.is-active { font-weight: 600; }
+  }
+}
+
+// Sub-text under the field-value (e.g. "2.4h logged · 1.6h remaining").
+.field-sub {
+  margin-top: 2px;
+  font: 500 11px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+}
+
+// Preview-aligned section heading style (uppercase, letter-spaced 600).
+.sec-head .title-text {
+  font: 600 12px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--legience-text-secondary);
+}
+
+// Inline value next to a uppercase field label — keeps natural case
+// (e.g. "ESTIMATED · 2h" rather than "ESTIMATED · 2H").
+.field-label .label-value {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+.activity-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 10px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--legience-text-subtle);
+
+  &:hover { color: var(--legience-text-primary); }
+}
+
+// ── Avatar stack (multi-assignee — V78) ─────────────────────────
+// Overlapping ringed circles with a "+N" chip when more than 3 visible.
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar-stack .av-ringed {
+  margin-left: -6px;
+  // Ensure later avatars layer above earlier so the stack reads left→right.
+  position: relative;
+  z-index: 1;
+}
+.avatar-stack .av-ringed:first-child { margin-left: 0; }
+.avatar-stack .av-ringed:nth-child(2) { z-index: 2; }
+.avatar-stack .av-ringed:nth-child(3) { z-index: 3; }
+
+.avatar-stack-extra {
+  margin-left: 4px;
+  padding: 2px 6px;
+  border-radius: var(--legience-radius-pill);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-muted);
+  font: 600 10px/1 var(--legience-font-sans);
+}
+
+// Multi-select dropdown items get a leading checkbox.
+.dd-item--multi {
+  align-items: center;
+}
+
+.dd-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--legience-border-emphasis);
+  border-radius: 4px;
+  background: var(--legience-bg-elevated);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  transition: background 100ms ease, border-color 100ms ease;
+
+  &.checked {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+  }
+}
+
+// ── Phase H — Comments add-only + Activity log accordion ───────
+
+.comment-empty {
+  padding: 8px 0 4px;
+  color: var(--legience-text-muted);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  font-style: italic;
+}
+
+// Composer (preview's `.comment-input-wrap`) — textarea + button side-by-side.
+// Submit aligns to the top so its visual weight matches the first textarea
+// row even as the textarea grows.
+.comment-input-wrap {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--legience-border-hairline);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.comment-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--legience-radius);
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-primary);
+  font: 400 13px/1.4 var(--legience-font-sans);
+  resize: vertical;
+  min-height: 56px;
+
+  &:focus {
+    outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+    outline-offset: 1px;
+    border-color: var(--legience-accent);
+  }
+
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.comment-input-wrap .btn { align-self: flex-start; }
+
+// Activity log accordion. Header acts as a button; body collapses below.
+.drawer-section--accordion {
+  .sec-head--toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+
+    &:hover .title { color: var(--legience-text-primary); }
+  }
+}
+
+.activity-body {
+  margin-top: 10px;
+}
+
+.activity-empty {
+  color: var(--legience-text-muted);
+  font: 500 13px/1.5 var(--legience-font-sans);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 200px;
+  max-height: 320px;
+  padding: 6px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.10);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  display: flex;
+  flex-direction: column;
+
+  &.assignee-menu { min-width: 260px; }
+}
+
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  color: var(--legience-text-primary);
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+
+  &:hover { background: var(--legience-bg-row-hover); }
+
+  .dd-name { flex: 1; }
+  .dd-role {
+    font: 500 11px/1 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+    text-transform: capitalize;
+  }
+}
+
+.dd-empty {
+  padding: 6px 10px;
+  color: var(--legience-text-muted);
+  font-style: italic;
+}
+
+.dd-scroll {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.assignee-search {
+  width: 100%;
+  padding: 7px 10px;
+  margin-bottom: 4px;
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 6px;
+  background: var(--legience-bg-elevated);
+  font: 400 13px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+
+  &:focus {
+    outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+    outline-offset: -1px;
+    border-color: var(--legience-accent);
   }
 }
 
 // ── Subtask rows ─────────────────────────────────────────────
+.subtask-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+
+  .subtask-input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 6px;
+    background: var(--legience-bg-elevated);
+    font: 400 13px/1.4 var(--legience-font-sans);
+    color: var(--legience-text-primary);
+
+    &:focus {
+      outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+      outline-offset: -1px;
+      border-color: var(--legience-accent);
+    }
+  }
+}
+
 .subtask-row {
   display: grid;
-  grid-template-columns: 18px 1fr auto;
+  grid-template-columns: 18px 1fr auto 28px;
   align-items: center;
   gap: 10px;
   padding: 6px 0;
 
-  .t-checkbox {
+  .t-checkbox-btn {
     width: 16px;
     height: 16px;
     border: 1.5px solid var(--legience-border-emphasis);
     border-radius: 4px;
     background: var(--legience-bg-elevated);
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--legience-text-on-accent);
 
     &.checked {
       background: var(--legience-accent);
@@ -251,6 +688,13 @@
     font: 500 11px/1 var(--legience-font-sans);
     color: var(--legience-text-muted);
   }
+
+  // Hide the trash icon until hover for less visual noise.
+  .subtask-del {
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+  &:hover .subtask-del { opacity: 1; }
 }
 
 // ── Attachment pills ─────────────────────────────────────────
@@ -262,8 +706,6 @@
 
 .attachment-pill {
   padding: 4px 10px;
-  // Inherits .case-pill styles below; this just bumps padding to
-  // match the brainstorm preview's chunkier file-pill rendering.
 }
 
 .attachment-icon {
@@ -271,10 +713,10 @@
   line-height: 1;
 }
 
-// ── Comments ─────────────────────────────────────────────────
+// ── Comments — preview-aligned (24px avatar + tinted body block) ────
 .comment {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  grid-template-columns: 24px 1fr;
   gap: 10px;
   margin-top: 10px;
 
@@ -300,8 +742,6 @@
 }
 
 // ── Ringed avatar (shared across header / metadata / comments) ─
-// Same recipe as InboxViewComponent so the same person looks
-// identical in the row and in the drawer.
 .av-ringed {
   width: 28px;
   height: 28px;
@@ -335,11 +775,13 @@
     align-items: center;
     justify-content: center;
   }
+
+  &.sm { width: 22px; height: 22px; padding: 1.5px; }
+  &.sm .inner { padding: 1px; }
+  &.sm .inner .content { font-size: 8px; }
 }
 
-// ── Pills (priority + status) — copied from inbox-view so the
-// drawer is visually self-contained and we don't depend on
-// global pill styles leaking in. ─────────────────────────────
+// ── Pills (priority + status) ───────────────────────────────
 .pill {
   display: inline-flex;
   align-items: center;
@@ -359,10 +801,12 @@
     background: currentColor;
   }
 }
-.pill-info    { background: var(--legience-info-bg-subtle);    color: var(--legience-info);     border-color: rgba(var(--legience-info-rgb), 0.25); }
-.pill-warning { background: var(--legience-warning-bg-subtle); color: #b45309;                  border-color: rgba(var(--legience-warning-rgb), 0.25); }
-.pill-danger  { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger);   border-color: rgba(var(--legience-danger-rgb), 0.25); }
-.pill-orange  { background: var(--legience-orange-soft);       color: var(--legience-orange);   border-color: rgba(var(--legience-orange-rgb), 0.25); }
+.pill-info    { background: var(--legience-info-bg-subtle);    color: var(--legience-info);    border-color: rgba(var(--legience-info-rgb), 0.25); }
+.pill-warning { background: var(--legience-warning-bg-subtle); color: #b45309;                 border-color: rgba(var(--legience-warning-rgb), 0.25); }
+.pill-danger  { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger);  border-color: rgba(var(--legience-danger-rgb), 0.25); }
+.pill-orange  { background: var(--legience-orange-soft);       color: var(--legience-orange);  border-color: rgba(var(--legience-orange-rgb), 0.25); }
+.pill-accent  { background: var(--legience-accent-bg-subtle);  color: var(--legience-accent);  border-color: rgba(var(--legience-accent-rgb), 0.25); }
+.pill-success { background: var(--legience-success-bg-subtle); color: var(--legience-success); border-color: rgba(var(--legience-success-rgb), 0.25); }
 .pill-subtle  { background: var(--legience-bg-subtle);         color: var(--legience-text-subtle); border-color: var(--legience-border-hairline); }
 
 // ── Case pill (and the attachment pill that reuses it) ──────
@@ -386,29 +830,155 @@
   }
 }
 
-// ── Buttons (ghost + small) used in section headers ─────────
+// ── Buttons (per the brainstorm preview's `.btn`/`.btn-primary`/etc) ─
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  color: var(--legience-text-primary);
   border-radius: var(--legience-radius-buttons);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  letter-spacing: -0.005em;
   cursor: pointer;
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--legience-text-subtle);
-  padding: 4px 10px;
-  font: 500 12px/1.4 var(--legience-font-sans);
+  transition: all 120ms ease;
 
   &:hover {
-    background: var(--legience-bg-row-hover);
-    color: var(--legience-text-primary);
+    background: var(--legience-bg-card-hover);
+    border-color: var(--legience-border-emphasis);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.btn-primary {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+    box-shadow: var(--legience-shadow-button);
+
+    &:hover:not(:disabled) {
+      background: var(--legience-accent-hover);
+      border-color: var(--legience-accent-hover);
+    }
+  }
+
+  &.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  &.btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  &.btn-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--legience-text-secondary);
+
+    &:hover:not(:disabled) {
+      background: var(--legience-bg-row-hover);
+      border-color: transparent;
+      color: var(--legience-text-primary);
+    }
   }
 }
 
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
+// ── Blocker required-prompt (small modal stacked above drawer) ──
+.blocker-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--legience-overlay-backdrop);
+  z-index: calc(var(--legience-z-modal) + 10);
+  animation: t-drawer-fade-in var(--legience-motion-fast) var(--legience-ease-out);
+}
+
+.blocker-prompt {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, 92vw);
+  max-height: 88vh;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-lg, 12px);
+  box-shadow: var(--legience-shadow-lg);
+  z-index: calc(var(--legience-z-modal) + 11);
+  display: flex;
+  flex-direction: column;
+  animation: t-drawer-modal-in var(--legience-motion-fast) var(--legience-ease-out);
+
+  .bp-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--legience-border-hairline);
+    color: var(--legience-danger);
+
+    h4 {
+      flex: 1;
+      margin: 0;
+      font: 600 14px/1.3 var(--legience-font-sans);
+      color: var(--legience-text-primary);
+      letter-spacing: -0.01em;
+    }
+  }
+
+  .bp-body {
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .bp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .bp-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 600 11px/1 var(--legience-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--legience-text-muted);
+
+    .req { color: var(--legience-danger); margin-left: 2px; }
+  }
+
+  .bp-textarea,
+  .bp-date {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 6px;
+    background: var(--legience-bg-elevated);
+    color: var(--legience-text-primary);
+    font: 400 13px/1.5 var(--legience-font-sans);
+    resize: vertical;
+
+    &:focus {
+      outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+      outline-offset: -1px;
+      border-color: var(--legience-accent);
+    }
+  }
+
+  .bp-foot {
+    padding: 12px 18px;
+    border-top: 1px solid var(--legience-border-hairline);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
 }

@@ -1,0 +1,179 @@
+<!--
+  Calendar event view modal — Rox-styled summary that branches on tier:
+    • mode='d1' (no tier) → standard event modal (cal-d1)
+    • mode='d2' (statute / court / soft) → deadline modal with banner + cascade (cal-d2)
+  The full edit form lives in the existing EventModalComponent — Edit hands off there.
+-->
+<div class="cev-modal" [class]="tierClass()" [style.--ev-color]="caseColor || '#0b64e9'">
+
+  <!-- Head: case pill (or tier pill for deadlines) + title + close -->
+  <div class="cev-head">
+    <span class="pill" [ngClass]="mode === 'd2' ? 'pill-tier' : 'pill-case'">
+      <span class="dot"></span>
+      <ng-container *ngIf="mode === 'd1'">{{ event.caseTitle || event.caseNumber || 'No case' }}</ng-container>
+      <ng-container *ngIf="mode === 'd2'">{{ tierLabel() }}</ng-container>
+    </span>
+    <h4 class="cev-title">{{ event.title }}</h4>
+    <button type="button" class="cev-close" (click)="close()" aria-label="Close">
+      <i-lucide name="x" [size]="16"></i-lucide>
+    </button>
+  </div>
+
+  <!-- D2 only: warning banner. Tier drives the color (statute=red, court=orange, soft=yellow). -->
+  <div class="cev-banner" *ngIf="mode === 'd2'">
+    <div class="headline">{{ bannerCopy().headline }}</div>
+    <div class="sub">{{ bannerCopy().sub }}</div>
+  </div>
+
+  <!-- ───────────── Fields ───────────── -->
+  <div class="cev-fields">
+
+    <!-- Title (echoed) — both modes show this for symmetry with the mockups. -->
+    <div class="field">
+      <label>{{ mode === 'd2' ? 'Deadline title' : 'Event title' }}</label>
+      <div class="value">{{ event.title }}</div>
+    </div>
+
+    <!-- D1: Date + Time grid. D2: Tier + Hard date grid. -->
+    <div class="field-grid" *ngIf="mode === 'd1'">
+      <div class="field">
+        <label>Date</label>
+        <div class="value">{{ dateLabel || '—' }}</div>
+      </div>
+      <div class="field">
+        <label>Time</label>
+        <div class="value">{{ timeLabel || '—' }}</div>
+      </div>
+    </div>
+
+    <div class="field-grid" *ngIf="mode === 'd2'">
+      <div class="field">
+        <label>Tier</label>
+        <div class="value">
+          <span class="pill pill-tier" [class]="tierClass()">
+            <span class="dot"></span>{{ tierLabel() }}
+          </span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Hard date</label>
+        <div class="value strong">{{ hardDateLabel || '—' }}</div>
+      </div>
+    </div>
+
+    <!-- D1 only: Location -->
+    <div class="field" *ngIf="mode === 'd1' && event.location">
+      <label>Location</label>
+      <div class="value"><i-lucide name="map-pin" [size]="13"></i-lucide> {{ event.location }}</div>
+    </div>
+
+    <!-- Linked case (both modes, when known) -->
+    <div class="field" *ngIf="event.caseTitle || event.caseNumber">
+      <label>Linked case</label>
+      <div class="value">
+        <span class="case-pill">
+          <span class="case-dot"></span>
+          {{ event.caseTitle || event.caseNumber }}
+        </span>
+      </div>
+    </div>
+
+    <!-- D1 only: Description / Notes (when present) -->
+    <div class="field" *ngIf="mode === 'd1' && event.description">
+      <label>Notes</label>
+      <div class="value">{{ event.description }}</div>
+    </div>
+
+    <!-- D2 only: source / authority. Prefers the dedicated V79 field; falls
+         back to description for legacy rows where the citation was typed
+         into the description box. -->
+    <div class="field" *ngIf="mode === 'd2' && (event.sourceAuthority || event.description)">
+      <label>Source / authority</label>
+      <div class="value">{{ event.sourceAuthority || event.description }}</div>
+    </div>
+
+    <!--
+      Reminders. D1 shows a one-liner ("1 day before · 1 hour before").
+      D2 shows the full cascade as a list — matches the mockup's reminder
+      cascade with leading-bell + bold offset + channel description.
+    -->
+    <div class="field" *ngIf="reminderCascade.length > 0 && mode === 'd1'">
+      <label>Reminders</label>
+      <div class="value">
+        {{ reminderCascade[0].leadLabel }}
+        <ng-container *ngIf="reminderCascade.length > 1">
+          · {{ reminderCascade[1].leadLabel }}
+        </ng-container>
+      </div>
+    </div>
+
+    <div class="field" *ngIf="reminderCascade.length > 0 && mode === 'd2'">
+      <label>Reminder cascade</label>
+      <!--
+        Cells go directly under .value.cascade (an ng-container has zero
+        DOM output) so they participate in a SINGLE 3-column grid where the
+        offset column is unified across all rows. Each cell carries the
+        `now` class individually so the active row highlights all three.
+      -->
+      <div class="value cascade">
+        <ng-container *ngFor="let r of reminderCascade; let i = index">
+          <i-lucide
+            name="bell"
+            [size]="13"
+            class="cev-cell cev-cell-bell"
+            [class.now]="r.isNow"
+            [class.first-row]="i === 0"
+          ></i-lucide>
+          <strong
+            class="cev-cell cev-cell-lead"
+            [class.now]="r.isNow"
+            [class.first-row]="i === 0"
+          >{{ r.leadLabel }}</strong>
+          <span
+            class="cev-cell cev-cell-ch"
+            [class.now]="r.isNow"
+            [class.first-row]="i === 0"
+          >· {{ r.channel }}</span>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- "Required action" intentionally omitted — title + tier banner +
+         source/authority already convey what needs doing; a separate field
+         was redundant. Kept on the data model for future power-user surfaces. -->
+  </div>
+
+  <!--
+    Actions — destructive split-left, dismiss/edit/primary grouped right.
+    Standard modal hierarchy: Delete is one click away from a primary save,
+    so we physically separate it. Primary action depends on context:
+      D2 (deadline) → "Mark filed" (relief action)
+      D1 (event)    → "Edit" (the only constructive action)
+  -->
+  <div class="cev-actions">
+    <button
+      type="button"
+      class="btn btn-danger btn-ghost"
+      *ngIf="event.id"
+      (click)="confirmDelete()"
+    >
+      <i-lucide name="trash-2" [size]="14"></i-lucide>
+      Delete
+    </button>
+    <div class="cev-actions-right">
+      <button type="button" class="btn" (click)="close()">Close</button>
+      <button
+        type="button"
+        class="btn"
+        [class.btn-primary]="mode !== 'd2' || !event.id"
+        (click)="edit()"
+      >Edit</button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        *ngIf="mode === 'd2' && event.id"
+        (click)="markFiled()"
+      >Mark filed</button>
+    </div>
+  </div>
+</div>

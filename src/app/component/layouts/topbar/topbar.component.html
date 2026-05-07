@@ -10,12 +10,31 @@
     <!-- ── LEFT: brand + hamburger + active case pill ───────────── -->
     <div class="lt-left">
 
-      <a class="lt-brand" [routerLink]="['/']">
-        <img src="assets/images/legience-logo-blue.svg" class="lt-brand-mark" alt="Legience" height="28">
-        <span class="lt-brand-firm" *ngIf="user$ | async as u">
-          {{ u.organizationName || u.organization?.name }}
+      <!--
+        Brand cluster: Legience mark + workspace chip showing the user's
+        current organization (e.g. "Legience-Dev"). Replaces the previous
+        practice-area-switcher — per product direction the bar 1 identity
+        is firm-level (organization), not practice-area-level. Practice
+        area selection lives at the case-detail / dashboard level.
+
+        The chip is the Linear/Notion/GitHub workspace pattern: avatar
+        with deterministic initials + name. Reads `User.organizationName`
+        from the auth user stream; if absent, the whole chip collapses
+        out so we never render an empty pill.
+      -->
+      <div class="lt-brand-cluster">
+        <a class="lt-brand" [routerLink]="['/']">
+          <img src="assets/images/legience-logo-blue.svg" class="lt-brand-mark" alt="Legience" height="28">
+        </a>
+        <span class="lt-brand-firm"
+              *ngIf="(user$ | async)?.organizationName as orgName"
+              [title]="orgName">
+          <span class="lt-brand-firm-avatar" aria-hidden="true">
+            {{ brandFirmInitials(orgName) }}
+          </span>
+          <span class="lt-brand-firm-name">{{ orgName }}</span>
         </span>
-      </a>
+      </div>
 
       <button type="button"
               id="topnav-hamburger-icon"

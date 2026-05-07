@@ -37,47 +37,78 @@
                   @if(item.badge){<span class="badge badge-pill {{item.badge.variant}} ms-1">{{item.badge.text}}</span>}
                 </a>
 
+                <!-- ========================================================
+                     Bar 2 dropdown panel. Hover-shown on desktop
+                     (.lt-nav-item:hover > .lt-nav-dropdown), click-toggled
+                     on touch via .is-open. Each sub-item is either a leaf
+                     (direct routerLink) OR a sub-parent with its own
+                     cascading flyout (.lt-nav-flyout) for items like
+                     Invoices > {All Invoices, Workflows} or Expenses >
+                     {All Expenses, Categories, Vendors}.
+
+                     Removed: Bootstrap collapse machinery (data-bs-toggle,
+                     aria-expanded, .collapse.menu-dropdown). It was broken
+                     because no data-bs-target was bound. Replaced with a
+                     pure-CSS cascading flyout that hover-shows on desktop
+                     and degrades to an inline accordion on mobile.
+                     ======================================================== -->
                 <div class="lt-nav-dropdown" [ngClass]="{'mega-dropdown-menu':item.label === 'MENUITEMS.BASEUI.TEXT'}">
                   <div [ngClass]="{'row':item.label == 'MENUITEMS.BASEUI.TEXT'}">
                     @for(subitem of item.subItems; track $index){
                       <div [ngClass]="{'col-lg-4': item.label == 'MENUITEMS.BASEUI.TEXT'}">
-                        <ul class="nav nav-sm flex-column" aria-expanded="false">
-                          <li class="nav-item">
+                        <ul class="nav nav-sm flex-column">
+                          <li class="nav-item"
+                              [class.is-flyout]="hasItems(subitem)"
+                              [class.is-open]="!!subitem['_ltOpen']">
                             @if(hasItems(subitem)){
-                              <a class="nav-link" href="javascript:void(0);" [attr.data-parent]="subitem.parentId" [attr.data-title]="subitem.label" data-bs-toggle="collapse" aria-expanded="false" (click)="toggleSubItem($event)">
+                              <!-- Sub-parent (e.g. Invoices, Expenses).
+                                   Has its own link AND a flyout of children.
+                                   Click navigates to its primary route; hover
+                                   (desktop) and :focus-within (keyboard) reveal
+                                   the flyout. On mobile the flyout becomes an
+                                   inline accordion always visible when its
+                                   parent dropdown is open. The chevron-right
+                                   is a visual indicator only — not interactive
+                                   (an interactive <button> inside an <a> is
+                                   invalid HTML and would break keyboard nav). -->
+                              <a [routerLink]="subitem.link"
+                                 class="nav-link nav-link-parent"
+                                 [routerLinkActive]="'active'"
+                                 [routerLinkActiveOptions]="{ exact: false }"
+                                 [attr.aria-haspopup]="'menu'"
+                                 (click)="updateActive($event)">
                                 @if(subitem.icon){<i class="bx {{ subitem.icon }} icon nav-icon"></i>}
                                 <span class="menu-text">{{ subitem.label }}</span>
+                                <i-lucide name="chevron-right" [size]="12" class="nav-chev-right" aria-hidden="true"></i-lucide>
                               </a>
-                              <div class="collapse menu-dropdown">
-                                <ul class="nav nav-sm flex-column" aria-expanded="false">
-                                  @for(subSubitem of subitem.subItems; track $index){
-                                    <li class="nav-item">
-                                      @if(subSubitem.childItem){
-                                        <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subSubitem.label" [routerLink]="subSubitem.link" data-bs-toggle="collapse" aria-expanded="false" class="nav-link" (click)="updateActive($event)">
+                              <div class="lt-nav-flyout">
+                                <div>
+                                  <ul class="nav nav-sm flex-column">
+                                    @for(subSubitem of subitem.subItems; track $index){
+                                      <li class="nav-item">
+                                        <a [routerLink]="subSubitem.link"
+                                           class="nav-link"
+                                           [routerLinkActive]="'active'"
+                                           [routerLinkActiveOptions]="{ exact: false }"
+                                           [attr.data-parent]="subSubitem.parentId"
+                                           [attr.data-title]="subSubitem.label"
+                                           (click)="updateActive($event)">
+                                          @if(subSubitem.icon){<i class="bx {{ subSubitem.icon }} icon nav-icon"></i>}
                                           <span class="menu-text">{{ subSubitem.label }}</span>
                                         </a>
-                                        <div class="collapse menu-dropdown">
-                                          <ul class="nav nav-sm flex-column" aria-expanded="false">
-                                            @for(subChilditem of subChilditem.childItem; track $index){
-                                              <li class="nav-item">
-                                                <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subChilditem.label" [routerLink]="subChilditem.link" class="nav-link" (click)="updateActive($event)">
-                                                  <span class="menu-text">{{ subChilditem.label }}</span>
-                                                </a>
-                                              </li>
-                                            }
-                                          </ul>
-                                        </div>
-                                      }@else{
-                                        <a [attr.data-parent]="subSubitem.parentId" [attr.data-title]="subSubitem.label" [routerLink]="subSubitem.link" class="nav-link" (click)="updateActive($event)">
-                                          <span class="menu-text">{{ subSubitem.label }}</span>
-                                        </a>
-                                      }
-                                    </li>
-                                  }
-                                </ul>
+                                      </li>
+                                    }
+                                  </ul>
+                                </div>
                               </div>
                             }@else {
-                              <a [routerLink]="subitem.link" class="nav-link" [attr.data-parent]="subitem.parentId" [attr.data-title]="subitem.label" (click)="updateActive($event)">
+                              <a [routerLink]="subitem.link"
+                                 class="nav-link"
+                                 [routerLinkActive]="'active'"
+                                 [routerLinkActiveOptions]="{ exact: false }"
+                                 [attr.data-parent]="subitem.parentId"
+                                 [attr.data-title]="subitem.label"
+                                 (click)="updateActive($event)">
                                 @if(subitem.icon){<i class="bx {{ subitem.icon }} icon nav-icon"></i>}
                                 <span class="menu-text">{{ subitem.label }}</span>
                               </a>

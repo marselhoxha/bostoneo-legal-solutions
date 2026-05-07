@@ -24,8 +24,13 @@ import { LucideAngularModule, Search, Bell, MessageSquare, Moon, Sun, Sparkles,
          Wrench, Users, DollarSign, Headphones, PenTool, Briefcase,
          X, ChevronDown, Building2, BarChart2, Settings, Megaphone,
          FileText, CalendarCheck, MessageCircle, UserCog,
-         BookOpen, Receipt, ScrollText, Square } from 'lucide-angular';
+         BookOpen, Receipt, ScrollText, Square,
+         // Practice-area switcher + Direction 3 dashboard icons
+         HeartPulse, Gavel, Globe, Scale, Lightbulb, Wallet, HardHat,
+         Leaf, UsersRound, Home, ArrowRight, AlertTriangle, MailPlus,
+         Repeat, Check, CalendarClock } from 'lucide-angular';
 import { AiQuickDrawerComponent } from './ai-quick-drawer/ai-quick-drawer.component';
+import { PracticeAreaSwitcherComponent } from 'src/app/shared/components/practice-area-switcher/practice-area-switcher.component';
 
 @NgModule({
   declarations: [
@@ -50,10 +55,14 @@ import { AiQuickDrawerComponent } from './ai-quick-drawer/ai-quick-drawer.compon
     PermissionDebuggerComponent,
     OrganizationManagementModule,
     BackgroundTasksIndicatorComponent,
+    PracticeAreaSwitcherComponent,
     LucideAngularModule.pick({
       Search, Bell, MessageSquare, Moon, Sun, Sparkles, Clock, FolderOpen,
       LayoutDashboard, Folder, Calendar, CheckSquare, Wrench, Users,
       DollarSign, Headphones, PenTool, Briefcase, X, ChevronDown,
+      HeartPulse, Gavel, Globe, Scale, Lightbulb, Wallet, HardHat,
+      Leaf, UsersRound, Home, ArrowRight, AlertTriangle, MailPlus,
+      Repeat, Check, CalendarClock,
       Building2, BarChart2, Settings, Megaphone, FileText, CalendarCheck,
       MessageCircle, UserCog, BookOpen, Receipt, ScrollText, Square
     })

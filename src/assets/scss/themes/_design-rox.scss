@@ -6,8 +6,9 @@
 // to the corresponding line range of the previous monolith — no semantic
 // changes were introduced during the split.
 //
-// Activation: <html data-design="rox"> (set in app.component.ts at bootstrap
-// in production; toggleable in dev via the design-switcher).
+// Activation: <html data-design="rox">, set unconditionally in
+// app.component.ts at bootstrap. Rox is the only design — the legacy
+// Velzon / Column dev-toggles and their design-switcher were retired.
 //
 // Module order matters — later modules override earlier ones via the
 // CSS cascade. Foundation (tokens + Phase 1 components) loads first;
@@ -21,3 +22,4 @@
 @import 'rox/polish';         // Charts, third-party plugin polish, polish-enhancements
 @import 'rox/dashboard';         // Attorney dashboard Tier 3 components + dark touchups
 @import 'rox/layout-overrides';  // Page-content padding fix for redesigned topbar
+@import 'rox/skeletons';         // Loading-state primitives + shimmer animation

@@ -22,12 +22,12 @@
   border-bottom: 1px solid var(--legience-border-hairline) !important;
 }
 
-[data-bs-theme="dark"] {
-  :host .lt-nav-menu,
-  .lt-nav-menu {
-    background: #1c1917 !important;
-    border-bottom-color: rgba(245, 245, 244, 0.08) !important;
-  }
+// Dark mode for the nav strip itself. `:host-context()` for the same
+// reason as the .lt-nav-dropdown rule below — the dark flag is on <html>,
+// outside view encapsulation.
+:host-context([data-bs-theme="dark"]) .lt-nav-menu {
+  background: #1c1917 !important;
+  border-bottom-color: rgba(245, 245, 244, 0.08) !important;
 }
 
 .lt-nav-list {
@@ -253,10 +253,20 @@
   }
 }
 
-[data-bs-theme="dark"] .lt-nav-dropdown {
+// `:host-context()` is required here — the `[data-bs-theme="dark"]` flag
+// lives on `<html>`, which sits OUTSIDE this component's view-encapsulation
+// boundary. Default emulated encapsulation rewrites a plain
+// `[data-bs-theme="dark"] .lt-nav-dropdown` selector by adding the
+// component's `_ngcontent-X` attribute to every part — including the
+// `[data-bs-theme="dark"]` ancestor — and `<html>` doesn't have that
+// attribute, so the rule never matches and the dropdown stays white in
+// dark mode. `:host-context()` is special-cased by Angular's compiler to
+// climb past encapsulation and match real ancestors.
+:host-context([data-bs-theme="dark"]) .lt-nav-dropdown {
   > div {
     background: #1c1917;
     border-color: rgba(245, 245, 244, 0.08);
+    box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.55);
   }
 
   .nav-link {
@@ -272,6 +282,159 @@
       color: #5b9dff;
       .nav-icon, .icon { color: #5b9dff; }
     }
+  }
+}
+
+// ---------------------------------------------------------------------
+// Cascading flyout — for sub-parents (e.g. Invoices, Expenses) inside
+// the Bar 2 dropdown. Replaces the broken Bootstrap-collapse pattern.
+//
+// Desktop: hover the sub-parent's <li> reveals the flyout to the right
+//          of the parent panel. The hover bridge (.lt-nav-flyout's
+//          padding-left) keeps the cursor in scope while traversing.
+//          :focus-within keeps the flyout open during keyboard nav.
+// Mobile:  flyout becomes an inline accordion always shown when its
+//          parent dropdown is open (no toggle needed — the whole nav
+//          is already in hamburger / vertical-stacked mode).
+// ---------------------------------------------------------------------
+.lt-nav-dropdown .nav-item.is-flyout {
+  position: relative;
+}
+
+.lt-nav-dropdown .nav-link-parent {
+  position: relative;
+}
+
+// Visual indicator only — non-interactive (an interactive <button>
+// inside an <a> would be invalid HTML and break keyboard nav).
+.nav-chev-right {
+  margin-left: auto;
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.25;
+  opacity: 0.55;
+  color: var(--legience-text-muted);
+  flex-shrink: 0;
+  pointer-events: none;
+  transition: transform 0.15s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.lt-nav-dropdown .nav-link-parent:hover .nav-chev-right,
+.lt-nav-dropdown .nav-item.is-flyout:hover .nav-chev-right,
+.lt-nav-dropdown .nav-item.is-flyout:focus-within .nav-chev-right {
+  opacity: 1;
+  color: var(--legience-text-primary);
+}
+
+.lt-nav-dropdown .nav-link-parent.active .nav-chev-right,
+.lt-nav-dropdown .nav-link-parent.router-link-active .nav-chev-right {
+  color: var(--legience-accent);
+  opacity: 1;
+}
+
+// Flyout panel — positioned to the right of the parent <li> on desktop.
+// `padding-left: 6px` is an invisible hover bridge: it extends the
+// flyout's :hover target back across the gap to the parent panel,
+// preventing the dropdown from closing as the cursor traverses.
+.lt-nav-flyout {
+  display: none;
+  position: absolute;
+  top: -7px; // align flyout's first item with the parent <li>'s top
+  left: 100%;
+  padding-left: 6px;
+  z-index: 1031;
+  min-width: 220px;
+  animation: ltNavDropdownIn 0.15s ease-out both;
+
+  > div {
+    background: #ffffff;
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.16);
+    padding: 6px;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px !important;
+    border-radius: 6px;
+    margin: 0 !important;
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    color: var(--legience-text-primary);
+    text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease;
+    line-height: 1;
+    white-space: nowrap;
+
+    &:hover, &:focus {
+      background: rgba(28, 25, 23, 0.04);
+      color: var(--legience-text-primary);
+
+      .nav-icon, .icon { color: var(--legience-accent); }
+    }
+
+    &.active,
+    &.router-link-active {
+      background: transparent;
+      color: var(--legience-accent);
+      font-weight: 500;
+
+      .nav-icon, .icon { color: var(--legience-accent); }
+    }
+
+    .nav-icon, .icon, i.bx, i[class^="ri-"], i[class*=" ri-"] {
+      font-size: 15px;
+      width: 16px;
+      text-align: center;
+      color: var(--legience-text-muted);
+      flex-shrink: 0;
+      line-height: 1;
+      margin-right: 0;
+    }
+  }
+}
+
+// :host-context() — see the same-named explanation above the
+// .lt-nav-dropdown dark-mode rule. Same view-encapsulation reason.
+:host-context([data-bs-theme="dark"]) .lt-nav-flyout {
+  > div {
+    background: #1c1917;
+    border-color: rgba(245, 245, 244, 0.08);
+    box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.55);
+  }
+
+  .nav-link {
+    color: #d4d2d1;
+
+    &:hover, &:focus {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+    }
+
+    &.active,
+    &.router-link-active {
+      color: #5b9dff;
+      .nav-icon, .icon { color: #5b9dff; }
+    }
+  }
+}
+
+:host-context([data-bs-theme="dark"]) .nav-chev-right {
+  color: rgba(245, 245, 244, 0.55);
+}
+
+// Desktop: hover-to-show. :focus-within keeps the flyout open during
+// keyboard nav (Tab into the parent link → flyout opens → Tab again →
+// focus moves into the flyout's items, keeping :focus-within true).
+@media (min-width: 1024.1px) {
+  .lt-nav-dropdown .nav-item.is-flyout:hover > .lt-nav-flyout,
+  .lt-nav-dropdown .nav-item.is-flyout:focus-within > .lt-nav-flyout {
+    display: block;
   }
 }
 
@@ -322,5 +485,33 @@
     border-radius: 0;
     padding: 0 0 0 22px;
     margin-top: 0;
+  }
+
+  // Mobile: cascading flyout collapses into an inline accordion that's
+  // always shown when its parent dropdown (e.g. Billing) is open. No
+  // tap-toggle needed — the parent dropdown's open state already
+  // represents user intent to see everything inside it.
+  .lt-nav-flyout {
+    position: static;
+    display: block;
+    padding-left: 14px;
+    margin: 4px 0 4px 0;
+    box-shadow: none;
+    min-width: 0;
+    animation: none;
+
+    > div {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0;
+    }
+  }
+
+  // Hide the chevron-right on mobile — its purpose (signalling a flyout
+  // exists) is moot when children are already visible inline.
+  .nav-chev-right {
+    display: none;
   }
 }

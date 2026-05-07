@@ -10,6 +10,7 @@ import { CaseListComponent } from './case-list/case-list.component';
 import { CaseDetailComponent } from './case-detail/case-detail.component';
 import { CaseCreateComponent } from './case-create/case-create.component';
 import { CaseService } from '../../services/case.service';
+import { SkeletonModule } from 'src/app/shared/components/skeleton/skeleton.module';
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import { CaseService } from '../../services/case.service';
     MatButtonModule,
     MatIconModule,
     NgbTooltipModule,
+    SkeletonModule,
     CaseCreateComponent,
     CaseDetailComponent,
     RouterModule.forChild([

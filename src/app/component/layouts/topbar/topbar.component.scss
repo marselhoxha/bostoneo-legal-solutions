@@ -7,40 +7,39 @@
 
 // ---------------------------------------------------------------------
 // Bar 1 — outer header
+//
+// LAYOUT NOTE: Velzon's `_horizontal.scss` (line 11–17) applies
+// `max-width: 95%; margin: 0 auto` to every `.container-fluid` at
+// min-width 1024.1px. The horizontal-topbar (Bar 2) uses
+// `.container-fluid`, so its content is centered with ~2.5vw gutters.
+// To keep the topbar (Bar 1) logo aligned with Bar 2's first nav item,
+// we mirror that centering on `.lt-bar-row` AND move the full-width
+// visuals (gradient + bottom border + glow) up to `#page-topbar.lt-bar`
+// so the bar still paints edge-to-edge while the content respects the
+// 95% rule.
 // ---------------------------------------------------------------------
 #page-topbar.lt-bar {
   position: sticky;
   top: 0;
   z-index: 1020;
-  background: transparent;     // background lives on .lt-bar-row
-  box-shadow: none;
-  border-bottom: none;
-}
 
-.lt-bar-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0 22px;
-  height: 70px;
+  // Full-bleed gradient + hairline (moved here from .lt-bar-row so that
+  // when the row is centered to 95% width, the visual still spans edge
+  // to edge instead of leaving 2.5vw of bare page color on each side).
   background:
     linear-gradient(135deg,
       #ffffff 0%,
       rgba(11, 100, 233, 0.025) 50%,
       rgba(11, 100, 233, 0.06) 100%);
   border-bottom: 1px solid var(--legience-border-hairline);
-  font-family: 'Geist', system-ui, -apple-system, sans-serif;
-  // overflow MUST stay visible so ngbDropdown menus can render below the bar.
-  // The decorative radial glow is contained via a child .lt-bar-glow div
-  // (which has its own overflow: hidden) instead of clipping the whole row.
+  box-shadow: none;
+  // overflow MUST stay visible so dropdowns + glow can render past
+  // the bar's edges.
   overflow: visible;
 
-  // Decorative radial glow — top-right corner. Same pattern as the
-  // attorney dashboard's hero focus card. Rendered via ::before on the
-  // row directly. We bias the glow upward so its falloff doesn't leak
-  // visibly below the bar's hairline. (No overflow:hidden — dropdowns win.)
+  // Decorative radial glow — top-right corner. Anchored to the topbar
+  // so it stays at the visual edge even when the row inside is
+  // constrained to 95% width.
   &::before {
     content: '';
     position: absolute;
@@ -54,7 +53,34 @@
     z-index: 0;
   }
 
+  // Direct children (i.e. .lt-bar-row) sit above the glow.
   > * { position: relative; z-index: 1; }
+}
+
+.lt-bar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  // Left padding (24px) matches Bar 2's first nav-link content edge.
+  // Math after centering both rows to 95% width:
+  //   Bar 1 (logo)         = .lt-bar-row pad-left (24px)
+  //   Bar 2 (Dashboard ic) = .container-fluid pad-left (12px) + .lt-nav-link pad-left (12px) = 24px
+  // Same starting X => pixel-perfect alignment between the logo and
+  // the first nav icon below.
+  padding: 0 24px;
+  height: 70px;
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+
+  // Mirror Velzon's `.container-fluid` centering on desktop. With both
+  // bars centered to the same 95% width, the logo (Bar 1) and the
+  // Dashboard icon (Bar 2) share an identical left X regardless of the
+  // viewport size.
+  @media (min-width: 1024.1px) {
+    max-width: 95%;
+    margin: 0 auto;
+  }
 }
 
 .lt-left {
@@ -73,12 +99,26 @@
 }
 
 // ---------------------------------------------------------------------
-// Brand — logo + firm subtitle
+// Brand cluster — logo + workspace chip
+//
+// The cluster is a flex row holding two visually distinct units:
+//   1. .lt-brand        — the Legience mark (link to /).
+//   2. .lt-brand-firm   — workspace chip showing the user's current
+//                         organization (e.g. "Legience-Dev"). Modeled on
+//                         the Linear/Notion/GitHub workspace-switcher
+//                         pattern: avatar + name in a soft pill.
 // ---------------------------------------------------------------------
+.lt-brand-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
 .lt-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   text-decoration: none !important;
   color: inherit;
 
@@ -92,13 +132,77 @@
   flex-shrink: 0;
 }
 
+// ---------------------------------------------------------------------
+// Workspace chip — current organization (NOT firm type / practice area)
+//
+// Visual: soft accent-tinted pill with a 22px avatar circle on the left
+// (initials in white on accent-blue) and the organization name on the
+// right. The avatar's `box-shadow: inset` adds a subtle highlight that
+// gives the dot a tactile, glossy quality at small sizes.
+//
+// The whole chip is decorative for now (no hover/click affordance) —
+// hover styles intentionally omitted so we don't promise interactivity
+// the chip doesn't deliver yet.
+//
+// Hidden below 992px (see RESPONSIVE TRIMS at the bottom of this file)
+// to avoid crowding the topbar at narrow widths.
+// ---------------------------------------------------------------------
 .lt-brand-firm {
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--legience-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px 0 4px;
+  background: rgba(var(--legience-accent-rgb), 0.04);
+  border: 1px solid rgba(var(--legience-accent-rgb), 0.14);
+  border-radius: 100px;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--legience-text-primary);
   white-space: nowrap;
   line-height: 1.2;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lt-brand-firm-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--legience-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  // Inner top highlight — gives the disc a subtle gloss without an
+  // outer shadow that would fight with the surrounding chip border.
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  text-transform: uppercase;
+}
+
+.lt-brand-firm-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+:host-context([data-bs-theme="dark"]) .lt-brand-firm {
+  background: rgba(91, 157, 255, 0.10);
+  border-color: rgba(91, 157, 255, 0.22);
+  color: #f5f5f4;
+}
+
+:host-context([data-bs-theme="dark"]) .lt-brand-firm-avatar {
+  background: #5b9dff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 // ---------------------------------------------------------------------

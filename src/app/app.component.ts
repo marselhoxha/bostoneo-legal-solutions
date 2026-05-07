@@ -24,8 +24,8 @@ import { WebSocketService } from './core/services/websocket.service';
 import { DeadlineAlertService } from './core/services/deadline-alert.service';
 import { OrganizationService } from './core/services/organization.service';
 import { decodeJwtPayload } from './core/utils/jwt.util';
-import { environment } from 'src/environments/environment';
 import { CommandPaletteService } from './core/services/command-palette.service';
+import { PracticeAreaContextService } from './core/services/practice-area-context.service';
 
 @Component({
   selector: 'app-root',
@@ -35,9 +35,6 @@ import { CommandPaletteService } from './core/services/command-palette.service';
 export class AppComponent implements OnInit, OnDestroy {
   showPreloader = false;
   showTosModal = false;
-  // Exposed to the template so we can gate the dev-only design switcher
-  // behind *ngIf="!production".
-  isProduction = environment.production;
   private tosAcceptedThisSession = false;
   private destroy$ = new Subject<void>();
 
@@ -59,14 +56,18 @@ export class AppComponent implements OnInit, OnDestroy {
     // the user back to. Inject-and-forget; no calls needed from this component.
     private _navigationHistoryService: NavigationHistoryService,
     // Inject so the global ⌘K HostListener below can toggle it.
-    private commandPalette: CommandPaletteService
+    private commandPalette: CommandPaletteService,
+    // Drives the topbar practice-area switcher pill + the attorney
+    // dashboard outlet. Subscribed in ngOnInit() to userData$ so the
+    // pill updates whenever the user profile is (re)loaded.
+    private practiceAreaContext: PracticeAreaContextService
   ) {
-    // Set the Rox design attribute on <html> as early as possible — before
-    // the design-switcher component mounts. This eliminates the one-paint
-    // Velzon flicker on first load (when localStorage is empty) and ensures
-    // production users always land on Rox. The dev-only design-switcher can
-    // still override this in dev, but production hides the switcher entirely.
-    if (typeof document !== 'undefined' && !document.documentElement.hasAttribute('data-design')) {
+    // Set the Rox design attribute on <html> as early as possible. The
+    // SCSS theme files are scoped via `:root[data-design="rox"]`, so this
+    // attribute is what activates the Rox visual system. Rox is the only
+    // design in production; the legacy Velzon and Column dev-toggles were
+    // retired with the design-switcher component.
+    if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-design', 'rox');
     }
 
@@ -74,25 +75,38 @@ export class AppComponent implements OnInit, OnDestroy {
       this.showPreloader = show;
     });
 
-    // Handle navigation events
+    // Handle navigation events.
+    //
+    // Preloader policy: the overlay (with its logo + content skeleton) is for
+    // the COLD app boot only. PreloaderService.showPreloaderSubject defaults
+    // to `true` so the overlay covers the screen until the first
+    // NavigationEnd fires below — at which point we hide it forever (within
+    // this session). Subsequent in-app navigations do NOT re-show it; route
+    // components own their own loading states tied to actual API calls. This
+    // eliminates the per-route logo-skeleton flash users were seeing.
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationStart) {
-        // Redirect root URL to dashboard
+        // Redirect root URL to dashboard.
         if (event.url === '/' || event.url === '') {
           this.router.navigate(['/home']);
           return;
         }
-
-        if (!this.isExcludedRoute(event.url)) {
-          this.preloaderService.show();
-        } else {
+        // Public routes (login/register/resetpassword) hide the preloader
+        // immediately — they render their own auth UIs, not the layout.
+        if (this.isExcludedRoute(event.url)) {
           this.preloaderService.hide();
         }
+        // NOTE: intentionally NOT calling preloaderService.show() here.
+        // Showing on every NavigationStart caused the topbar skeleton (with
+        // its logo placeholder) to flash on every internal route change.
       } else if (
         event instanceof NavigationEnd ||
         event instanceof NavigationCancel ||
         event instanceof NavigationError
       ) {
+        // Hide the cold-boot overlay once the first navigation settles.
+        // Subsequent NavigationEnd events are no-ops because the overlay is
+        // already hidden.
         setTimeout(() => {
           this.preloaderService.hide();
         }, 200);
@@ -151,10 +165,16 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Re-evaluate modal whenever user data changes (profile load on refresh, acceptance, token refresh).
     // isPublicRoute() uses this.router.url which is '/' at app start → safely suppressed until navigation.
+    // Same subscription also feeds the practice-area context service so the
+    // topbar switcher pill stays in sync with the active user.
     this.userService.userData$
       .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         this.evaluateTosModal(user);
+        this.practiceAreaContext.setPracticeAreas(
+          user?.attorneyPracticeAreas ?? null,
+          user?.enabledPracticeAreas ?? null
+        );
       });
 
     // Also re-evaluate on every route change so navigating to/from public routes hides/shows correctly.

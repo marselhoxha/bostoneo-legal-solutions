@@ -1,0 +1,357 @@
+// ─────────────────────────────────────────────────────────────────────────
+// Calendar event view modal — D1 + D2 (cal-d1, cal-d2 modal mockups)
+// Tier color (statute/court/soft) is set via the host class so the head
+// pill, banner, and "Mark filed" button stay coherent.
+// `--ev-color` is the case-hash color — used for the case dot in the head
+// pill and the linked-case row.
+// ─────────────────────────────────────────────────────────────────────────
+
+:host {
+  display: block;
+}
+
+.cev-modal {
+  background: var(--legience-bg-elevated);
+  border-radius: var(--legience-radius-lg);
+  padding: 22px 24px;
+  font: 400 13.5px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+}
+
+// ─── Head ───────────────────────────────────────────────────────────────
+.cev-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cev-title {
+  margin: 0;
+  font: 600 16px/1.2 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  letter-spacing: -0.02em;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cev-close {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--legience-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 100ms ease, color 100ms ease;
+
+  &:hover {
+    background: var(--legience-bg-row-hover);
+    color: var(--legience-text-primary);
+  }
+}
+
+// ─── Pills (case + tier) ────────────────────────────────────────────────
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  font: 600 11px/1.4 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+// Case pill — accent-toned, dot picks up the case-hash color.
+.pill-case {
+  background: var(--legience-accent-bg-subtle);
+  color: var(--legience-accent);
+  border-color: rgba(var(--legience-accent-rgb), 0.20);
+  .dot { background: var(--ev-color, var(--legience-accent)); }
+}
+
+// Tier pills — three palette variants. Class on the host (.tier-statute etc.)
+// drives which one wins.
+.pill-tier { background: transparent; }
+.tier-statute .pill-tier {
+  background: var(--legience-danger-bg-subtle);
+  color: var(--legience-danger);
+  border-color: rgba(var(--legience-danger-rgb), 0.25);
+}
+.tier-court .pill-tier {
+  background: var(--legience-orange-soft, rgba(var(--legience-orange-rgb), 0.10));
+  color: var(--legience-orange);
+  border-color: rgba(var(--legience-orange-rgb), 0.30);
+}
+.tier-soft .pill-tier {
+  background: var(--legience-warning-bg-subtle);
+  color: #b45309;
+  border-color: rgba(var(--legience-warning-rgb), 0.25);
+}
+
+// ─── Tier banner (D2 only) ──────────────────────────────────────────────
+.cev-banner {
+  padding: 12px 14px;
+  border-radius: var(--legience-radius);
+  margin-bottom: 16px;
+
+  .headline {
+    font: 600 13px/1.3 var(--legience-font-sans);
+    margin-bottom: 4px;
+  }
+  .sub {
+    font: 400 12px/1.4 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+  }
+}
+.tier-statute .cev-banner {
+  background: var(--legience-danger-bg-subtle);
+  border: 1px solid rgba(var(--legience-danger-rgb), 0.18);
+  .headline { color: var(--legience-danger); }
+}
+.tier-court .cev-banner {
+  background: rgba(var(--legience-orange-rgb), 0.08);
+  border: 1px solid rgba(var(--legience-orange-rgb), 0.25);
+  .headline { color: var(--legience-orange); }
+}
+.tier-soft .cev-banner {
+  background: var(--legience-warning-bg-subtle);
+  border: 1px solid rgba(var(--legience-warning-rgb), 0.25);
+  .headline { color: #b45309; }
+}
+
+// ─── Field rows ─────────────────────────────────────────────────────────
+.cev-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+
+  label {
+    font: 600 10.5px/1 var(--legience-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--legience-text-muted);
+  }
+
+  .value {
+    font: 400 13.5px/1.4 var(--legience-font-sans);
+    color: var(--legience-text-primary);
+    padding: 8px 12px;
+    background: var(--legience-bg-card-hover);
+    border-radius: var(--legience-radius);
+    border: 1px solid var(--legience-border-hairline);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+
+    &.strong { font-weight: 600; }
+
+    // Empty-state copy. Renamed from `.placeholder` because Bootstrap's
+    // global `.placeholder` class renders as a skeleton-loading rectangle
+    // (background: currentColor; opacity: 0.5) — using it here turned the
+    // "No required action specified" hint into an opaque gray bar.
+    .cev-empty {
+      color: var(--legience-text-muted);
+      font-style: italic;
+    }
+  }
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  // Children are .field rows; remove their bottom-margin so the grid gap
+  // governs spacing instead. Otherwise the grid feels uneven.
+  .field { margin-bottom: 14px; }
+}
+
+// Linked-case chip inside a field value.
+.case-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  font: 500 12px/1.5 var(--legience-font-sans);
+  color: var(--legience-text-secondary);
+
+  .case-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ev-color, var(--legience-accent));
+  }
+}
+
+// ─── Reminder cascade (D2) ──────────────────────────────────────────────
+// 3-column grid spanning ALL reminder rows. Every cell goes directly under
+// .value.cascade (the *ngFor uses an ng-container with no DOM output), so
+// the grid sees N×3 cells in a flat list and lays them out 3-per-row with
+// a unified `max-content` offset column. Result: bells share an x, "30
+// days before"/"14 days before"/etc. share an x, and every "· email …"
+// channel starts at the SAME x-position regardless of how short the offset
+// label is.
+.value.cascade {
+  display: grid !important;
+  grid-template-columns: 16px max-content 1fr;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 0;
+  padding: 4px 14px;
+  // Override the parent .field .value's flex layout — important so a cached
+  // build of the parent rule can't reflow this back into a wrapping flex row.
+  flex-wrap: nowrap;
+}
+
+.cev-cell {
+  padding: 9px 0;
+  border-top: 1px solid var(--legience-border-hairline);
+  font: 400 12.5px/1.4 var(--legience-font-sans);
+
+  // First row's cells skip the divider — the value-card surface already
+  // bounds the top of the cascade.
+  &.first-row { border-top: none; }
+}
+
+.cev-cell-bell {
+  color: var(--legience-text-muted);
+  display: inline-flex;
+  align-items: center;
+}
+
+.cev-cell-lead {
+  color: var(--legience-text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cev-cell-ch {
+  color: var(--legience-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// "Firing now" highlight — every cell of the current row picks up danger.
+.cev-cell.now,
+.cev-cell.now i-lucide,
+.cev-cell.now .ch {
+  color: var(--legience-danger);
+}
+
+// ─── Actions ────────────────────────────────────────────────────────────
+// Destructive split-left, dismiss/edit/primary grouped right. Standard
+// modal hierarchy that prevents accidental destructive clicks while keeping
+// the primary action under the user's natural eye-line at bottom-right.
+.cev-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--legience-border-hairline);
+  flex-wrap: wrap;
+}
+
+.cev-actions-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  color: var(--legience-text-secondary);
+  font: 500 12.5px/1 var(--legience-font-sans);
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+
+  &:hover {
+    background: var(--legience-bg-row-hover);
+    border-color: var(--legience-border-emphasis);
+    color: var(--legience-text-primary);
+  }
+
+  // Ghost variant — outlined danger that doesn't compete with the primary
+  // CTA. Used for Delete on the left side of the action bar.
+  &.btn-danger {
+    color: var(--legience-danger);
+    border-color: rgba(var(--legience-danger-rgb), 0.30);
+    &:hover {
+      background: var(--legience-danger-bg-subtle);
+      border-color: var(--legience-danger);
+      color: var(--legience-danger);
+    }
+  }
+
+  &.btn-ghost {
+    background: transparent;
+  }
+
+  &.btn-primary {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+    color: #fff;
+    font-weight: 600;
+    &:hover {
+      filter: brightness(1.05);
+      color: #fff;
+    }
+  }
+
+  // For statute deadlines, "Mark filed" reads as a relief action — keep it
+  // accent-blue so it doesn't look like another red destructive button.
+  // (No special override needed; the accent default already does this.)
+}
+
+// ─── Responsive ─────────────────────────────────────────────────────────
+@media (max-width: 560px) {
+  .cev-modal { padding: 18px; }
+  .field-grid { grid-template-columns: 1fr; }
+  // Stack actions on small screens so each button is full-width tap-target.
+  // Delete drops under the dismiss/edit row to keep it visually subordinate.
+  .cev-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    .btn { justify-content: center; }
+  }
+  .cev-actions-right {
+    margin-left: 0;
+    .btn { flex: 1; }
+  }
+}

@@ -350,27 +350,31 @@ export class UserService {
   }
 
   /**
-   * Get all attorneys/lawyers for CRM assignments
+   * Get all attorneys / legal staff for case assignments. Roles in this app
+   * carry the Spring `ROLE_` prefix (e.g. `ROLE_ADMIN`, `ROLE_MANAGING_PARTNER`),
+   * so equality checks like `role === 'admin'` never match. Substring match
+   * (`role.includes('admin')`) is the right shape and matches the existing
+   * attorney/lawyer/paralegal branches. Keywords cover every legal-staff role
+   * the backend allows on `createTask` (attorney, lawyer, paralegal, partner,
+   * counsel, manager, admin, secretary). Clients are excluded by virtue of
+   * not matching any keyword.
    */
   getAttorneys(): Observable<User[]> {
+    const STAFF_KEYWORDS = [
+      'attorney', 'lawyer', 'paralegal',
+      'partner', 'counsel',
+      'admin', 'manager', 'secretary',
+    ];
+    const isStaffRole = (role: string): boolean =>
+      STAFF_KEYWORDS.some((kw) => role.includes(kw));
+
     return this.getUsers().pipe(
       map(response => {
         const users = response?.data?.users || [];
-        // Filter for attorneys/lawyers - using roleName and roles array
         return users.filter((user: User) => {
           const primaryRole = user.roleName?.toLowerCase() || '';
           const allRoles = user.roles?.map(role => role.toLowerCase()) || [];
-          
-          return primaryRole.includes('attorney') || 
-                 primaryRole.includes('lawyer') ||
-                 primaryRole.includes('paralegal') ||
-                 primaryRole === 'admin' ||  // Admins can also be assigned leads
-                 allRoles.some(role => 
-                   role.includes('attorney') || 
-                   role.includes('lawyer') || 
-                   role.includes('paralegal') ||
-                   role === 'admin'
-                 );
+          return isStaffRole(primaryRole) || allRoles.some(isStaffRole);
         }).map((user: User) => ({
           id: user.id,
           firstName: user.firstName,

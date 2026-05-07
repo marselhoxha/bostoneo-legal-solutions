@@ -1,0 +1,200 @@
+<!--
+  "+ New task" modal — backdrop + centered surface, mirrors the task drawer's
+  modal pattern. Opens via `?new=task`, closes on backdrop click, X button,
+  or after a successful create.
+-->
+
+<button
+  type="button"
+  class="t-modal-backdrop"
+  *ngIf="open"
+  (click)="close()"
+  aria-label="Close new task modal"
+></button>
+
+<div class="new-task-modal" *ngIf="open" role="dialog" aria-label="New task">
+  <header class="modal-head">
+    <h3 class="modal-title">New task</h3>
+    <button type="button" class="btn btn-ghost btn-icon" (click)="close()" aria-label="Close">
+      <i-lucide name="x" [size]="16"></i-lucide>
+    </button>
+  </header>
+
+  <form class="form-grid" (ngSubmit)="save()">
+    <label class="field">
+      <span class="field-label">Title <span class="required">*</span></span>
+      <input
+        type="text"
+        class="form-input"
+        [(ngModel)]="title"
+        name="title"
+        placeholder="What needs to get done?"
+        autofocus
+        required
+      />
+    </label>
+
+    <div class="field">
+      <span class="field-label">Case <span class="required">*</span></span>
+      <div class="case-wrap">
+        <button
+          type="button"
+          class="form-input case-trigger"
+          (click)="toggleCaseMenu($event)"
+          [class.placeholder]="caseId == null"
+        >
+          <span *ngIf="caseId == null">Select a case&hellip;</span>
+          <span *ngIf="caseId != null">{{ pickedCaseLabel() }}</span>
+          <i-lucide name="chevron-down" [size]="12"></i-lucide>
+        </button>
+        <div class="dropdown-menu case-menu" *ngIf="caseMenuOpen" (click)="$event.stopPropagation()">
+          <input
+            type="text"
+            class="dd-search"
+            [(ngModel)]="caseSearchQuery"
+            name="caseSearchQuery"
+            [ngModelOptions]="{ standalone: true }"
+            placeholder="Search cases&hellip;"
+            autocomplete="off"
+          />
+          <div class="dd-scroll">
+            <div class="dd-empty" *ngIf="filteredCases().length === 0">No matches</div>
+            <button
+              type="button"
+              class="dd-item"
+              *ngFor="let c of filteredCases()"
+              [class.selected]="c.id === caseId"
+              (click)="selectCase(c, $event)"
+            >
+              <span class="dd-label">{{ c.title || c.caseNumber }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="field-label">Priority</span>
+      <div class="priority-pills">
+        <button
+          type="button"
+          *ngFor="let p of priorityOptions"
+          class="pill-btn"
+          [class.active]="priority === p"
+          [ngClass]="'tone-' + (p | priorityToTone)"
+          (click)="priority = p"
+        >
+          <span class="dot" aria-hidden="true"></span>
+          {{ p | titlecase }}
+        </button>
+      </div>
+    </div>
+
+    <!--
+      Phase J — Estimated hours visible only when the picked case isn't
+      on a contingency or pro-bono billing arrangement. Switching the
+      Case dropdown re-evaluates this each change via onCaseChanged().
+    -->
+    <label class="field" *ngIf="showEstimatedHoursField()">
+      <span class="field-label">Estimated hours</span>
+      <input
+        type="number"
+        class="form-input"
+        [(ngModel)]="estimatedHours"
+        name="estimatedHours"
+        min="0"
+        step="0.25"
+        placeholder="e.g. 2.5"
+      />
+    </label>
+
+    <div class="field-row">
+      <label class="field">
+        <span class="field-label">Due date</span>
+        <input type="date" class="form-input" [(ngModel)]="dueDate" name="dueDate" />
+      </label>
+
+      <div class="field">
+        <span class="field-label">Assignees</span>
+        <div class="assignee-wrap">
+          <button
+            type="button"
+            class="form-input assignee-trigger"
+            (click)="toggleAssigneeMenu($event)"
+            [class.placeholder]="assigneeIds.length === 0"
+          >
+            <ng-container *ngIf="assigneeIds.length > 0; else noPicked">
+              <div class="avatar-stack">
+                <div
+                  class="av-ringed sm"
+                  *ngFor="let u of (pickedAssignees() | slice:0:3)"
+                  [title]="(u.firstName ?? '') + ' ' + (u.lastName ?? '')"
+                >
+                  <div class="inner"><div class="content">{{ u | userInitials }}</div></div>
+                </div>
+                <span class="avatar-stack-extra" *ngIf="assigneeIds.length > 3">
+                  +{{ assigneeIds.length - 3 }}
+                </span>
+              </div>
+            </ng-container>
+            <ng-template #noPicked>
+              <span>Unassigned</span>
+            </ng-template>
+            <span class="trigger-spacer"></span>
+            <span *ngIf="assigneeIds.length > 1" class="picked-summary">{{ assigneeIds.length }} attorneys</span>
+            <i-lucide name="chevron-down" [size]="12"></i-lucide>
+          </button>
+          <div class="dropdown-menu assignee-menu" *ngIf="assigneeMenuOpen" (click)="$event.stopPropagation()">
+            <input
+              type="text"
+              class="dd-search"
+              [(ngModel)]="assigneeSearchQuery"
+              name="assigneeSearchQuery"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Search&hellip;"
+              autocomplete="off"
+            />
+            <div class="dd-scroll">
+              <div class="dd-empty" *ngIf="filteredAssignees().length === 0">No matches</div>
+              <button
+                type="button"
+                class="dd-item dd-item--multi"
+                *ngFor="let u of filteredAssignees()"
+                [class.selected]="isAssigneePicked(u)"
+                (click)="toggleAssigneeId(u, $event)"
+              >
+                <span class="dd-checkbox" [class.checked]="isAssigneePicked(u)" aria-hidden="true">
+                  <i-lucide *ngIf="isAssigneePicked(u)" name="check" [size]="11"></i-lucide>
+                </span>
+                <span class="dd-label">{{ u.firstName }} {{ u.lastName }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <label class="field">
+      <span class="field-label">Description</span>
+      <textarea
+        class="form-input"
+        rows="3"
+        [(ngModel)]="description"
+        name="description"
+        placeholder="Add detail (optional)"
+      ></textarea>
+    </label>
+
+    <div class="form-error" *ngIf="submitError">
+      <i-lucide name="alert-circle" [size]="14"></i-lucide>
+      <span>{{ submitError }}</span>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" (click)="close()" [disabled]="submitting">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="!isValid() || submitting">
+        {{ submitting ? 'Creating&hellip;' : 'Create task' }}
+      </button>
+    </div>
+  </form>
+</div>

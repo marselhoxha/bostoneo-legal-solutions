@@ -145,7 +145,7 @@ export class CaseTaskService {
   updateTaskStatus(taskId: number, status: string): Observable<ApiResponse<CaseTask>> {
     const params = new HttpParams().set('status', status);
     
-    return this.http.post<ApiResponse<CaseTask>>(
+    return this.http.put<ApiResponse<CaseTask>>(
       `${this.apiUrl}/tasks/${taskId}/status`,
       {},
       { params }
@@ -167,6 +167,17 @@ export class CaseTaskService {
     return this.http.post<ApiResponse<CaseTask>>(
       `${this.apiUrl}/tasks/${taskId}/assign/${userId}`,
       {}
+    );
+  }
+
+  /**
+   * V78 — multi-assignee. Replaces the entire set of assignees on a task.
+   * The first userId becomes the primary (mirrored to legacy `assignedToId`).
+   */
+  replaceAssignees(taskId: number, userIds: number[]): Observable<ApiResponse<CaseTask>> {
+    return this.http.put<ApiResponse<CaseTask>>(
+      `${this.apiUrl}/tasks/${taskId}/assignees`,
+      { userIds }
     );
   }
 

@@ -1,0 +1,112 @@
+<!--
+  Skeleton — 4 columns with shimmering placeholder cards. Geometry mirrors
+  the real board (column header + tinted count chip + 2-3 cards per column +
+  footer line) so the layout doesn't snap when data lands. Tones loosely
+  echo the real columns (neutral / accent / info / success).
+-->
+<div *ngIf="loading" class="pl-skeleton" aria-busy="true" aria-live="polite">
+  <div
+    class="pl-sk-col"
+    *ngFor="let col of [0, 1, 2, 3]"
+    [attr.data-tone]="['neutral','accent','info','success'][col]"
+  >
+    <div class="pl-sk-col-head">
+      <div class="sk-cell pl-sk-name"></div>
+      <div class="sk-cell pl-sk-count"></div>
+    </div>
+    <div class="pl-sk-col-body">
+      <div class="pl-sk-card" *ngFor="let i of [0, 1, 2]; let idx = index" [attr.data-w]="idx">
+        <div class="sk-cell pl-sk-title"></div>
+        <div class="pl-sk-card-meta">
+          <div class="sk-cell pl-sk-pill"></div>
+          <div class="sk-cell pl-sk-pill short"></div>
+        </div>
+        <div class="pl-sk-card-foot">
+          <div class="sk-cell pl-sk-due"></div>
+          <div class="sk-cell pl-sk-avatar"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pl-sk-col-foot">
+      <div class="sk-cell pl-sk-foot-cell"></div>
+      <div class="sk-cell pl-sk-foot-cell short"></div>
+    </div>
+  </div>
+</div>
+
+<div class="pl-board" *ngIf="!loading">
+  <div class="pl-col" *ngFor="let col of columns; trackBy: trackByCol" [attr.data-tone]="col.tone">
+    <div class="pl-col-head">
+      <span class="pl-col-name">{{ col.label }}</span>
+      <span class="pl-col-count">{{ col.tasks.length }}</span>
+      <button
+        type="button"
+        class="pl-col-add"
+        (click)="openNewTask($event)"
+        [attr.aria-label]="'Add task to ' + col.label"
+        title="Add task"
+      >
+        <i-lucide name="plus" [size]="14"></i-lucide>
+      </button>
+    </div>
+
+    <!--
+      Drop zone — each column body is a cdkDropList connected to all
+      siblings. Drag a card into another column to fire onDrop, which
+      flips status and persists. Same-column drop is a no-op (Pipeline
+      is a status board, not a sortable backlog).
+    -->
+    <div
+      class="pl-col-body"
+      cdkDropList
+      [id]="'pl-col-' + col.key"
+      [cdkDropListData]="col.tasks"
+      [cdkDropListConnectedTo]="connectedColumnIds"
+      (cdkDropListDropped)="onDrop($event)"
+    >
+      <div
+        class="pl-card"
+        *ngFor="let task of col.tasks; trackBy: trackByTask"
+        cdkDrag
+        [cdkDragData]="task"
+        [class.selected]="task.id === selectedTaskId"
+        [class.is-done]="col.key === 'done'"
+        (click)="selectTask(task)"
+      >
+        <div class="pl-card-title">{{ task.title }}</div>
+
+        <div class="pl-card-meta">
+          <span class="case-pill" *ngIf="task.caseTitle || task.caseNumber">
+            <span class="case-dot" [style.background]="caseDotColor(task)"></span>
+            {{ task.caseTitle || task.caseNumber }}
+          </span>
+          <span class="pill" [ngClass]="'pill-' + priorityTone(task.priority)">
+            <span class="dot"></span>{{ task.priority | titlecase }}
+          </span>
+        </div>
+
+        <div class="pl-card-blocker" *ngIf="col.key === 'blocked' && task.blockerReason">
+          <i-lucide name="pause" [size]="11"></i-lucide>
+          <span>{{ task.blockerReason }}</span>
+        </div>
+
+        <div class="pl-card-foot">
+          <span class="pl-due">{{ task.dueDate | dueLabel }}</span>
+          <div
+            class="av-ringed"
+            *ngIf="task.assignedToName as name"
+            [style.--ring]="avatarColor(task.assignedToId ?? name)"
+            [style.--bg]="avatarColor(task.assignedToId ?? name)"
+          >
+            <div class="inner"><div class="content">{{ name | userInitials }}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pl-col-foot">
+      <span>{{ col.tasks.length }} task{{ col.tasks.length === 1 ? '' : 's' }}</span>
+      <span>{{ col.estimatedHours | number:'1.0-1' }} h est.</span>
+    </div>
+  </div>
+</div>

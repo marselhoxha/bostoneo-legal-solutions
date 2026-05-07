@@ -1,85 +1,270 @@
-<div class="container-fluid">
-  <!-- Page-Title -->
-  <div class="row">
-    <div class="col-sm-12">
-      <div class="page-title-box">
-        <div class="float-end">
-          <div class="btn-wrapper" (click)="openCreateEventModal()" style="display: inline-block; cursor: pointer;">
-            <button type="button" class="btn btn-soft-success btn-animation waves-effect waves-light add-btn">
-              <i class="ri-add-line align-middle me-1"></i> Create Event
-            </button>
-          </div>
+<!--
+  Calendar — D1 Classic. Page-head + case-toggle filter + month grid.
+  Day/Week toggle visible but stubbed; Month is fully functional.
+  Click an empty day to create; click an event chip to view/edit.
+-->
+<div class="cal-page">
+  <header class="page-head">
+    <div class="head-row">
+      <div class="head-title">
+        <h2>Calendar</h2>
+        <div class="sub">
+          <!-- Title varies by view: month label, week-of label, or single-day label. -->
+          <ng-container [ngSwitch]="viewMode">
+            <ng-container *ngSwitchCase="'month'">{{ monthLabel }}</ng-container>
+            <ng-container *ngSwitchCase="'week'">{{ weekLabel }}</ng-container>
+            <ng-container *ngSwitchCase="'day'">{{ dayLabel }}</ng-container>
+          </ng-container>
+
+          <ng-container *ngIf="viewMode === 'month' && weekEventCount > 0">
+            · {{ weekEventCount }} event{{ weekEventCount === 1 ? '' : 's' }} this week
+          </ng-container>
+          <ng-container *ngIf="viewMode === 'month' && deadlinesIn90d > 0">
+            · {{ deadlinesIn90d }} deadline{{ deadlinesIn90d === 1 ? '' : 's' }} in next 90 days
+          </ng-container>
+          <ng-container *ngIf="viewMode === 'month' && statuteUnder60d > 0">
+            · <span class="sub-danger">{{ statuteUnder60d }} statute clock{{ statuteUnder60d === 1 ? '' : 's' }} under 60 days</span>
+          </ng-container>
         </div>
-        <h4 class="page-title mb-sm-0">Calendar</h4>
+      </div>
+
+      <div class="head-actions">
+        <button type="button" class="btn btn-icon" (click)="prevMonth()" aria-label="Previous month">
+          <i-lucide name="chevron-left" [size]="16"></i-lucide>
+        </button>
+        <button type="button" class="btn" (click)="goToday()">Today</button>
+        <button type="button" class="btn btn-icon" (click)="nextMonth()" aria-label="Next month">
+          <i-lucide name="chevron-right" [size]="16"></i-lucide>
+        </button>
+
+        <div class="view-toggle" role="tablist" aria-label="Calendar view">
+          <button
+            type="button"
+            class="opt"
+            role="tab"
+            [class.active]="viewMode === 'day'"
+            [attr.aria-selected]="viewMode === 'day'"
+            (click)="setView('day')"
+          >Day</button>
+          <button
+            type="button"
+            class="opt"
+            role="tab"
+            [class.active]="viewMode === 'week'"
+            [attr.aria-selected]="viewMode === 'week'"
+            (click)="setView('week')"
+          >Week</button>
+          <button
+            type="button"
+            class="opt"
+            role="tab"
+            [class.active]="viewMode === 'month'"
+            [attr.aria-selected]="viewMode === 'month'"
+            (click)="setView('month')"
+          >Month</button>
+        </div>
+
+        <button type="button" class="btn btn-primary" (click)="openCreateEventModal()">
+          <i-lucide name="plus" [size]="14"></i-lucide>
+          New event
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!--
+    Deadline track (cal-d2) — persistent strip showing upcoming statute /
+    court / soft deadlines in the next 90 days. Sorted tier-severity → date
+    so the row most likely to break the firm sits leftmost. Cards click
+    through to the event modal (D2 layout with statute warning + cascade).
+    Only renders in MONTH view; week/day views focus on scheduled time so
+    the deadline strip would feel out of place there.
+  -->
+  <div class="deadline-track" *ngIf="!loading && viewMode === 'month' && upcomingDeadlines.length > 0">
+    <div class="track-head">
+      <span class="title">Upcoming deadlines · next 90 days</span>
+      <span class="meta">Sorted by risk → time</span>
+    </div>
+    <div class="strip">
+      <button
+        type="button"
+        class="deadline-card"
+        *ngFor="let d of upcomingDeadlines; trackBy: trackByDeadline"
+        [class]="'tier-' + d.tier"
+        (click)="selectDeadlineCard(d, $event)"
+      >
+        <div class="countdown" [class.danger]="d.countdownTone === 'danger'" [class.warn]="d.countdownTone === 'warn'">
+          {{ d.countdownLabel }}
+        </div>
+        <div class="label">{{ d.label }}</div>
+        <div class="case-line">{{ d.caseLine }}</div>
+        <span class="badge-tier">{{ d.tier }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!--
+    Skeleton — only while the initial fetch is in flight. Mirrors the real
+    grid geometry (7 columns, 6 rows, dayhead row) so when data lands the
+    layout doesn't reflow.
+  -->
+  <div *ngIf="loading" class="c1-skeleton" aria-busy="true" aria-live="polite">
+    <div class="c1-sk-dayhead" *ngFor="let d of dayHeaders"></div>
+    <div class="c1-sk-day" *ngFor="let i of [].constructor(42); let idx = index" [attr.data-w]="idx % 5">
+      <div class="sk-cell c1-sk-num"></div>
+      <div class="sk-cell c1-sk-event" *ngIf="idx % 4 === 1"></div>
+      <div class="sk-cell c1-sk-event short" *ngIf="idx % 7 === 3"></div>
+    </div>
+  </div>
+
+  <div *ngIf="error && !loading" class="cal-error">
+    <i-lucide name="alert-circle" [size]="14"></i-lucide>
+    {{ error }}
+  </div>
+
+  <!--
+    Month grid (cal-d1 + cal-d2) — 7 day-headers + 42 day cells (always 6
+    rows). Each cell renders the day number, deadline pins (cal-d2), event
+    chips (cal-d1), and a "+N more" link if any were truncated. Clicking a
+    blank area of a cell opens the create modal; clicking a chip/pin opens
+    the view modal.
+  -->
+  <div class="c1-grid" *ngIf="!loading && viewMode === 'month'">
+    <div class="c1-dayhead" *ngFor="let d of dayHeaders">{{ d }}</div>
+
+    <div
+      class="c1-day"
+      *ngFor="let cell of cells; trackBy: trackByCell"
+      [class.muted]="!cell.inMonth"
+      [class.today]="cell.isToday"
+      [class.c2-day]="cell.pins.length > 0"
+      (click)="selectDay(cell, $event)"
+    >
+      <span class="num">{{ cell.dayNumber }}</span>
+
+      <!-- Deadline pins (cal-d2) — render BEFORE regular events so the row
+           ordering reflects urgency. Tier class drives the pill color. -->
+      <button
+        type="button"
+        class="c2-deadline-pin"
+        *ngFor="let pin of cell.pins; trackBy: trackByPin"
+        [class]="pin.tier"
+        (click)="selectPin(pin, $event)"
+        [attr.title]="pin.event.title"
+      >{{ pinLabel(pin) }}</button>
+
+      <!-- Regular event chips (cal-d1). Solid by default, tinted variant
+           for all-day banners — color comes from the case-hash. -->
+      <div
+        class="c1-event"
+        *ngFor="let ev of cell.events; trackBy: trackByEvent"
+        [class.tinted]="isTinted(ev)"
+        [style.--ev-color]="caseColor(ev)"
+        (click)="selectEvent(ev, $event)"
+        [attr.title]="ev.title"
+      >
+        <span class="time">{{ eventTimeLabel(ev) }}</span>
+        <span class="t">{{ ev.title }}</span>
+      </div>
+
+      <!-- "+N more" — drills into Day view for that date so the user sees
+           every event on it. Clicking the cell background still opens the
+           create modal (handled by selectDay on the parent .c1-day). -->
+      <button
+        *ngIf="cell.moreCount > 0"
+        type="button"
+        class="c1-more"
+        (click)="expandDay(cell, $event)"
+      >+{{ cell.moreCount }} more</button>
+    </div>
+  </div>
+
+  <!--
+    Week / Day view (cal-d3) — time grid with a 60px-wide hour column and
+    one column per visible day (7 for week, 1 for day). Timed events render
+    as absolutely-positioned blocks inside their day column; all-day events
+    render as a thin banner row above the hour grid. Tone classes:
+      - .billable     → accent (would activate when CalendarEvent gains
+                        a `billable` field)
+      - .event        → warning (court/depo/meetings — current default)
+      - .non-billable → info (admin / internal / unmatched eventTypes)
+  -->
+  <div class="c3-shell" *ngIf="!loading && (viewMode === 'week' || viewMode === 'day')" [class.has-allday]="hasAnyAllDay">
+    <div class="c3-grid" [style.grid-template-columns]="'60px repeat(' + weekDays.length + ', 1fr)'">
+
+      <!-- Day-head row (corner spacer + N day headers). Click a header in
+           week view to drill into Day view for that date. -->
+      <div class="c3-corner"></div>
+      <button
+        type="button"
+        class="c3-dayhead"
+        *ngFor="let d of weekDays; trackBy: trackByDay"
+        [class.today]="d.isToday"
+        (click)="drillIntoDay(d)"
+        [attr.aria-label]="'Drill into ' + d.weekday + ' ' + d.dayNumber"
+      >
+        {{ d.weekday }}
+        <span class="day-num">{{ d.dayNumber }}</span>
+      </button>
+
+      <!-- All-day banner row — only renders when at least one day has an
+           all-day event. Keeps the row out of the layout when empty. -->
+      <ng-container *ngIf="hasAnyAllDay">
+        <div class="c3-allday-label">all-day</div>
+        <div class="c3-allday-col" *ngFor="let d of weekDays; trackBy: trackByDay">
+          <div
+            class="c3-allday-block"
+            *ngFor="let ev of d.allDayBlocks; trackBy: trackByEvent"
+            [style.--ev-color]="caseColor(ev)"
+            (click)="selectAllDayEvent(ev, $event)"
+            [attr.title]="ev.title"
+          >{{ ev.title }}</div>
+        </div>
+      </ng-container>
+
+      <!-- Hour rows. Each row is one hour-col cell + N day-col cells.
+           The day-col cells are empty containers; the actual event blocks
+           are absolutely-positioned children of the column-stack below. -->
+      <ng-container *ngFor="let h of hours; trackBy: trackByHour">
+        <div class="c3-hourcol">{{ hourLabel(h) }}</div>
+        <div
+          class="c3-slot"
+          *ngFor="let d of weekDays; trackBy: trackByDay"
+          (click)="selectTimeSlot(d.date, h, $event)"
+          [attr.aria-label]="'Create event at ' + d.weekday + ' ' + hourLabel(h)"
+        ></div>
+      </ng-container>
+    </div>
+
+    <!--
+      Block overlay — one absolutely-positioned stack per day column,
+      holding all the timed blocks for that day. Sits on top of the slot
+      cells so its blocks appear inside their respective day columns at the
+      computed top/height. Pointer-events route through to the blocks; the
+      empty space passes clicks down to the slot beneath it.
+    -->
+    <div class="c3-overlay" [style.grid-template-columns]="'60px repeat(' + weekDays.length + ', 1fr)'">
+      <div class="c3-overlay-spacer"></div>
+      <div
+        class="c3-day-stack"
+        *ngFor="let d of weekDays; trackBy: trackByDay"
+        [style.height.px]="gridHeightPx"
+      >
+        <button
+          type="button"
+          class="c3-block"
+          *ngFor="let b of d.blocks; trackBy: trackByBlock"
+          [class]="b.tone"
+          [style.top.px]="b.topPx"
+          [style.height.px]="b.heightPx"
+          (click)="selectBlock(b, $event)"
+          [attr.title]="b.event.title"
+        >
+          <span class="time">{{ b.timeLabel }}</span>
+          <span class="title">{{ b.event.title }}</span>
+          <span class="case-line" *ngIf="b.caseLineLabel">{{ b.caseLineLabel }}</span>
+        </button>
       </div>
     </div>
   </div>
-  <!-- end page title end breadcrumb -->
-
-  <!-- Breadcrumbs -->
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a href="javascript: void(0);" (click)="navigateToLegal()">Legal</a></li>
-            <li class="breadcrumb-item active">Calendar</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- end Breadcrumbs -->
-
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header d-flex flex-wrap align-items-center gap-2">
-          <h4 class="card-title mb-0 flex-grow-1">Event Calendar</h4>
-          <div class="event-type-info">
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-              <div class="badge-info">
-                <span class="badge-dot dot-court"></span>
-                <span class="text-muted ms-1">Court Dates</span>
-              </div>
-              <div class="badge-info">
-                <span class="badge-dot dot-hearing"></span>
-                <span class="text-muted ms-1">Hearings</span>
-              </div>
-              <div class="badge-info">
-                <span class="badge-dot dot-deadline"></span>
-                <span class="text-muted ms-1">Deadlines</span>
-              </div>
-              <div class="badge-info">
-                <span class="badge-dot dot-meeting"></span>
-                <span class="text-muted ms-1">Meetings</span>
-              </div>
-              <div class="badge-info">
-                <span class="badge-dot dot-reminder"></span>
-                <span class="text-muted ms-1">Reminders</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card-body">
-          <!-- Show loading spinner while events are loading -->
-          <div *ngIf="loading" class="d-flex justify-content-center py-3">
-            <div class="spinner-border spinner-border-sm text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-          </div>
-
-          <!-- Show error as an alert but don't hide calendar -->
-          <div *ngIf="error" class="alert alert-danger mb-3">
-            <i class="ri-error-warning-line me-2"></i> {{ error }}
-          </div>
-
-          <!-- Always show calendar once loaded, even if there are no events -->
-          <div class="calendar-wrapper" [ngClass]="{'fc-theme-dark': isDarkMode}">
-            <full-calendar #calendar [options]="calendarOptions"></full-calendar>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div> 
+</div>

@@ -855,12 +855,12 @@ export class SafePipe implements PipeTransform {
 
     .dropzone-wrapper:hover {
       border-color: var(--legience-accent);
-      background: var(--legience-accent-bg-subtle));
+      background: var(--legience-accent-bg-subtle);
     }
 
     .dropzone-wrapper.dropzone-dragging {
       border-color: var(--legience-accent);
-      background: var(--legience-accent-bg-subtle));
+      background: var(--legience-accent-bg-subtle);
       border-style: solid;
     }
 
@@ -932,7 +932,7 @@ export class SafePipe implements PipeTransform {
 
     .file-upload-box:hover {
       border-color: var(--legience-accent);
-      background: var(--legience-accent-bg-subtle));
+      background: var(--legience-accent-bg-subtle);
     }
 
     .selected-file-display {
@@ -1007,11 +1007,11 @@ export class SafePipe implements PipeTransform {
     }
 
     .tree-item:hover {
-      background: var(--legience-accent-bg-subtle));
+      background: var(--legience-accent-bg-subtle);
     }
 
     .tree-item.active {
-      background: var(--legience-accent-bg-subtle));
+      background: var(--legience-accent-bg-subtle);
       border-left-color: var(--legience-accent);
     }
 
@@ -1121,7 +1121,7 @@ export class SafePipe implements PipeTransform {
 
     .upload-drop-hint.dropzone-dragging {
       border-color: var(--legience-accent);
-      background: var(--legience-accent-bg-subtle));
+      background: var(--legience-accent-bg-subtle);
     }
 
     /* Document summary stat chips */

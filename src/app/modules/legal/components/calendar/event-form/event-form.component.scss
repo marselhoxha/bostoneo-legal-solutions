@@ -1,1127 +1,379 @@
-// Form styling
-.custom-form {
-  background-color: var(--legience-bg-card);
-  color: var(--legience-text-secondary);
-  
-  // Button styling to match Velzon theme
-  .btn-soft-primary {
-    color: var(--legience-accent);
-    background-color: rgba(var(--legience-accent-rgb), 0.1);
-    border-color: transparent;
-    
-    &:hover, &:focus, &:active {
-      color: #fff;
-      background-color: var(--legience-accent);
-      border-color: var(--legience-accent);
-    }
-  }
-  
-  .btn-soft-danger {
-    color: var(--legience-danger);
-    background-color: rgba(var(--legience-danger-rgb), 0.1);
-    border-color: transparent;
-    
-    &:hover, &:focus, &:active {
-      color: #fff;
-      background-color: var(--legience-danger);
-      border-color: var(--legience-danger);
-    }
-  }
-  
-  .btn-soft-success {
-    color: var(--legience-success);
-    background-color: rgba(var(--legience-success-rgb), 0.1);
-    border-color: transparent;
-    
-    &:hover, &:focus, &:active {
-      color: #fff;
-      background-color: var(--legience-success);
-      border-color: var(--legience-success);
-    }
-  }
-  
-  .btn-animation {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.5s ease;
-    z-index: 1;
-    
-    &:before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 0%;
-      height: 100%;
-      z-index: -1;
-      transition: all 0.5s ease;
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    &:hover:before {
-      width: 100%;
-    }
-  }
-  
-  .waves-effect {
-    position: relative;
-    cursor: pointer;
-    display: inline-block;
-    overflow: hidden;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    
-    .waves-ripple {
-      position: absolute;
-      border-radius: 50%;
-      width: 100px;
-      height: 100px;
-      margin-top: -50px;
-      margin-left: -50px;
-      opacity: 0;
-      background: rgba(255, 255, 255, 0.2);
-      transition: all 0.5s ease-out;
-      transition-property: transform, opacity;
-      transform: scale(0);
-      pointer-events: none;
-    }
-  }
-  
-  .form-floating {
-    position: relative;
-    margin-bottom: 0.75rem;
-    
-    .form-control {
-      min-height: calc(3.5rem + 2px);
-      padding: 1.25rem 0.75rem 0.5rem;
-      border-color: var(--legience-border-hairline);
-      background-color: var(--legience-bg-input);
-      color: var(--legience-text-secondary);
-      font-size: 0.9rem;
-      line-height: 1.6;
-      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-      
-      &:focus {
-        border-color: var(--legience-accent);
-        box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-      }
-    }
-    
-    textarea.form-control {
-      min-height: 100px;
-      padding-top: 1.85rem;
-      line-height: 1.5;
-    }
-    
-    label {
-      position: absolute;
-      top: 0;
-      left: 0;
-      padding: 0.75rem 0.75rem 0;
-      color: var(--legience-text-subtle);
-      font-size: 0.8125rem;
-      font-weight: 500;
-      letter-spacing: 0.01em;
-      pointer-events: none;
-      transform-origin: 0 0;
-      transition: all 0.2s ease-out;
-      z-index: 3;
-      background-color: transparent;
-      
-      &::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--legience-bg-input);
-        z-index: -1;
-      }
-    }
-    
-    .form-control:focus ~ label,
-    .form-control:not(:placeholder-shown) ~ label {
-      transform: scale(0.85) translateY(-0.5rem);
-      padding-top: 0.35rem;
-    }
-  }
-  
-  .form-label {
-    color: var(--legience-text-subtle);
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-  }
-  
-  .form-control, .form-select {
-    border: 1px solid var(--legience-border-hairline);
-    background-color: var(--legience-bg-input);
-    color: var(--legience-text-secondary);
-    padding: 0.47rem 0.75rem;
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    min-height: 38px;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    
-    &:focus {
-      border-color: var(--legience-accent);
-      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-    }
-  }
-  
-  // Flatpickr styling
-  .flatpickr-input {
-    background-color: var(--legience-bg-input);
-    
-    &::placeholder {
-      color: var(--legience-text-muted);
-      opacity: 0.7;
-    }
-  }
-  
-  .input-group-dynamic {
-    transition: box-shadow 0.2s ease;
-    border-radius: 0.25rem;
-    
-    &:focus-within {
-      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-    }
-    
-    .input-group-text {
-      background-color: var(--legience-bg-card-hover);
-      border-color: var(--legience-border-hairline);
-      color: var(--legience-text-subtle);
-      transition: color 0.2s ease, background-color 0.2s ease;
-      border-top-left-radius: 0.25rem;
-      border-bottom-left-radius: 0.25rem;
-      padding: 0.47rem 0.75rem;
-      
-      i {
-        font-size: 1.1rem;
-      }
-    }
-    
-    &:focus-within .input-group-text {
-      color: var(--legience-accent);
-      background-color: rgba(var(--legience-accent-rgb), 0.1);
-    }
-    
-    .form-control {
-      border-left: none;
-      min-height: 38px;
-    }
-  }
-  
-  // Enhanced Color swatch styling
-  .color-swatch-container {
-    display: flex;
-    align-items: center;
-    border: 1px solid var(--legience-border-hairline);
-    border-radius: 0.25rem;
-    overflow: hidden;
-    background-color: var(--legience-bg-input);
-    height: 38px;
-    position: relative;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    
-    .color-input {
-      width: 38px;
-      height: 36px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      padding: 0;
-      position: relative;
-      z-index: 1;
-      
-      &::-webkit-color-swatch-wrapper {
-        padding: 0;
-      }
-      
-      &::-webkit-color-swatch {
-        border: none;
-        border-radius: 0;
-      }
-      
-      &::-moz-color-swatch {
-        border: none;
-        border-radius: 0;
-      }
-    }
-    
-    .color-preview {
-      flex-grow: 1;
-      padding: 0 0.75rem 0 0.75rem;
-      color: var(--legience-text-subtle);
-      font-size: 0.8125rem;
-      border-left: 1px solid var(--legience-border-hairline);
-      line-height: 36px;
-      height: 36px;
-      font-weight: 500;
-      
-      &::before {
-        content: '';
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        margin-right: 6px;
-        border-radius: 2px;
-        border: 1px solid var(--legience-border-hairline);
-        background-color: var(--selected-color, currentColor);
-        vertical-align: middle;
-        position: relative;
-        top: -1px;
-      }
-    }
-    
-    &:focus-within {
-      border-color: var(--legience-accent);
-      box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-    }
-  }
-  
-  // Toggle switch with ONLY square button (no overlapping)
-  .toggle-switch-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    height: 38px; // Match height of color picker
-    
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 50px;  
-      height: 24px; 
-      
-      input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-        position: absolute;
-        
-        &:checked + .toggle-label {
-          background-color: var(--legience-accent);
-          border-color: var(--legience-accent);
-          
-          .toggle-inner {
-            transform: translateX(26px);
-            background-color: var(--legience-bg-card, #fff);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          }
-        }
-        
-        &:focus + .toggle-label {
-          box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-        }
-      }
-      
-      .toggle-label {
-        display: block;
-        cursor: pointer;
-        width: 100%;
-        height: 100%;
-        background: var(--legience-bg-card-hover);
-        border-radius: 4px; // Square corners
-        border: 1px solid var(--legience-border-hairline);
-        position: relative;
-        transition: all 0.25s ease;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-        
-        .toggle-inner {
-          width: 18px;
-          height: 18px;
-          background: var(--legience-bg-card, #fff);
-          border-radius: 3px; // Square corners to match
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          transition: transform 0.25s ease, box-shadow 0.2s ease;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-        }
-      }
-    }
-    
-    .toggle-label-text {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--legience-text-secondary);
-      display: flex;
-      align-items: center;
-      
-      &::after {
-        content: attr(data-status);
-        font-size: 0.75rem;
-        font-weight: 500;
-        padding: 0.18rem 0.5rem;
-        border-radius: 3px;
-        margin-left: 6px;
-        background-color: var(--status-bg, rgba(var(--legience-success-rgb), 0.1));
-        color: var(--status-color, var(--legience-success));
-      }
-    }
-  }
-  
-  /* Custom reminder styling */
-  .custom-reminder-input {
-    margin-top: 0.5rem;
-    
-    .input-group-sm {
-      .form-control-sm {
-        min-height: 31px;
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-        
-        &:focus {
-          z-index: 2;
-          border-color: var(--legience-info);
-          box-shadow: 0 0 0 0.15rem rgba(var(--legience-info-rgb), 0.25);
-        }
-      }
-      
-      .input-group-text {
-        background-color: rgba(var(--legience-info-rgb), 0.1);
-        color: var(--legience-info);
-        font-size: 0.75rem;
-        border-color: rgba(var(--legience-info-rgb), 0.2);
-        border-radius: 0;
-        height: 31px;
-      }
-      
-      .btn-soft-info {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-        height: 31px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 0.5rem;
-        font-size: 0.75rem;
-        
-        i {
-          font-size: 0.875rem;
-        }
-      }
-    }
-  }
-  
-  /* Selected reminders styling */
-  .selected-reminders {
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.4rem 0.6rem;
-      font-weight: 500;
-      font-size: 0.75rem;
-      margin-right: 0.5rem;
-      margin-bottom: 0.5rem;
-      
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 15px;
-        height: 15px;
-        line-height: 1;
-        border-radius: 50%;
-        
-        i {
-          font-size: 0.75rem;
-          line-height: 1;
-        }
-        
-        &:hover {
-          background-color: rgba(var(--legience-danger-rgb), 0.1);
-        }
-      }
-    }
-  }
+// ─────────────────────────────────────────────────────────────────────────
+// Event create/edit form — Rox-styled. Pairs with the cal-d2 view modal's
+// `.cev-modal` chrome via the parent EventModal wrapper. All token usage
+// goes through `--legience-*` so dark-mode + theme overrides flow through.
+//
+// Class prefix `.cef-` (Calendar Event Form) keeps these styles scoped and
+// avoids collision with Bootstrap's `.form-*` namespace and the global
+// `.placeholder` skeleton class. (See bug-4 saga from 2026-05-07.)
+// ─────────────────────────────────────────────────────────────────────────
 
-  /* Enhanced Color selector styling */
-  .color-selector {
-    .color-input {
-      width: 38px;
-      height: 36px;
-      padding: 0;
-      border: 1px solid var(--legience-border-hairline);
-      border-radius: 4px;
-      cursor: pointer;
-      overflow: hidden;
-      
-      &::-webkit-color-swatch-wrapper {
-        padding: 0;
-      }
-      
-      &::-webkit-color-swatch {
-        border: none;
-      }
-      
-      &::-moz-color-swatch {
-        border: none;
-      }
-      
-      &:focus {
-        box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-      }
-    }
-    
-    .color-preview {
-      flex-grow: 1;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      transition: all 0.2s ease;
-    }
-  }
-  
-  /* Modern form switch styling */
-  .form-check.form-switch {
-    padding-left: 3rem;
-    margin-bottom: 0;
-    min-height: 38px; /* Match height with other form elements */
-    
-    .form-check-input {
-      width: 48px;
-      height: 24px;
-      margin-left: -3rem;
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e");
-      background-position: left center;
-      border-radius: 2em;
-      transition: all 0.3s ease-in-out;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-      border: none;
-      background-color: var(--legience-bg-subtle, #e9ecef);
-      
-      &:checked {
-        background-position: right center;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-        background-color: var(--legience-success);
-      }
-      
-      &:focus {
-        box-shadow: 0 0 0 0.25rem rgba(var(--legience-success-rgb), 0.25);
-      }
-    }
-    
-    .form-check-label {
-      line-height: 1;
-      padding-top: 2px;
-      
-      .badge {
-        transition: all 0.3s ease;
-        font-weight: 500;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        font-size: 0.82rem;
-        letter-spacing: 0.01em;
-        padding-top: 0.35em;
-        padding-bottom: 0.35em;
-        
-        &.bg-success-subtle {
-          border: 1px solid rgba(var(--legience-success-rgb), 0.2);
-        }
-        
-        &.bg-danger-subtle {
-          border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
-        }
-      }
-    }
-  }
-  
-  /* Notification options styling */
-  .notification-option {
-    .form-check-label {
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 0.875rem;
-      
-      i {
-        transition: color 0.2s ease;
-      }
-    }
-    
-    .form-check-input:checked + .form-check-label i {
-      animation: pulse 0.4s ease-in-out;
-    }
+:host { display: block; }
+
+.cef-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// Two-column row that collapses to a single column at narrow widths so
+// labels never get clipped on phones.
+.cef-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
   }
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+// ─── Field row ──────────────────────────────────────────────────────────
+.cef-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0; // lets long select values truncate cleanly
 }
 
-// Dark mode overrides
-[data-layout-mode="dark"] {
-  .custom-form {
-    .form-control, .form-select, .form-floating .form-control {
-      background-color: var(--legience-bg-input);
-      border-color: var(--legience-border-hairline);
-      color: var(--legience-text-secondary);
-    }
-    
-    .form-floating label::after {
-      background-color: var(--legience-bg-input);
-    }
-    
-    .input-group-dynamic {
-      .input-group-text {
-        background-color: var(--legience-text-secondary);
-        border-color: var(--legience-border-hairline);
-        color: var(--legience-border-emphasis);
-      }
-      
-      &:focus-within .input-group-text {
-        color: var(--legience-accent);
-        background-color: rgba(var(--legience-accent-rgb), 0.15);
-      }
-    }
-    
-    // Dark mode color swatch
-    .color-swatch-container {
-      background-color: var(--legience-bg-input);
-      border-color: var(--legience-border-hairline);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-      
-      .color-preview {
-        color: var(--legience-text-muted);
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
-        
-        &::before {
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-      }
-    }
-    
-    // Dark mode toggle switch
-    .toggle-switch-container {
-      .toggle-switch {
-        .toggle-label {
-          background: var(--legience-text-secondary);
-          border-color: var(--legience-border-hairline);
-          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
-          
-          .toggle-inner {
-            background: var(--legience-border-emphasis);
-          }
-        }
-        
-        input:checked + .toggle-label {
-          background-color: var(--legience-accent);
-          border-color: var(--legience-accent);
-          
-          .toggle-inner {
-            background-color: var(--legience-bg-card, #fff);
-          }
-        }
-      }
-    }
-    
-    input[type="datetime-local"] {
-      &::-webkit-calendar-picker-indicator {
-        filter: invert(1);
-      }
-    }
-    
-    /* Dark mode custom reminder styling */
-    .custom-reminder-input {
-      .input-group-sm {
-        .form-control-sm {
-          background-color: var(--legience-bg-input);
-          color: var(--legience-text-secondary);
-          border-color: rgba(var(--legience-info-rgb), 0.2);
-        }
-        
-        .input-group-text {
-          background-color: rgba(var(--legience-info-rgb), 0.15);
-          border-color: rgba(var(--legience-info-rgb), 0.25);
-          color: var(--legience-info);
-        }
-      }
-    }
-    
-    /* Dark mode selected reminders */
-    .selected-reminders {
-      .badge {
-        background-color: var(--legience-text-secondary) !important;
-        color: var(--legience-border-emphasis) !important;
-        border-color: var(--legience-border-hairline) !important;
-        
-        .btn:hover {
-          background-color: rgba(var(--legience-danger-rgb), 0.15);
-        }
-      }
-    }
+.cef-label {
+  font: 600 10.5px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-muted);
+  margin: 0;
+}
 
-    /* Dark mode color selector */
-    .color-selector {
-      .color-input {
-        border-color: var(--legience-border-hairline);
-      }
-      
-      .color-preview {
-        border-color: rgba(255, 255, 255, 0.1);
-      }
-    }
-    
-    /* Dark mode form switch */
-    .form-check.form-switch .form-check-input {
-      background-color: var(--legience-text-subtle);
-      border-color: var(--legience-text-muted);
-      
-      &:checked {
-        background-color: var(--legience-success);
-        border-color: var(--legience-success);
-      }
-    }
+// Required-asterisk: tiny + danger so it reads as a flag, not a glyph.
+.cef-req {
+  color: var(--legience-danger);
+  font-weight: 600;
+  margin-left: 1px;
+}
+
+// ─── Inputs ─────────────────────────────────────────────────────────────
+// Single shared style for input/select/textarea so the whole form aligns.
+// Background sits one shade above the modal so the field reads as a card,
+// matching the value rows in the view modal.
+.cef-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--legience-bg-card-hover);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  color: var(--legience-text-primary);
+  font: 400 13.5px/1.4 var(--legience-font-sans);
+  outline: none;
+  transition: border-color 100ms ease, box-shadow 100ms ease, background 100ms ease;
+
+  &::placeholder {
+    color: var(--legience-text-muted);
+  }
+
+  &:hover {
+    border-color: var(--legience-border-emphasis);
+  }
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--legience-accent);
+    background: var(--legience-bg-elevated);
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 
-// Improved styling for select elements in dark mode
-[data-layout-mode="dark"] {
-  select.form-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23dee2e6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
-  }
+.cef-textarea {
+  resize: vertical;
+  min-height: 76px;
+  font-family: var(--legience-font-sans);
 }
 
-/* Recurrence section styling */
-.card-header.bg-soft-primary {
-  background-color: rgba(var(--legience-accent-rgb), 0.1);
+// Native select — keep the native chevron behavior but restyle the chrome
+// to match other inputs. Custom arrow via background-image to ensure
+// consistent rendering across Chromium / WebKit / Firefox.
+.cef-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2378716c' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
 }
 
-.card-header.bg-soft-warning {
-  background-color: rgba(var(--legience-warning-rgb), 0.1);
-}
-
-.form-check.form-switch {
-  padding-left: 2.5rem;
-  
-  .form-check-input {
-    width: 2.5rem;
-    height: 1.25rem;
-  }
-}
-
-.form-check.form-switch.form-switch-success .form-check-input:checked {
-  background-color: var(--legience-success);
-  border-color: var(--legience-success);
-}
-
-/* Multi-select styling */
-select[multiple] {
-  height: 100px;
-  padding: 0.375rem;
-  
-  option {
-    padding: 0.375rem 0.75rem;
-    margin: 2px 0;
-    border-radius: 4px;
-    
-    &:checked {
-      background-color: rgba(var(--legience-accent-rgb), 0.15);
-      color: var(--legience-accent);
-    }
-    
-    &:hover {
-      background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
-    }
-  }
-}
-
-/* Toggle switch styling */
-.toggle-switch-container {
+// Input + leading icon — composed so the icon sits inside the field surface
+// without breaking focus styles. The wrap is the focusable shape; the input
+// inside is borderless so :focus styles all live on the wrap.
+.cef-input-wrap {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  
-  .toggle-switch {
-    position: relative;
-    width: 50px;
-    height: 24px;
-    margin-right: 10px;
-    
-    input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-      
-      &:checked + .toggle-label {
-        background-color: var(--legience-success);
-        
-        &:before {
-          transform: translateX(26px);
-        }
-      }
-      
-      &:focus + .toggle-label {
-        box-shadow: 0 0 1px var(--legience-accent);
-      }
-    }
-    
-    .toggle-label {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: var(--legience-text-muted);
-      transition: .4s;
-      border-radius: 24px;
-      
-      &:before {
-        position: absolute;
-        content: "";
-        height: 18px;
-        width: 18px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-      }
-    }
+
+  .cef-input-ico {
+    position: absolute;
+    left: 12px;
+    color: var(--legience-text-muted);
+    pointer-events: none;
   }
-  
-  .toggle-label-text {
-    font-size: 0.85rem;
-    display: inline-flex;
-    align-items: center;
-    padding: 0.15rem 0.5rem;
-    border-radius: 0.25rem;
-    background-color: var(--status-bg, rgba(var(--legience-secondary-rgb), 0.1));
-    color: var(--status-color, var(--legience-secondary));
-    
-    &::after {
-      content: attr(data-status);
-      font-weight: 500;
-    }
+
+  .cef-input {
+    padding-left: 36px;
   }
 }
 
-/* Input group styling */
-.input-group-text {
-  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
-  border-color: var(--legience-border-hairline);
-}
-
-.form-select, .form-control {
-  border-color: var(--legience-border-hairline);
-  
-  &:focus {
-    border-color: var(--legience-accent);
-    box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-  }
-}
-
-/* Small text styling */
-.text-muted {
-  font-size: 0.75rem;
-  color: var(--legience-text-subtle) !important;
-}
-
-/* Enhanced Reminder and Deadline Cards */
-.reminder-card, .deadline-card, .recurrence-card {
-  transition: all 0.3s ease;
-  
-  .card-header {
-    border-bottom: 1px solid rgba(var(--legience-border-hairline-rgb), 0.15);
-    
-    .reminder-icon, .deadline-icon, .recurrence-icon {
-      background-color: rgba(255, 255, 255, 0.6);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-  }
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-  }
-}
-
-/* Background color utilities */
-.bg-soft-info-5 {
-  background-color: rgba(var(--legience-info-rgb), 0.05);
-}
-
-.bg-soft-primary-5 {
-  background-color: rgba(var(--legience-accent-rgb), 0.05);
-}
-
-.bg-soft-warning-5 {
-  background-color: rgba(var(--legience-warning-rgb), 0.05);
-}
-
-/* Alert soft styles */
-.alert-soft-info {
-  background-color: rgba(var(--legience-info-rgb), 0.1);
-  border-color: rgba(var(--legience-info-rgb), 0.2);
-  color: var(--legience-info);
-}
-
-.alert-soft-warning {
-  background-color: rgba(var(--legience-warning-rgb), 0.1);
-  border-color: rgba(var(--legience-warning-rgb), 0.2);
-  color: var(--legience-warning);
-}
-
-.alert-soft-danger {
-  background-color: rgba(var(--legience-danger-rgb), 0.1);
-  border-color: rgba(var(--legience-danger-rgb), 0.2);
+// ─── Inline error / hint copy ───────────────────────────────────────────
+.cef-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: 500 11.5px/1.3 var(--legience-font-sans);
   color: var(--legience-danger);
-}
 
-.alert-soft-secondary {
-  background-color: rgba(var(--legience-secondary-rgb), 0.1);
-  border-color: rgba(var(--legience-secondary-rgb), 0.2);
-  color: var(--legience-secondary);
-}
-
-/* Button styling for priority selector */
-.priority-selector {
-  .btn-check {
-    &:checked + .btn-outline-secondary {
-      background-color: var(--legience-secondary);
-      color: #fff;
-    }
-    
-    &:checked + .btn-outline-danger {
-      background-color: var(--legience-danger);
-      color: #fff;
-    }
-  }
-  
-  .btn-outline-secondary, .btn-outline-danger {
-    border-width: 1px;
-    transition: all 0.3s ease;
-    
-    &:hover {
-      transform: translateY(-1px);
-    }
+  &::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
   }
 }
 
-/* Status tracking progress bar */
-.deadline-progress {
-  border-radius: 1rem;
-  background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
-  
-  .progress-bar {
-    border-radius: 1rem;
+.cef-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 6px 10px;
+  background: var(--legience-bg-card-hover);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-sm);
+  font: 400 11.5px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-subtle);
+
+  &.warn {
+    color: var(--legience-orange);
+    background: rgba(var(--legience-orange-rgb), 0.06);
+    border-color: rgba(var(--legience-orange-rgb), 0.20);
+
+    i-lucide { flex-shrink: 0; }
   }
 }
 
-/* Form control enhancements */
-.form-select-sm.border-info-subtle {
-  border-color: rgba(var(--legience-info-rgb), 0.2);
-  
-  &:focus {
-    border-color: var(--legience-info);
-    box-shadow: 0 0 0 0.15rem rgba(var(--legience-info-rgb), 0.25);
-  }
-}
-
-.form-select-sm.border-primary-subtle, 
-.form-control-sm.border-primary-subtle {
-  border-color: rgba(var(--legience-accent-rgb), 0.2);
-  
-  &:focus {
-    border-color: var(--legience-accent);
-    box-shadow: 0 0 0 0.15rem rgba(var(--legience-accent-rgb), 0.25);
-  }
-}
-
-/* Font size utility */
-.fs-20 {
-  font-size: 20px;
-}
-
-.fs-16 {
-  font-size: 16px;
-}
-
-.fs-12 {
-  font-size: 12px;
-}
-
-/* Multiple select styling */
-select[multiple] {
-  overflow-y: auto;
-  height: 120px;
-  
-  &.border-info-subtle {
-    option {
-      padding: 8px 12px;
-      margin-bottom: 2px;
-      border-radius: 4px;
-      
-      &:checked {
-        background-color: rgba(var(--legience-info-rgb), 0.15);
-        color: var(--legience-info);
-      }
-      
-      &:hover:not(:checked) {
-        background-color: rgba(var(--legience-bg-card-hover-rgb), 0.5);
-      }
-    }
-  }
-}
-
-/* Recurrence summary styling */
-.recurrence-summary {
-  border: 1px dashed rgba(var(--legience-accent-rgb), 0.3);
-}
-
-/* Remove hover effects from settings sections */
-.reminder-card, .deadline-card, .recurrence-card {
-  &:hover {
-    transform: none !important;
-    box-shadow: none !important;
-  }
-  
-  .card-header, .card-body {
-    transition: none !important;
-  }
-}
-
-/* Fix for modal initialization issues */
-.modal-backdrop {
-  z-index: 1050;
-}
-
-.modal {
-  z-index: 1055;
-}
-
-/* Fixes for Velzon theme buttons */
-.btn {
-  font-weight: 500;
-  
-  &.btn-primary, &.btn-danger, &.btn-success, &.btn-info, &.btn-warning {
-    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.1);
-  }
-}
-
-.modal-body .event-actions .btn {
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
+// ─── Switch (all-day) ───────────────────────────────────────────────────
+// Pure CSS switch — no Bootstrap form-switch dependency. The hidden input
+// stays focusable for keyboard nav; the visible track + thumb mirrors its
+// state via :checked sibling selectors.
+.cef-switch {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 500;
-  
-  i {
-    font-size: 1rem;
-    margin-right: 0.25rem;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  height: 38px; // matches input height so adjacent fields align
+  font: 400 13.5px/1 var(--legience-font-sans);
+  color: var(--legience-text-secondary);
+
+  // Hide native checkbox without removing it from the a11y tree.
+  input[type="checkbox"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .cef-switch-track {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: var(--legience-bg-subtle);
+    border: 1px solid var(--legience-border-hairline);
+    border-radius: 999px;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+
+  .cef-switch-thumb {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    background: var(--legience-bg-elevated);
+    border-radius: 50%;
+    box-shadow: var(--legience-shadow-sm);
+    transition: transform 140ms ease;
+  }
+
+  input:checked + .cef-switch-track {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+
+    .cef-switch-thumb { transform: translateX(16px); background: #fff; }
+  }
+
+  input:focus-visible + .cef-switch-track {
+    box-shadow: 0 0 0 3px rgba(var(--legience-accent-rgb), 0.20);
+  }
+
+  .cef-switch-text {
+    font-weight: 500;
+    color: var(--legience-text-primary);
   }
 }
 
-/* Improved Notification Buttons styling */
-.notification-buttons {
+// ─── Toggle row (notification methods) ──────────────────────────────────
+.cef-toggle-row {
   display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cef-toggle {
+  display: inline-flex;
   align-items: center;
-  height: 38px; /* Match height with toggle container */
-  
-  .notification-btn {
-    flex: 1;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    border-width: 1px;
-    height: 38px; /* Match height with toggle */
-    padding: 0 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    
-    &.active {
-      transform: translateY(1px);
-    }
-    
-    i {
-      font-size: 1rem;
-    }
-    
-    &:hover {
-      transform: translateY(-1px);
-    }
-    
-    &.btn-soft-success {
-      border-color: rgba(var(--legience-success-rgb), 0.5);
-      box-shadow: 0 2px 6px rgba(var(--legience-success-rgb), 0.15);
-    }
-    
-    &.btn-outline-secondary:hover {
-      background-color: var(--legience-bg-subtle);
-    }
+  gap: 6px;
+  padding: 7px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  color: var(--legience-text-secondary);
+  font: 500 12.5px/1 var(--legience-font-sans);
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+
+  &:hover {
+    border-color: var(--legience-border-emphasis);
+    color: var(--legience-text-primary);
+  }
+
+  &.active {
+    background: var(--legience-accent-bg-subtle);
+    border-color: rgba(var(--legience-accent-rgb), 0.30);
+    color: var(--legience-accent);
+
+    i-lucide { color: var(--legience-accent); }
+  }
+
+  i-lucide { color: var(--legience-text-muted); flex-shrink: 0; }
+}
+
+// Visually-hidden helper — keeps the form-control inputs registered with
+// the FormGroup without occupying visual space.
+.cef-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+// ─── Actions ────────────────────────────────────────────────────────────
+.cef-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--legience-border-hairline);
+  flex-wrap: wrap;
+}
+
+.cef-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  color: var(--legience-text-secondary);
+  font: 500 12.5px/1 var(--legience-font-sans);
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+
+  &:hover:not(:disabled) {
+    background: var(--legience-bg-row-hover);
+    border-color: var(--legience-border-emphasis);
+    color: var(--legience-text-primary);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 
-/* Toggle container styling */
-.toggle-container {
-  height: 38px; /* Ensure consistent height with notification buttons */
+.cef-btn-primary {
+  background: var(--legience-accent);
+  border-color: var(--legience-accent);
+  color: #fff;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: var(--legience-accent-hover, var(--legience-accent));
+    border-color: var(--legience-accent-hover, var(--legience-accent));
+    color: #fff;
+    filter: brightness(1.05);
+  }
 }
 
-/* Modern form switch styling */
-.form-check.form-switch {
-  padding-left: 3rem;
-  margin-bottom: 0;
-  
-  .form-check-input {
-    width: 48px;
-    height: 24px;
-    margin-left: -3rem;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e");
-    background-position: left center;
-    border-radius: 2em;
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-    border: none;
-    background-color: var(--legience-bg-subtle, #e9ecef);
-    
-    &:checked {
-      background-position: right center;
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-      background-color: var(--legience-success);
-    }
-    
-    &:focus {
-      box-shadow: 0 0 0 0.25rem rgba(var(--legience-success-rgb), 0.25);
-    }
+// ─── Flatpickr theme override ───────────────────────────────────────────
+// Keep the native flatpickr calendar but theme its popup to the rox tokens
+// so it doesn't drop a Velzon-styled white card into our modal. ::ng-deep
+// scopes the override to this component only.
+:host ::ng-deep {
+  .flatpickr-calendar {
+    background: var(--legience-bg-elevated);
+    border: 1px solid var(--legience-border-hairline);
+    box-shadow: var(--legience-shadow-lg);
+    border-radius: var(--legience-radius);
+    font-family: var(--legience-font-sans);
   }
-  
-  .form-check-label {
-    line-height: 1;
-    
-    .badge {
-      transition: all 0.3s ease;
-      font-weight: 500;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-      font-size: 0.82rem;
-      letter-spacing: 0.01em;
-      padding-top: 0.35em;
-      padding-bottom: 0.35em;
-      
-      &.bg-success-subtle {
-        border: 1px solid rgba(var(--legience-success-rgb), 0.2);
-      }
-      
-      &.bg-danger-subtle {
-        border: 1px solid rgba(var(--legience-danger-rgb), 0.2);
-      }
+
+  .flatpickr-day {
+    color: var(--legience-text-secondary);
+    border-radius: var(--legience-radius-sm);
+
+    &.today {
+      border-color: var(--legience-accent);
+      color: var(--legience-accent);
     }
+    &.selected,
+    &.selected.today {
+      background: var(--legience-accent);
+      border-color: var(--legience-accent);
+      color: #fff;
+    }
+    &:hover { background: var(--legience-bg-row-hover); }
   }
-} 
+
+  .flatpickr-months .flatpickr-month {
+    color: var(--legience-text-primary);
+    background: var(--legience-bg-elevated);
+  }
+  .flatpickr-current-month .flatpickr-monthDropdown-months,
+  .flatpickr-current-month input.cur-year {
+    color: var(--legience-text-primary);
+  }
+  .flatpickr-weekday {
+    color: var(--legience-text-muted);
+    font-weight: 600;
+  }
+  .flatpickr-time input,
+  .flatpickr-time .flatpickr-time-separator,
+  .flatpickr-time .flatpickr-am-pm {
+    color: var(--legience-text-primary);
+  }
+}

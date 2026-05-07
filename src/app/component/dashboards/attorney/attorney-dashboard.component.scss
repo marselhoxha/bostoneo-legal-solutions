@@ -3075,17 +3075,6 @@
   box-shadow: var(--legience-shadow-sm);
   overflow: hidden;
   position: relative;
-
-  // Top accent stripe — visual marker that this card needs action.
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--legience-warning);
-  }
-
-  &.appt-action-card-info::before { background: var(--legience-cat-blue); }
 }
 
 .appt-action-head {
@@ -3388,5 +3377,828 @@
     letter-spacing: -0.012em;
 
     &:hover { text-decoration: underline; }
+  }
+}
+
+// =====================================================================
+// DIRECTION 3 — Timeline / rail patterns
+// (ported from dashboard-cards-rox-options.html — Direction 3 block,
+//  using --legience-* tokens instead of the preview's --color-* names).
+//
+// Rules below replace the .sched-list / .queue-list / .appt-list /
+// .feed-list visual patterns for the 4 cards covered by D3:
+//   - Today's schedule    -> .d3-timeline + .d3-event
+//   - Urgent items        -> .d3-urgent-item + .d3-urgent-num
+//   - Appt requests       -> .d3-req + .d3-pill-btn
+//   - Reschedule requests -> .d3-req + .d3-pill-btn (orange avatar)
+// Old SCSS rules for the legacy classes are intentionally LEFT IN PLACE
+// (Phase 7 cleanup will remove them) — both rule blocks coexist so the
+// fallback empty-states / view-all links continue to render correctly.
+// =====================================================================
+
+// Shared rx-tag chips used by appointment requests and urgent items.
+// These mirror the preview's .rx-tag rules — Geist body 12, system-ui
+// captions, soft fills tinted with status colors.
+.d3-req,
+.d3-urgent-item {
+  .rx-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--legience-radius);
+    font-family: var(--legience-font-system);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
+
+    &.tag-blue {
+      background: rgba(var(--legience-accent-rgb), 0.10);
+      color: var(--legience-accent);
+    }
+    &.tag-muted {
+      background: var(--legience-bg-subtle);
+      color: var(--legience-text-subtle);
+    }
+    &.solid-red {
+      background: var(--legience-danger);
+      color: var(--legience-text-on-accent);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// Today's Schedule — Rox header (full-width band that sits above the
+// horizontal timeline body). Replaces the legacy Velzon `.card-header`
+// + `.badge bg-*-subtle` + `.btn-soft-*` patterns with Rox primitives:
+// flat surface, hairline divider, --legience-* tokens, .rox-btn actions.
+// ---------------------------------------------------------------------
+.h-schedule-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+}
+
+// Date tile — clean Rox surface, no gradient marketing card.
+.h-schedule-date-tile {
+  flex-shrink: 0;
+  width: 52px;
+  height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius, 6px);
+  font-family: var(--legience-font-sans);
+}
+
+.h-schedule-date-day {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--legience-text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.h-schedule-date-month {
+  font-family: var(--legience-font-system);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-muted);
+  text-transform: uppercase;
+}
+
+.h-schedule-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.h-schedule-title {
+  margin: 0 0 6px;
+  font-family: var(--legience-font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--legience-text-primary);
+  line-height: 1.2;
+}
+
+.h-schedule-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.h-schedule-day {
+  font-family: var(--legience-font-system);
+  font-size: 12px;
+  color: var(--legience-text-muted);
+  letter-spacing: 0.01em;
+  margin-right: 4px;
+}
+
+// Tonal chips — small, dense, uppercase. Reuse the timeline tone palette
+// so visual language is consistent across the schedule surface.
+.h-schedule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--legience-radius-sm, 4px);
+  font-family: var(--legience-font-system);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  white-space: nowrap;
+
+  .h-schedule-chip-num {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.h-schedule-chip-remaining {
+    background: rgba(var(--legience-accent-rgb), 0.10);
+    color: var(--legience-accent);
+  }
+  &.h-schedule-chip-completed {
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-muted);
+  }
+  &.h-schedule-chip-hours {
+    background: rgba(var(--legience-success-rgb), 0.10);
+    color: var(--legience-success);
+  }
+}
+
+.h-schedule-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// ---------------------------------------------------------------------
+// Horizontal timeline (Today's schedule)
+// Hour ticks 8 AM → 6 PM across the top axis; events absolute-positioned
+// inside the track by start% / width%; red NOW vertical line marks the
+// current time.
+// ---------------------------------------------------------------------
+.h-timeline {
+  position: relative;
+  padding: 18px 28px 24px;
+}
+
+.h-timeline-axis {
+  position: relative;
+  height: 26px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+}
+
+.h-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  // Edge ticks anchor instead of centering so labels don't clip outside
+  // the card padding.
+  &:first-child { transform: none; align-items: flex-start; }
+  &:last-child { transform: translateX(-100%); align-items: flex-end; }
+}
+
+.h-tick-label {
+  font-family: var(--legience-font-system);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--legience-text-muted);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.h-tick-mark {
+  width: 1px;
+  height: 6px;
+  background: var(--legience-border-hairline);
+}
+
+.h-timeline-track {
+  position: relative;
+  height: 84px;
+}
+
+.h-event {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow var(--legience-motion-base) ease,
+              transform var(--legience-motion-base) ease;
+  // Colored left-edge accent — overridden per tone below.
+  border-left: 3px solid var(--legience-border-emphasis);
+
+  &:hover {
+    box-shadow: var(--legience-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  // Type tones — left-edge accent + tinted background pulled from the
+  // legience palette so events read at a glance. Type identity is
+  // ALWAYS preserved — the is-now / is-past modifiers layer ring/fade
+  // ON TOP without changing the type color.
+  &.tone-call {
+    border-left-color: var(--legience-success);
+    background: rgba(var(--legience-success-rgb), 0.06);
+  }
+  &.tone-court {
+    border-left-color: var(--legience-warning);
+    background: rgba(var(--legience-warning-rgb), 0.06);
+  }
+  &.tone-review {
+    border-left-color: var(--legience-info);
+    background: rgba(var(--legience-info-rgb), 0.06);
+  }
+  &.tone-meeting {
+    border-left-color: var(--legience-accent);
+    background: rgba(var(--legience-accent-rgb), 0.06);
+  }
+  &.tone-depo {
+    border-left-color: var(--legience-text-subtle);
+    background: rgba(var(--legience-text-subtle-rgb), 0.06);
+  }
+
+  // State modifiers — sit ON TOP of the type tone.
+  // .is-now: keep the block visually identical to upcoming events of the
+  //   same type. The vertical NOW line + chip on the timeline already
+  //   marks the current time, so a per-block ring is redundant.
+  &.is-now {
+    z-index: 2;
+  }
+  // .is-past: muted appearance + strikethrough title. Past events stay
+  //   visible (so the user reads the full day at a glance) but recede
+  //   visually so they don't compete with active/upcoming work.
+  &.is-past {
+    opacity: 0.55;
+    .h-event-title {
+      text-decoration: line-through;
+      color: var(--legience-text-muted);
+    }
+    .h-event-time { color: var(--legience-text-muted); }
+  }
+}
+
+.h-event-title {
+  font-family: var(--legience-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.h-event-time {
+  font-family: var(--legience-font-system);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--legience-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.h-now-line {
+  position: absolute;
+  top: -38px;            // reach up into the axis
+  bottom: 0;
+  width: 2px;
+  background: var(--legience-danger);
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.h-now-chip {
+  position: absolute;
+  top: -36px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--legience-danger);
+  color: var(--legience-text-on-accent);
+  font-family: var(--legience-font-system);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 4;
+  box-shadow: 0 2px 6px -2px rgba(var(--legience-danger-rgb), 0.40);
+}
+
+// ---------------------------------------------------------------------
+// Urgent items — numbered list
+// ---------------------------------------------------------------------
+.d3-urgent-item {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--legience-border-subtle);
+  cursor: pointer;
+
+  &:first-of-type {
+    border-top: 0;
+  }
+}
+
+.d3-urgent-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--legience-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  // Default = high/critical — red soft fill.
+  background: rgba(var(--legience-danger-rgb), 0.10);
+  color: var(--legience-danger);
+
+  &.med {
+    background: rgba(var(--legience-warning-rgb), 0.12);
+    // Slightly darker than the warning yellow for contrast on white.
+    color: #b88600;
+  }
+
+  &.low {
+    background: rgba(var(--legience-info-rgb), 0.10);
+    color: var(--legience-info);
+  }
+}
+
+.d3-urgent-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.d3-urgent-title {
+  font-family: var(--legience-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.d3-urgent-sub {
+  font-family: var(--legience-font-system);
+  font-size: 12px;
+  color: var(--legience-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.d3-urgent-cta {
+  font-family: var(--legience-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--legience-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: var(--legience-radius);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(var(--legience-accent-rgb), 0.10);
+  }
+
+  i-lucide,
+  i-lucide svg {
+    color: currentColor;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Request rows (appointment + reschedule)
+// ---------------------------------------------------------------------
+.d3-req {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--legience-border-subtle);
+
+  &:first-of-type {
+    border-top: 0;
+  }
+}
+
+.d3-req-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--legience-info);
+  color: var(--legience-text-on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--legience-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+
+  &.orange {
+    background: var(--legience-orange);
+  }
+  &.blue {
+    background: var(--legience-accent);
+  }
+}
+
+.d3-req-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.d3-req-name {
+  font-family: var(--legience-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--legience-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.d3-req-detail {
+  font-family: var(--legience-font-system);
+  font-size: 12px;
+  color: var(--legience-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  s {
+    color: var(--legience-text-muted);
+  }
+}
+
+.d3-req-cluster {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.d3-pill-btn {
+  font-family: var(--legience-font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 5px 10px;
+  border-radius: var(--legience-radius-pill);
+  border: 1px solid var(--legience-border-subtle);
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background var(--legience-motion-base) ease,
+              border-color var(--legience-motion-base) ease,
+              color var(--legience-motion-base) ease;
+
+  &:hover:not(.primary):not(.danger) {
+    background: var(--legience-bg-subtle);
+  }
+
+  &.primary {
+    background: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+    border-color: var(--legience-accent);
+
+    &:hover {
+      background: var(--legience-accent-hover);
+      border-color: var(--legience-accent-hover);
+    }
+  }
+
+  &.danger {
+    color: var(--legience-danger);
+    border-color: rgba(var(--legience-danger-rgb), 0.20);
+
+    &:hover {
+      background: rgba(var(--legience-danger-rgb), 0.08);
+    }
+  }
+}
+
+// =====================================================================
+// ROX MODAL — generic Legience overlay pattern
+// Mirrors the command-palette overlay (--legience-bg-elevated surface,
+// hairline border, radius-lg, shadow-lg, scrim backdrop, motion-medium
+// enter). Used here for the event-details view; reusable for any future
+// Rox-themed modal in the dashboard.
+// =====================================================================
+
+.rox-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 10, 9, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1080;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  padding-left: 16px;
+  padding-right: 16px;
+  animation: roxModalFadeIn 120ms ease-out;
+}
+
+.rox-modal {
+  width: min(560px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-lg, 12px);
+  box-shadow: var(--legience-shadow-lg, 0 8px 24px -8px rgba(0, 0, 0, 0.14));
+  overflow: hidden;
+  font-family: var(--legience-font-sans);
+  animation: roxModalSlideUp 160ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.rox-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 12px;
+}
+
+.rox-modal-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rox-event-type-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--legience-font-system);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-secondary);
+
+  // Reuse the same tone palette as the timeline blocks so the chip color
+  // ties directly back to the event the user just clicked.
+  &.tone-call {
+    background: rgba(var(--legience-success-rgb), 0.12);
+    color: var(--legience-success);
+  }
+  &.tone-court {
+    background: rgba(var(--legience-warning-rgb), 0.16);
+    color: #92500a;
+  }
+  &.tone-review {
+    background: rgba(var(--legience-info-rgb), 0.12);
+    color: var(--legience-info);
+  }
+  &.tone-meeting {
+    background: rgba(var(--legience-accent-rgb), 0.10);
+    color: var(--legience-accent);
+  }
+  &.tone-depo {
+    background: rgba(var(--legience-text-subtle-rgb), 0.12);
+    color: var(--legience-text-subtle);
+  }
+  &.tone-now {
+    background: var(--legience-danger);
+    color: var(--legience-text-on-accent);
+  }
+  &.tone-past {
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-muted);
+  }
+}
+
+.rox-modal-date {
+  font-family: var(--legience-font-system);
+  font-size: 12px;
+  color: var(--legience-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rox-modal-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--legience-radius, 6px);
+  color: var(--legience-text-muted);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+
+  &:hover {
+    background: var(--legience-bg-subtle);
+    color: var(--legience-text-primary);
+  }
+
+  i { font-size: 18px; line-height: 1; }
+}
+
+.rox-modal-title {
+  margin: 0;
+  padding: 0 22px 16px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--legience-text-primary);
+  line-height: 1.3;
+}
+
+.rox-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid var(--legience-border-hairline);
+  padding-top: 18px;
+}
+
+.rox-event-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.rox-event-row-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-secondary);
+  border-radius: var(--legience-radius, 6px);
+
+  i { font-size: 14px; line-height: 1; }
+}
+
+.rox-event-row-meta {
+  min-width: 0;
+}
+
+.rox-event-row-label {
+  font-family: var(--legience-font-system);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legience-text-muted);
+  margin-bottom: 2px;
+}
+
+.rox-event-row-value {
+  font-family: var(--legience-font-sans);
+  font-size: 14px;
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.rox-event-row-sub {
+  color: var(--legience-text-muted);
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+.rox-event-row-desc {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.rox-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--legience-border-hairline);
+}
+
+.rox-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--legience-radius-buttons, 8px);
+  font-family: var(--legience-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  border: 1px solid transparent;
+
+  i { font-size: 14px; line-height: 1; }
+
+  &.rox-btn-ghost {
+    background: transparent;
+    color: var(--legience-text-secondary);
+    border-color: var(--legience-border-hairline);
+    &:hover {
+      background: var(--legience-bg-subtle);
+      color: var(--legience-text-primary);
+      border-color: var(--legience-border-emphasis);
+    }
+  }
+
+  &.rox-btn-secondary {
+    background: var(--legience-bg-elevated);
+    color: var(--legience-text-primary);
+    border-color: var(--legience-border-hairline);
+    &:hover {
+      background: var(--legience-bg-subtle);
+      border-color: var(--legience-border-emphasis);
+    }
+  }
+
+  &.rox-btn-primary {
+    background: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+    &:hover {
+      background: var(--legience-accent-hover);
+    }
+  }
+}
+
+@keyframes roxModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes roxModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

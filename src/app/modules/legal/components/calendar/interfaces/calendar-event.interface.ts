@@ -38,6 +38,14 @@ export interface CalendarEvent {
   // Additional fields for deadlines
   highPriority?: boolean;
   additionalReminders?: number[];
+
+  // Cal-D2 deadline tier — STATUTE | COURT | SOFT. NULL means inferred at
+  // render time from eventType + highPriority (see deadline-tier util).
+  deadlineTier?: 'STATUTE' | 'COURT' | 'SOFT';
+  // Free-text statutory or rule citation backing the deadline.
+  sourceAuthority?: string;
+  // Free-text required action to satisfy the deadline.
+  requiredAction?: string;
 }
 
 export interface CreateEventRequest {
@@ -69,4 +77,9 @@ export interface CreateEventRequest {
   // Additional fields for deadlines
   highPriority?: boolean;
   additionalReminders?: number[];
-} 
+
+  // Cal-D2 deadline tier fields — same shape as on CalendarEvent.
+  deadlineTier?: 'STATUTE' | 'COURT' | 'SOFT';
+  sourceAuthority?: string;
+  requiredAction?: string;
+}

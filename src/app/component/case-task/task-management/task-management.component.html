@@ -14,12 +14,12 @@
     </div>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="loading.tasks" class="text-center py-5">
-    <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;">
-      <span class="visually-hidden">Loading...</span>
+  <!-- Loading State — stats strip + table skeleton matches the page shape -->
+  <div *ngIf="loading.tasks">
+    <leg-skel-stats [count]="4" label="Loading task stats"></leg-skel-stats>
+    <div class="mt-4">
+      <leg-skel-table [rows]="6" [cols]="5" label="Loading tasks"></leg-skel-table>
     </div>
-    <p class="text-muted mt-3 mb-0">Loading tasks...</p>
   </div>
 
   <!-- Main Content -->

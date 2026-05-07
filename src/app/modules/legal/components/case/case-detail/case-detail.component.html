@@ -19,12 +19,8 @@
   </div>
 </div>
 
-<!-- Loading State -->
-<div class="text-center py-5" *ngIf="isLoading">
-  <div class="spinner-border text-primary" role="status">
-    <span class="visually-hidden">Loading...</span>
-  </div>
-</div>
+<!-- Loading State — full page detail skeleton (hero + sidebar shape) -->
+<leg-skel-detail *ngIf="isLoading" label="Loading case"></leg-skel-detail>
 
 <!-- Error State -->
 <div class="alert alert-danger" *ngIf="error" role="alert">
@@ -611,13 +607,9 @@
                 </div>
 
                 <div class="card-body p-0">
-                  <!-- Loading State -->
-                  <div *ngIf="isLoadingEvents" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-3 text-muted">Loading events...</p>
-                  </div>
+                  <!-- Loading State — events table skeleton -->
+                  <leg-skel-table *ngIf="isLoadingEvents" [rows]="4" [cols]="5"
+                                  label="Loading events"></leg-skel-table>
                   
                   <!-- Events Table -->
                   <div *ngIf="!isLoadingEvents && caseEvents && caseEvents.length > 0" class="table-responsive">

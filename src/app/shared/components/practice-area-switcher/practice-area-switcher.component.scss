@@ -1,0 +1,167 @@
+// =====================================================================
+// Practice-area switcher pill — Direction 3 spec
+// (ported from dashboard-cards-rox-options.html .pa-pill rules,
+//  using --legience-* tokens instead of the preview's --color-* names).
+// =====================================================================
+
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
+// ---------------------------------------------------------------------
+// Pill base — covers both static (length === 1) and interactive
+// (length >= 2) variants. Same look; only behaviour differs.
+// ---------------------------------------------------------------------
+.pa-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 4px 12px 4px 4px;
+  background: rgba(var(--legience-accent-rgb), 0.08);
+  border: 1px solid rgba(var(--legience-accent-rgb), 0.18);
+  border-radius: var(--legience-radius-pill);
+  font-family: var(--legience-font-sans);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--legience-motion-base) ease,
+              border-color var(--legience-motion-base) ease;
+
+  &:hover {
+    background: rgba(var(--legience-accent-rgb), 0.12);
+  }
+}
+
+// Static variant — visually identical but not actionable.
+.pa-pill-static {
+  cursor: default;
+  padding-right: 14px;
+
+  &:hover {
+    background: rgba(var(--legience-accent-rgb), 0.08);
+  }
+}
+
+// Interactive variant uses <button>; reset native styles.
+.pa-pill-interactive {
+  border-style: solid;
+  background-color: rgba(var(--legience-accent-rgb), 0.08);
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+}
+
+// Circle icon avatar at the left of the pill.
+.pa-pill-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--legience-accent);
+  color: var(--legience-text-on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i-lucide,
+  i-lucide svg {
+    color: currentColor;
+  }
+}
+
+.pa-pill-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--legience-accent);
+  white-space: nowrap;
+}
+
+.pa-pill-chevron {
+  color: var(--legience-accent);
+  flex-shrink: 0;
+  margin-left: -2px;
+  transition: transform var(--legience-motion-base) ease;
+
+  &.is-open {
+    transform: rotate(180deg);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Wrapper + dropdown panel (length >= 2 only)
+// ---------------------------------------------------------------------
+.pa-pill-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.pa-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-subtle);
+  border-radius: var(--legience-radius);
+  box-shadow: var(--legience-shadow-lg);
+  padding: 4px;
+  min-width: 220px;
+  z-index: var(--legience-z-dropdown);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pa-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--legience-radius);
+  cursor: pointer;
+  font-family: var(--legience-font-sans);
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--legience-text-secondary);
+  background: transparent;
+  border: none;
+  text-align: left;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+
+  &:hover {
+    background: var(--legience-bg-subtle);
+  }
+
+  &.active {
+    background: rgba(var(--legience-accent-rgb), 0.10);
+    color: var(--legience-accent);
+    font-weight: 500;
+  }
+}
+
+.pa-item-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(var(--legience-accent-rgb), 0.10);
+  color: var(--legience-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .pa-item.active & {
+    background: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+  }
+}
+
+.pa-item-name {
+  flex: 1;
+  white-space: nowrap;
+}

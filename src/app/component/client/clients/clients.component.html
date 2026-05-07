@@ -276,13 +276,8 @@
           </div>
         </div>
       </div>
-      <div class="card border-0 shadow-sm">
-        <div class="card-body text-center py-5">
-          <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-          <h5 class="mt-4">Loading Clients</h5>
-          <p class="text-muted">Fetching your client list...</p>
-        </div>
-      </div>
+      <leg-skel-table [rows]="8" [cols]="5"
+                      label="Loading clients"></leg-skel-table>
     </div>
   </ng-container>
 

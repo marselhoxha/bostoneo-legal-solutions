@@ -32,36 +32,71 @@
   .head-actions { display: flex; align-items: center; gap: 8px; }
 }
 
+// Segmented view switcher (List · Pipeline · Workload). Inactive chips need
+// to read as "clickable but not selected" — text-secondary (not text-subtle)
+// keeps them legible, and a visible hover state confirms interactivity. The
+// active chip has elevated white bg + subtle shadow + bold weight + accent
+// icon, so it earns meaningful contrast against the now-darker inactive
+// siblings.
+// Segmented view switcher (List · Pipeline · Workload). Tap targets are
+// bigger now (39-40px tall) and the active chip carries a subtle accent
+// glow on its left edge so the selected view reads at a glance even from
+// across the screen. Inactive chips have a clear hover state so they
+// don't read as disabled.
 .view-switcher {
   display: inline-flex;
-  gap: 2px;
-  padding: 3px;
+  gap: 3px;
+  padding: 4px;
   border-radius: var(--legience-radius-buttons);
   background: var(--legience-bg-subtle);
+  border: 1px solid var(--legience-border-hairline);
 
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 5px 12px;
+    gap: 8px;
+    padding: 8px 14px;
     border: none;
     background: transparent;
-    color: var(--legience-text-subtle);
-    font: 500 12.5px/1 var(--legience-font-sans);
-    border-radius: var(--legience-radius-sm, 4px);
+    color: var(--legience-text-secondary);
+    font: 500 13.5px/1 var(--legience-font-sans);
+    letter-spacing: -0.005em;
+    border-radius: 6px;
     cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+    user-select: none;
 
-    .chip-icon {
-      font-size: 13px;
-      opacity: 0.85;
-      line-height: 1;
+    i-lucide {
+      color: var(--legience-text-muted);
+      transition: color 120ms ease;
+      flex-shrink: 0;
+      line-height: 0;
+    }
+
+    &:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.65);
+      color: var(--legience-text-primary);
+      i-lucide { color: var(--legience-text-secondary); }
+    }
+
+    &:active:not(.active) {
+      transform: scale(0.98);
     }
 
     &.active {
       background: var(--legience-bg-elevated);
       color: var(--legience-text-primary);
-      box-shadow: var(--legience-shadow-sm);
+      box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.06),
+        0 0 0 1px var(--legience-border-hairline);
       font-weight: 600;
+
+      i-lucide { color: var(--legience-accent); }
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba(var(--legience-accent-rgb), 0.40);
+      outline-offset: 1px;
     }
 
     &[disabled] { opacity: 0.5; cursor: not-allowed; }

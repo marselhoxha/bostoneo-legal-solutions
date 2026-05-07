@@ -1,0 +1,468 @@
+// =====================================================
+// "+ New task" modal — centered surface, mirrors the task drawer's
+// scrim+surface pattern. Class names are scoped under `.new-task-modal`
+// (and `.t-modal-backdrop`) to avoid collisions with the drawer.
+// =====================================================
+
+// ── Backdrop ─────────────────────────────────────────────────
+.t-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--legience-overlay-backdrop);
+  border: none;
+  cursor: default;
+  z-index: calc(var(--legience-z-modal) - 1);
+  animation: nt-fade-in var(--legience-motion-medium, 180ms) var(--legience-ease-out, ease-out);
+  padding: 0;
+  margin: 0;
+}
+
+// ── Modal surface ────────────────────────────────────────────
+.new-task-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 92vw);
+  max-height: 88vh;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius-lg, 12px);
+  box-shadow: var(--legience-shadow-lg);
+  padding: 22px 24px;
+  overflow-y: auto;
+  z-index: var(--legience-z-modal);
+  animation: nt-modal-in var(--legience-motion-medium, 180ms) var(--legience-ease-out, ease-out);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes nt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes nt-modal-in {
+  from { transform: translate(-50%, -48%) scale(0.98); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+// ── Header ───────────────────────────────────────────────────
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--legience-border-hairline);
+  margin-bottom: 18px;
+
+  .modal-title {
+    margin: 0;
+    font: 600 17px/1.3 var(--legience-font-sans);
+    letter-spacing: -0.02em;
+    color: var(--legience-text-primary);
+  }
+}
+
+// ── Form layout ──────────────────────────────────────────────
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field-label {
+  font: 600 10.5px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-muted);
+
+  .required {
+    color: var(--legience-danger);
+    margin-left: 2px;
+  }
+}
+
+.form-input {
+  padding: 8px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  font: 400 13.5px/1.4 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+
+  &:focus {
+    outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+    outline-offset: -1px;
+    border-color: var(--legience-accent);
+  }
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 64px;
+  font-family: inherit;
+}
+
+select.form-input {
+  cursor: pointer;
+}
+
+// ── Priority pills ───────────────────────────────────────────
+// Full-width segmented control: 4 equal cells, each color-coded by tone.
+// Inactive pills carry a small tone-colored dot so attorneys can scan
+// the priority ladder at a glance. Active pill fills with the tone's
+// subtle background + matched border + bold weight.
+.priority-pills {
+  display: flex;
+  gap: 8px;
+}
+
+.pill-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  color: var(--legience-text-secondary);
+  border-radius: var(--legience-radius-buttons);
+  font: 600 11.5px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--legience-text-muted);
+    flex-shrink: 0;
+    transition: background 120ms ease;
+  }
+
+  &:hover:not(.active) {
+    background: var(--legience-bg-card-hover);
+    border-color: var(--legience-border-emphasis);
+    color: var(--legience-text-primary);
+  }
+
+  // Tone-colored dot — visible even when inactive so the priority ladder
+  // reads at a glance (blue → amber → orange → red).
+  &.tone-info    .dot { background: var(--legience-info); }
+  &.tone-warning .dot { background: var(--legience-warning); }
+  &.tone-orange  .dot { background: var(--legience-orange); }
+  &.tone-danger  .dot { background: var(--legience-danger); }
+
+  // Active fill — tone-tinted background + matched border + tone-text.
+  &.active {
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+    &.tone-info {
+      background: var(--legience-info-bg-subtle);
+      border-color: rgba(var(--legience-info-rgb), 0.55);
+      color: var(--legience-info);
+    }
+    &.tone-warning {
+      background: var(--legience-warning-bg-subtle);
+      border-color: rgba(var(--legience-warning-rgb), 0.55);
+      color: #b45309;
+    }
+    &.tone-orange {
+      background: var(--legience-orange-soft);
+      border-color: rgba(var(--legience-orange-rgb), 0.55);
+      color: var(--legience-orange);
+    }
+    &.tone-danger {
+      background: var(--legience-danger-bg-subtle);
+      border-color: rgba(var(--legience-danger-rgb), 0.55);
+      color: var(--legience-danger);
+    }
+  }
+}
+
+// ── Action footer ────────────────────────────────────────────
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--legience-border-hairline);
+}
+
+// ── Buttons (per the brainstorm preview's `.btn`/`.btn-primary`/etc) ─
+// Inlined here because Angular ViewEncapsulation hides the inbox/drawer
+// component-scoped `.btn` rules from this component's template.
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  color: var(--legience-text-primary);
+  border-radius: var(--legience-radius-buttons);
+  font: 500 13px/1.4 var(--legience-font-sans);
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: all 120ms ease;
+
+  &:hover {
+    background: var(--legience-bg-card-hover);
+    border-color: var(--legience-border-emphasis);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &.btn-primary {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+    color: var(--legience-text-on-accent);
+    box-shadow: var(--legience-shadow-button);
+
+    &:hover {
+      background: var(--legience-accent-hover);
+      border-color: var(--legience-accent-hover);
+    }
+  }
+
+  &.btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  &.btn-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--legience-text-secondary);
+
+    &:hover {
+      background: var(--legience-bg-row-hover);
+      border-color: transparent;
+      color: var(--legience-text-primary);
+    }
+  }
+}
+
+// ── Searchable dropdown (Case + Assignee) ──────────────────────
+.case-wrap,
+.assignee-wrap {
+  position: relative;
+}
+
+.case-trigger,
+.assignee-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+
+  &.placeholder { color: var(--legience-text-muted); }
+
+  i-lucide { color: var(--legience-text-muted); flex-shrink: 0; }
+}
+
+.dropdown-menu.case-menu,
+.dropdown-menu.assignee-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 70;
+  max-height: 280px;
+  padding: 6px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.10);
+  display: flex;
+  flex-direction: column;
+}
+
+.dd-search {
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+  color: var(--legience-text-primary);
+  font: 500 13px/1.4 var(--legience-font-sans);
+
+  &:focus {
+    outline: 2px solid rgba(var(--legience-accent-rgb), 0.30);
+    outline-offset: 1px;
+    border-color: var(--legience-accent);
+  }
+}
+
+.dd-scroll {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 220px;
+}
+
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  color: var(--legience-text-primary);
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: 500 13px/1.4 var(--legience-font-sans);
+
+  &:hover { background: var(--legience-bg-row-hover); }
+
+  &.selected {
+    color: var(--legience-accent);
+    font-weight: 600;
+    background: var(--legience-accent-bg-subtle);
+  }
+
+  .dd-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.dd-empty {
+  padding: 6px 10px;
+  color: var(--legience-text-muted);
+  font-style: italic;
+  font: 500 13px/1.4 var(--legience-font-sans);
+}
+
+// ── Inline form error banner ───────────────────────────────────
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  background: var(--legience-danger-bg-subtle);
+  color: var(--legience-danger);
+  border: 1px solid rgba(var(--legience-danger-rgb), 0.25);
+  border-radius: 8px;
+  font: 500 13px/1.4 var(--legience-font-sans);
+
+  i-lucide { flex-shrink: 0; }
+}
+
+// ── V78 multi-assignee — avatar stack on trigger + multi-select rows ──
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar-stack .av-ringed {
+  margin-left: -6px;
+  position: relative;
+  z-index: 1;
+}
+.avatar-stack .av-ringed:first-child { margin-left: 0; }
+.avatar-stack .av-ringed:nth-child(2) { z-index: 2; }
+.avatar-stack .av-ringed:nth-child(3) { z-index: 3; }
+
+.avatar-stack-extra {
+  margin-left: 4px;
+  padding: 2px 6px;
+  border-radius: var(--legience-radius-pill);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-muted);
+  font: 600 10px/1 var(--legience-font-sans);
+}
+
+.av-ringed {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  padding: 1px;
+  background: var(--legience-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--legience-bg-elevated);
+    padding: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .inner .content {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--legience-accent);
+    color: #fff;
+    font: 600 8.5px/1 var(--legience-font-sans);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.trigger-spacer { flex: 1; }
+
+.picked-summary {
+  font: 500 12px/1 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+}
+
+.dd-item--multi { align-items: center; }
+
+.dd-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--legience-border-emphasis);
+  border-radius: 4px;
+  background: var(--legience-bg-elevated);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  transition: background 100ms ease, border-color 100ms ease;
+
+  &.checked {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+  }
+}

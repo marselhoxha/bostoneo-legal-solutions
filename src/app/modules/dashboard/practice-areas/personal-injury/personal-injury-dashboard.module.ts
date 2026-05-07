@@ -4,8 +4,6 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { PersonalInjuryDashboardComponent } from './personal-injury-dashboard.component';
 import { PiAiInsightsComponent } from './components/pi-ai-insights/pi-ai-insights.component';
-import { PiRiskAlertsComponent } from './components/pi-risk-alerts/pi-risk-alerts.component';
-import { PiCrossMatterIntelComponent } from './components/pi-cross-matter-intel/pi-cross-matter-intel.component';
 
 /**
  * Lazy-loaded module for the Personal Injury practice-area layer. Imported
@@ -23,8 +21,6 @@ import { PiCrossMatterIntelComponent } from './components/pi-cross-matter-intel/
   declarations: [
     PersonalInjuryDashboardComponent,
     PiAiInsightsComponent,
-    PiRiskAlertsComponent,
-    PiCrossMatterIntelComponent,
   ],
   imports: [
     CommonModule,

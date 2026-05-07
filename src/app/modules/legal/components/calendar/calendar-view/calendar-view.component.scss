@@ -1,402 +1,760 @@
-.calendar-container {
+// ─────────────────────────────────────────────────────────────────────────
+// Calendar — D1 Classic (cal-d1)
+// Design ref: wave1-tasks-calendar-redesign-options.html#cal-d1
+//
+// Custom 7-column month grid styled to the Rox/Legience system. Replaces the
+// previous FullCalendar embed (the 400+ line override file is gone with it).
+// Per-event color is driven by `--ev-color` set inline from the component
+// (hashed off the case key). Tinted variant uses `color-mix()` so we don't
+// have to ship 6 hand-written tinted color classes.
+// ─────────────────────────────────────────────────────────────────────────
+
+:host {
+  display: block;
+  background: var(--legience-bg-page);
+  min-height: 100%;
+}
+
+.cal-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background-color: var(--legience-bg-card);
-  border-radius: 8px;
+  min-height: 100%;
+}
+
+// ─── Page head ─────────────────────────────────────────────────────────
+.page-head {
+  background: var(--legience-bg-elevated);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  padding: 18px 24px;
+}
+
+.head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.head-title {
+  // Typography mirrors the brainstorm page-head exactly: 22px title at
+  // -0.025em letter-spacing, 13px sub. Tighter line-height (1) on both
+  // closes the visual gap between title and sub-label so they read as
+  // one block, the way the cal-d1/d2 mockups present them.
+  h2 {
+    margin: 0 0 4px;
+    font: 600 22px/1 var(--legience-font-sans);
+    color: var(--legience-text-primary);
+    letter-spacing: -0.025em;
+  }
+  .sub {
+    font: 500 13px/1 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+    font-variant-numeric: tabular-nums;
+
+    // Inline danger emphasis for "N statute clocks under 60 days" — pulls
+    // the eye to the highest-risk count without recoloring the whole line.
+    .sub-danger {
+      color: var(--legience-danger);
+      font-weight: 600;
+    }
+  }
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+// Generic button — same shape used by the prev/next/today triplet and the
+// view-toggle pieces. Primary variant overrides for "+ New event". Mockup
+// only changes border-color + text-color on hover (no background fill), so
+// match that exactly.
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  color: var(--legience-text-secondary);
+  font: 500 12.5px/1 var(--legience-font-sans);
+  cursor: pointer;
+  transition: border-color 100ms ease, color 100ms ease;
+
+  &:hover {
+    border-color: var(--legience-border-emphasis);
+    color: var(--legience-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(var(--legience-accent-rgb), 0.40);
+    outline-offset: 1px;
+  }
+}
+
+.btn-icon {
+  // Mockup uses rectangular icon-button (padding: 7px 9px), NOT a fixed square.
+  padding: 7px 9px;
+  justify-content: center;
+}
+
+.btn-primary {
+  background: var(--legience-accent);
+  border-color: var(--legience-accent);
+  color: #fff;
+  font-weight: 600;
+
+  &:hover {
+    background: var(--legience-accent-hover, var(--legience-accent));
+    border-color: var(--legience-accent-hover, var(--legience-accent));
+    color: #fff;
+    filter: brightness(1.05);
+  }
+}
+
+// View toggle — three pills sharing a single rounded container so the
+// active pill reads as "selected option" not "separate button". Matches
+// mockup: padding: 3px container + 1px gap + opt padding 6px 14px @ 12.5px.
+.view-toggle {
+  display: inline-flex;
+  gap: 1px;
+  background: var(--legience-bg-subtle);
+  border: 1px solid var(--legience-border-hairline);
+  border-radius: var(--legience-radius);
+  padding: 3px;
+
+  .opt {
+    padding: 6px 14px;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--legience-radius) - 2px);
+    color: var(--legience-text-secondary);
+    font: 500 12.5px/1 var(--legience-font-sans);
+    cursor: pointer;
+    transition: background 100ms ease, color 100ms ease;
+
+    &:hover { color: var(--legience-text-primary); }
+
+    &.active {
+      background: var(--legience-bg-elevated);
+      color: var(--legience-text-primary);
+      box-shadow: var(--legience-shadow-sm);
+      font-weight: 600;
+    }
+  }
+}
+
+// ─── Deadline track (cal-d2) ────────────────────────────────────────────
+// Persistent strip above the month grid showing upcoming statute / court /
+// soft deadlines. Cards sized for an at-a-glance read; horizontal-scroll
+// when there are many deadlines so the strip never wraps below the page-head.
+.deadline-track {
+  background: var(--legience-bg-elevated);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  padding: 14px 24px;
+}
+
+.track-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+
+  .title {
+    font: 600 11.5px/1 var(--legience-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--legience-text-secondary);
+  }
+
+  .meta {
+    font: 500 11px/1 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+  }
+}
+
+.strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  // Subtle scrollbar matching the tasks-page pattern so the strip's edge
+  // signals scrollability without becoming a visual noise generator.
+  scrollbar-width: thin;
+  scrollbar-color: var(--legience-border-emphasis) transparent;
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--legience-border-emphasis);
+    border-radius: 3px;
+  }
+}
+
+.deadline-card {
+  flex: 0 0 220px;
+  padding: 10px 12px;
+  border-radius: var(--legience-radius);
+  background: var(--legience-bg-elevated);
+  border: 1px solid var(--legience-border-hairline);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 100ms ease, box-shadow 100ms ease, transform 80ms ease;
+
+  &:hover {
+    border-color: var(--legience-border-emphasis);
+    box-shadow: var(--legience-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  // Tier-coded left border — three palette tiers, easy scan-down to spot
+  // statute clocks first.
+  &.tier-statute { border-left: 3px solid var(--legience-danger); }
+  &.tier-court   { border-left: 3px solid var(--legience-orange); }
+  &.tier-soft    { border-left: 3px solid var(--legience-warning); }
+
+  .countdown {
+    font: 600 14px/1 var(--legience-font-sans);
+    color: var(--legience-text-primary);
+    font-variant-numeric: tabular-nums;
+
+    &.danger { color: var(--legience-danger); }
+    &.warn   { color: var(--legience-orange); }
+  }
+
+  .label {
+    font: 500 12px/1.3 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+    margin-top: 4px;
+    // Truncate long deadline titles so cards stay uniform-height.
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    min-height: 32px;
+  }
+
+  .case-line {
+    font: 500 11px/1 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+    margin-top: 6px;
+  }
+
+  .badge-tier {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 7px;
+    border-radius: var(--legience-radius-sm);
+    font: 600 9.5px/1.4 var(--legience-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &.tier-statute .badge-tier { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger); }
+  &.tier-court   .badge-tier { background: rgba(var(--legience-orange-rgb), 0.10); color: var(--legience-orange); }
+  &.tier-soft    .badge-tier { background: var(--legience-warning-bg-subtle); color: #b45309; }
+}
+
+// ─── Error banner ───────────────────────────────────────────────────────
+.cal-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 24px 0;
+  padding: 10px 14px;
+  background: var(--legience-danger-bg-subtle);
+  border: 1px solid rgba(var(--legience-danger-rgb), 0.20);
+  border-radius: var(--legience-radius);
+  color: var(--legience-danger);
+  font: 500 12.5px/1.4 var(--legience-font-sans);
+}
+
+// ─── Month grid (cal-d1) ────────────────────────────────────────────────
+.c1-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--legience-bg-elevated);
+  flex: 1;
+  min-height: 640px;
+}
+
+.c1-dayhead {
+  padding: 10px 12px;
+  font: 600 11px/1 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--legience-text-muted);
+  background: var(--legience-bg-subtle);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  border-right: 1px solid var(--legience-border-hairline);
+
+  &:nth-child(7) { border-right: none; }
+}
+
+.c1-day {
+  border-right: 1px solid var(--legience-border-hairline);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  padding: 6px 8px 8px;
+  min-height: 110px;
+  background: var(--legience-bg-elevated);
+  position: relative;
+  cursor: pointer;
+  transition: background 100ms ease;
+
+  // Last column has no right border (grid edge).
+  &:nth-child(7n) { border-right: none; }
+
+  // Leading/trailing month days — softer background + dimmed numbers.
+  &.muted {
+    background: var(--legience-bg-card-hover);
+    cursor: default;
+    .num { color: var(--legience-text-muted); }
+  }
+
+  // Today — three-layer treatment so the user spots "today" instantly:
+  //   1. Cell background tinted with the accent (matches the day-head
+  //      treatment in week/day views, and the deadline track strip).
+  //   2. Day number in a 26px accent-colored circle (was 22px — too small
+  //      to read as an "active state").
+  //   3. Top accent bar across the cell so the column reads as today even
+  //      when scanned from a distance.
+  &.today {
+    background: var(--legience-accent-bg-subtle);
+    box-shadow: inset 0 2px 0 0 var(--legience-accent);
+
+    .num {
+      background: var(--legience-accent);
+      color: #fff;
+      font-weight: 700;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.02em;
+    }
+
+    &:hover { background: var(--legience-accent-bg-subtle); }
+  }
+
+  &:not(.muted):not(.today):hover {
+    background: var(--legience-bg-row-hover);
+  }
+
+  .num {
+    font: 500 12px/1 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+}
+
+// Event chip — solid by default, tinted variant via `.tinted` class.
+// `--ev-color` is set inline by the component (hashed off the case key).
+.c1-event {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  margin-bottom: 2px;
+  border-radius: var(--legience-radius-sm);
+  font: 500 10.5px/1.3 var(--legience-font-sans);
+  color: #fff;
+  background: var(--ev-color, var(--legience-accent));
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: filter 100ms ease, transform 80ms ease;
+
+  &:hover {
+    filter: brightness(1.08);
+    transform: translateY(-0.5px);
+  }
+
+  .time {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .t {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Tinted variant — semi-transparent background with colored text + border.
+  // color-mix lets us derive the wash from --ev-color without writing one
+  // class per palette entry. Falls back to solid if a viewport ever lacks
+  // color-mix support; the chip is still readable.
+  &.tinted {
+    background: color-mix(in srgb, var(--ev-color) 12%, transparent);
+    color: var(--ev-color);
+    border: 1px solid color-mix(in srgb, var(--ev-color) 22%, transparent);
+  }
+}
+
+.c1-more {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  background: transparent;
+  border: none;
+  font: 600 10.5px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--legience-accent);
+    text-decoration: underline;
+  }
+}
+
+// ─── Deadline pin (cal-d2) ──────────────────────────────────────────────
+// Compact tier-colored bar inside a day cell. Shorter + bolder than a
+// regular event chip so it reads as a deadline (banner) rather than a
+// scheduled block. Three tier classes drive color: statute (red), court
+// (orange), soft (yellow).
+.c2-deadline-pin {
+  display: block;
+  width: 100%;
+  padding: 2px 6px;
+  margin-bottom: 2px;
+  border-radius: var(--legience-radius-sm);
+  border: none;
+  text-align: left;
+  font: 600 10px/1.3 var(--legience-font-sans);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: filter 100ms ease, transform 80ms ease;
+
+  &:hover {
+    filter: brightness(1.08);
+    transform: translateY(-0.5px);
+  }
+
+  &.statute { background: var(--legience-danger);  color: #fff; }
+  &.court   { background: var(--legience-orange);  color: #fff; }
+  &.soft    { background: var(--legience-warning); color: #1c1917; }
+}
+
+// ─── Week / Day time grid (cal-d3) ──────────────────────────────────────
+// Two layered grids share the same template-columns:
+//   1. .c3-grid — paints the slots/headers/rows (visual scaffold)
+//   2. .c3-overlay — sits on top of (1) holding absolutely-positioned
+//      .c3-block elements per day-stack column.
+// Layering instead of using grid-row spans means we can place blocks at
+// minute-precision pixel offsets without forcing the row template to know
+// about every event's duration.
+.c3-shell {
+  position: relative;
+  background: var(--legience-bg-elevated);
+  flex: 1;
+  // Allow horizontal scroll for narrow viewports — the 60px hour col + 7
+  // day cols can otherwise crush block content.
+  overflow: auto;
+}
+
+.c3-grid {
+  display: grid;
+  // grid-template-columns set inline from component (60px + N day cols)
+  background: var(--legience-bg-elevated);
+  min-width: 700px;
+}
+
+// Header strip uses a single hairline along the bottom only — no column
+// dividers — so the day-head reads as a clean strip rather than a boxy
+// table row. Slot borders below still define columns for click targets.
+// !important on the side borders bulletproofs against any cached CSS or
+// Bootstrap reset that would re-add column dividers.
+.c3-corner {
+  background: var(--legience-bg-subtle);
+  border: none !important;
+  border-bottom: 1px solid var(--legience-border-hairline) !important;
+}
+
+.c3-dayhead {
+  // Explicit height so the overlay's padding-top can match exactly. 56px =
+  // 10px top + 10px weekday + 4px gap + 18px day-num + 14px bottom.
+  height: 56px;
+  padding: 10px 14px;
+  background: var(--legience-bg-subtle);
+  border: none !important;
+  border-bottom: 1px solid var(--legience-border-hairline) !important;
+  // Weekday: 10px muted uppercase — sets the column without competing with
+  // the day number for visual weight.
+  font: 600 10px/1 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  text-align: left;
+  transition: background 100ms ease;
+
+  &:hover { background: var(--legience-bg-row-hover); }
+
+  // Day number: 18px tight letter-spacing, primary color — owns the visual
+  // weight of the column so eye-jumps Mon→Tue→Wed read on the dates first.
+  .day-num {
+    display: block;
+    font: 600 18px/1 var(--legience-font-sans);
+    letter-spacing: -0.025em;
+    margin-top: 4px;
+    color: var(--legience-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Today: tinted background + accent-color day number. Background tint
+  // matches the deadline-track / accent-soft pattern used elsewhere on the
+  // page so "today" reads as part of the same visual language.
+  &.today {
+    background: var(--legience-accent-bg-subtle);
+    color: var(--legience-accent);
+    .day-num { color: var(--legience-accent); }
+  }
+}
+
+// All-day banner row — only renders when at least one day has an all-day
+// event. Banner blocks are tinted by case color (same hashing as month).
+// All-day banner row sits in the header zone, so it follows the same
+// "no column dividers" convention as the day-head row above it.
+.c3-allday-label {
+  height: 36px;
+  padding: 6px 10px;
+  background: var(--legience-bg-card-hover);
+  border: none !important;
+  border-bottom: 1px solid var(--legience-border-hairline) !important;
+  font: 500 10px/1.4 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--legience-text-muted);
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.c3-allday-col {
+  // Explicit height for overlay alignment. Matches .c3-allday-label height.
+  height: 36px;
+  border: none !important;
+  border-bottom: 1px solid var(--legience-border-hairline) !important;
+  padding: 4px;
+  background: var(--legience-bg-card-hover);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   overflow: hidden;
 }
 
-// Badge dot styling for event type legend
-.badge-dot {
-  display: inline-block;
-  height: 8px;
-  width: 8px;
-  border-radius: 50%;
-  margin-right: 1px;
 
-  &.dot-court {
-    background-color: var(--legience-danger, #f06548) !important; // Coral/Red
-  }
-
-  &.dot-hearing {
-    background-color: #865ce2 !important; // Purple
-  }
-
-  &.dot-deadline {
-    background-color: var(--legience-warning, #f7b84b) !important; // Orange/Amber
-  }
-
-  &.dot-meeting {
-    background-color: var(--legience-info, #299cdb) !important; // Blue
-  }
-
-  &.dot-reminder {
-    background-color: #45c8de !important; // Teal/Cyan
-  }
-}
-
-// Event Type Colors - matching the legend
-::ng-deep {
-  // Court Dates - Coral/Red
-  .fc-event.event-court {
-    background-color: rgba(240, 101, 72, 0.15) !important;
-    border-color: rgba(240, 101, 72, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #c9533a !important;
-    }
-  }
-
-  // Hearings - Purple
-  .fc-event.event-hearing {
-    background-color: rgba(134, 92, 226, 0.15) !important;
-    border-color: rgba(134, 92, 226, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #6f4bc7 !important;
-    }
-  }
-
-  // Deadlines - Orange/Amber
-  .fc-event.event-deadline {
-    background-color: rgba(247, 184, 75, 0.15) !important;
-    border-color: rgba(247, 184, 75, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #d19a2f !important;
-    }
-  }
-
-  // Meetings - Blue
-  .fc-event.event-meeting {
-    background-color: rgba(41, 156, 219, 0.15) !important;
-    border-color: rgba(41, 156, 219, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #2085bd !important;
-    }
-  }
-
-  // Reminders - Teal/Cyan
-  .fc-event.event-reminder {
-    background-color: rgba(69, 200, 222, 0.15) !important;
-    border-color: rgba(69, 200, 222, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #35a8bc !important;
-    }
-  }
-
-  // Consultations - Teal (similar to reminders)
-  .fc-event.event-consultation {
-    background-color: rgba(69, 200, 222, 0.15) !important;
-    border-color: rgba(69, 200, 222, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #35a8bc !important;
-    }
-  }
-
-  // Depositions - Purple (lighter than hearings)
-  .fc-event.event-deposition {
-    background-color: rgba(149, 117, 205, 0.15) !important;
-    border-color: rgba(149, 117, 205, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #7e57c2 !important;
-    }
-  }
-
-  // Document Review - Gray/Secondary
-  .fc-event.event-document {
-    background-color: rgba(108, 117, 125, 0.15) !important;
-    border-color: rgba(108, 117, 125, 0.3) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #5a6268 !important;
-    }
-  }
-
-  // Default - Light gray
-  .fc-event.event-default {
-    background-color: rgba(108, 117, 125, 0.1) !important;
-    border-color: rgba(108, 117, 125, 0.2) !important;
-
-    .fc-event-title, .fc-event-main {
-      color: #5a6268 !important;
-    }
-  }
-}
-
-.badge-info {
-  display: flex;
-  align-items: center;
-  margin-right: 12px;
-}
-
-.card-header {
-  border-bottom: 1px solid var(--legience-border-hairline);
-  background-color: var(--legience-bg-card);
-}
-
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background-color: var(--legience-bg-card, #fff);
-  border-bottom: 1px solid #e0e0e0;
-
-  h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: var(--legience-text-primary, #333);
-  }
-
-  .calendar-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-}
-
-.calendar-content {
-  flex: 1;
-  padding: 1rem;
-  overflow: auto;
-  position: relative;
-}
-
-.loading-spinner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  font-size: 1.25rem;
-  color: #666;
-
-  i {
-    margin-right: 0.5rem;
-  }
-}
-
-.error-message {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  font-size: 1.25rem;
-  color: var(--legience-danger, #dc3545);
-
-  i {
-    margin-right: 0.5rem;
-  }
-}
-
-.calendar-wrapper {
-  position: relative;
-  min-height: 500px;
-  width: 100%;
-  background: var(--legience-bg-card);
-  
-  ::ng-deep {
-    .fc {
-      height: 100%;
-      font-family: "Inter", sans-serif;
-      color: var(--legience-text-secondary);
-      
-      /* Header styling */
-      .fc-toolbar {
-        margin-bottom: 1.5rem;
-        
-        .fc-toolbar-chunk {
-          .fc-button-group {
-            .fc-button {
-              text-transform: capitalize;
-              background: var(--legience-bg-card-hover);
-              border-color: var(--legience-border-hairline);
-              color: var(--legience-text-secondary);
-              box-shadow: none;
-              font-weight: 500;
-              padding: 0.4rem 0.8rem;
-              
-              &:hover, &.fc-button-active {
-                background-color: var(--legience-accent);
-                border-color: var(--legience-accent);
-                color: var(--legience-color-surface-white);
-              }
-
-              &:focus {
-                box-shadow: none;
-              }
-            }
-          }
-          
-          .fc-today-button {
-            text-transform: capitalize;
-            background-color: var(--legience-accent);
-            border-color: var(--legience-accent);
-            color: var(--legience-color-surface-white);
-            font-weight: 500;
-            padding: 0.4rem 0.8rem;
-
-            &:disabled {
-              background-color: var(--legience-bg-card-hover);
-              border-color: var(--legience-border-hairline);
-              color: var(--legience-text-secondary);
-              opacity: 0.65;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-// Fix for Create Event button
-.add-btn {
-  position: relative !important;
-  display: inline-block !important;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  transform: none !important;
-  transition: none !important;
-  animation: none !important;
-
-  &::before, &::after {
-    display: none !important;
-    content: none !important;
-  }
-
-  // Override any parent styles that might interfere
-  &:hover, &:focus, &:active {
-    color: #fff !important;
-    background-color: var(--legience-success) !important;
-    border-color: var(--legience-success) !important;
-    opacity: 1 !important;
-    transform: none !important;
-    transition: background-color 0.2s ease !important;
-  }
-
-  * {
-    pointer-events: none !important;
-  }
-}
-
-// Prevent animation issues with button icons
-.btn {
-  i {
-    pointer-events: none;
-  }
-}
-
-// Completely disable animation behaviors
-.btn-animation {
-  position: relative !important;
-  overflow: visible !important; 
-  transition: none !important;
-  animation: none !important;
-  transform: none !important;
-  
-  &::before, &::after {
-    display: none !important;
-    content: none !important;
-    animation: none !important;
-    transition: none !important;
-    transform: none !important;
-    position: static !important;
-    width: 0 !important;
-    height: 0 !important;
-    opacity: 0 !important;
-  }
-  
-  > span {
-    opacity: 1 !important;
-    display: inline-block !important;
-    transform: none !important;
-    transition: none !important;
-    animation: none !important;
-  }
-  
-  &:hover::after {
-    opacity: 0 !important;
-    transform: none !important;
-    display: none !important;
-  }
-  
-  &:hover > span {
-    opacity: 1 !important;
-    transform: none !important;
-    position: static !important;
-  }
-}
-
-// Remove problematic styles
-.page-title-box {
-  .btn {
-    &::after, &::before {
-      display: none !important;
-      content: none !important;
-    }
-  }
-}
-
-// Style the button wrapper
-.btn-wrapper {
-  display: inline-block;
-  position: relative;
+.c3-allday-block {
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--ev-color, var(--legience-accent)) 12%, transparent);
+  color: var(--ev-color, var(--legience-accent));
+  border: 1px solid color-mix(in srgb, var(--ev-color, var(--legience-accent)) 22%, transparent);
+  border-radius: var(--legience-radius-sm);
+  font: 500 11px/1.3 var(--legience-font-sans);
   cursor: pointer;
-  padding: 0;
-  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover { filter: brightness(1.08); }
+}
+
+.c3-hourcol {
+  padding: 12px 8px 8px;
+  height: 60px; // matches HOUR_HEIGHT_PX in TS
+  font: 500 11px/1 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--legience-border-hairline);
+  border-bottom: 1px solid var(--legience-border-subtle, var(--legience-border-hairline));
+  background: var(--legience-bg-elevated);
+}
+
+.c3-slot {
+  height: 60px; // matches HOUR_HEIGHT_PX in TS
+  border-right: 1px solid var(--legience-border-hairline);
+  border-bottom: 1px solid var(--legience-border-subtle, var(--legience-border-hairline));
+  background: var(--legience-bg-elevated);
+  cursor: pointer;
+  transition: background 100ms ease;
+
+  &:last-of-type { border-right: none; }
+  &:hover { background: var(--legience-bg-row-hover); }
+}
+
+// Overlay grid — same column template as c3-grid, positioned on top so
+// blocks can sit at absolute pixel offsets within their day column. The
+// spacer skips the hour-col (column 1); each day-stack is column 2..N+1.
+.c3-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  pointer-events: none;
+  // Push overlay past the day-head row (56px). When .has-allday adds the
+  // banner row (+36px), bump to 92px below.
+  padding-top: 56px;
+}
+
+.c3-shell.has-allday .c3-overlay {
+  padding-top: 92px; // 56 (dayhead) + 36 (all-day)
+}
+
+.c3-overlay-spacer {
+  // Empty — just reserves the hour-col width.
+}
+
+.c3-day-stack {
+  position: relative;
+  // Width comes from the grid column; height set inline from gridHeightPx.
+  pointer-events: none; // children opt back in via .c3-block
+}
+
+// Time-block — tone class set by component (billable/event/non-billable).
+.c3-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: var(--legience-radius-sm);
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  font: 500 11px/1.3 var(--legience-font-sans);
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: filter 100ms ease, transform 80ms ease, box-shadow 100ms ease;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  .time {
+    font-size: 10px;
+    opacity: 0.85;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .case-line {
+    font-size: 10px;
+    opacity: 0.85;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   &:hover {
-    button {
-      color: #fff !important;
-      background-color: var(--legience-success) !important;
-      border-color: var(--legience-success) !important;
-    }
+    filter: brightness(1.05);
+    transform: translateY(-0.5px);
+    box-shadow: var(--legience-shadow-sm);
+  }
+
+  // Tones — solid-tinted backgrounds + matching text + colored borders.
+  // Matches cal-d3 mockup palettes.
+  &.billable {
+    background: var(--legience-accent-bg-subtle);
+    color: var(--legience-accent);
+    border-color: rgba(var(--legience-accent-rgb), 0.30);
+  }
+  &.event {
+    background: var(--legience-warning-bg-subtle);
+    color: #b45309;
+    border-color: rgba(var(--legience-warning-rgb), 0.25);
+  }
+  &.non-billable {
+    background: var(--legience-info-bg-subtle);
+    color: var(--legience-info);
+    border-color: rgba(var(--legience-info-rgb), 0.25);
   }
 }
 
-// Mobile responsiveness
-@media (max-width: 768px) {
-  .calendar-wrapper {
-    min-height: 400px;
+// ─── Skeleton ───────────────────────────────────────────────────────────
+// Same 7-col grid + 6-row layout as the live grid so there's zero reflow
+// when events land. Shimmer reuses the gradient + position-shift trick
+// from the tasks views; keyframe namespaced to this component.
+.c1-skeleton {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--legience-bg-elevated);
+  flex: 1;
+  min-height: 640px;
+}
 
-    ::ng-deep {
-      .fc {
-        .fc-toolbar {
-          flex-direction: column;
-          gap: 0.5rem;
+.c1-sk-dayhead {
+  padding: 10px 12px;
+  height: 32px;
+  background: var(--legience-bg-subtle);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  border-right: 1px solid var(--legience-border-hairline);
 
-          .fc-toolbar-chunk {
-            display: flex;
-            justify-content: center;
+  &:nth-child(7) { border-right: none; }
+}
 
-            .fc-button-group .fc-button {
-              padding: 0.25rem 0.5rem;
-              font-size: 0.8rem;
-            }
+.c1-sk-day {
+  border-right: 1px solid var(--legience-border-hairline);
+  border-bottom: 1px solid var(--legience-border-hairline);
+  padding: 6px 8px 8px;
+  min-height: 110px;
+  background: var(--legience-bg-elevated);
 
-            .fc-today-button {
-              padding: 0.25rem 0.5rem;
-              font-size: 0.8rem;
-            }
-          }
-        }
-      }
-    }
+  &:nth-child(7n) { border-right: none; }
+}
+
+.sk-cell {
+  background: linear-gradient(
+    90deg,
+    var(--legience-bg-subtle) 0%,
+    rgba(var(--legience-accent-rgb), 0.06) 50%,
+    var(--legience-bg-subtle) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: c1-sk-shimmer 1400ms linear infinite;
+}
+
+.c1-sk-num   { width: 22px; height: 12px; margin-bottom: 6px; }
+.c1-sk-event { height: 14px; width: 86%; margin-bottom: 3px;
+  &.short { width: 56%; }
+}
+
+@keyframes c1-sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// ─── Responsive ─────────────────────────────────────────────────────────
+@media (max-width: 720px) {
+  .head-row {
+    align-items: stretch;
+    gap: 12px;
   }
-
-  .card-header {
-    .event-type-info {
-      width: 100%;
-      margin-top: 0.5rem;
-    }
+  .head-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
-
-  .badge-info {
-    margin-right: 8px;
-    font-size: 0.75rem;
+  .c1-day {
+    min-height: 88px;
+    padding: 4px 6px 6px;
   }
+  .c1-sk-day { min-height: 88px; }
 }

@@ -6,31 +6,57 @@
       </div>
       <div class="head-actions">
         <div class="view-switcher" role="tablist" aria-label="View">
-          <button type="button" class="chip" [class.active]="activeView === 'inbox'" (click)="switchView('inbox')">
-            <span class="chip-icon">&#x229E;</span> List
+          <button
+            type="button"
+            class="chip"
+            role="tab"
+            [class.active]="activeView === 'inbox'"
+            [attr.aria-selected]="activeView === 'inbox'"
+            (click)="switchView('inbox')"
+          >
+            <i-lucide name="list-todo" [size]="16"></i-lucide>
+            <span>List</span>
           </button>
-          <button type="button" class="chip" [class.active]="activeView === 'pipeline'" (click)="switchView('pipeline')" disabled title="Phase 2">
-            <span class="chip-icon">&#x25A4;</span> Pipeline
+          <button
+            type="button"
+            class="chip"
+            role="tab"
+            [class.active]="activeView === 'pipeline'"
+            [attr.aria-selected]="activeView === 'pipeline'"
+            (click)="switchView('pipeline')"
+          >
+            <i-lucide name="kanban" [size]="16"></i-lucide>
+            <span>Pipeline</span>
           </button>
-          <button type="button" class="chip" [class.active]="activeView === 'workload'" (click)="switchView('workload')" disabled title="Phase 3">
-            <span class="chip-icon">&#x1F465;</span> Workload
+          <button
+            type="button"
+            class="chip"
+            role="tab"
+            [class.active]="activeView === 'workload'"
+            [attr.aria-selected]="activeView === 'workload'"
+            (click)="switchView('workload')"
+          >
+            <i-lucide name="gauge" [size]="16"></i-lucide>
+            <span>Workload</span>
           </button>
         </div>
-        <button type="button" class="btn">
-          <kbd class="kbd-hint">&#x2318;K</kbd> Search
+        <button type="button" class="btn-primary btn" (click)="openNewTaskModal()">
+          <i-lucide name="plus" [size]="14"></i-lucide>
+          New task
         </button>
-        <button type="button" class="btn">Filter</button>
-        <button type="button" class="btn-primary btn">+ New task</button>
       </div>
     </div>
   </header>
 
   <ng-container [ngSwitch]="activeView">
-    <app-inbox-view *ngSwitchCase="'inbox'"></app-inbox-view>
-    <div class="placeholder" *ngSwitchCase="'pipeline'">Pipeline view ships in Phase 2.</div>
-    <div class="placeholder" *ngSwitchCase="'workload'">Workload view ships in Phase 3.</div>
+    <app-task-view *ngSwitchCase="'inbox'"></app-task-view>
+    <app-pipeline-view *ngSwitchCase="'pipeline'"></app-pipeline-view>
+    <app-workload-view *ngSwitchCase="'workload'"></app-workload-view>
   </ng-container>
 
   <!-- Unified task drawer — opens when ?task=:id is in the URL. -->
   <app-task-drawer></app-task-drawer>
+
+  <!-- "+ New task" modal — opens when ?new=task is in the URL. -->
+  <app-new-task-modal></app-new-task-modal>
 </div>

@@ -1,0 +1,460 @@
+<div class="inbox-counts">
+  <span><strong>{{ totalActiveCount }}</strong> tasks</span>
+  <ng-container *ngIf="overdueCount > 0">
+    <span class="dot">&middot;</span>
+    <span class="overdue-count"><strong>{{ overdueCount }}</strong> overdue</span>
+  </ng-container>
+  <span class="dot">&middot;</span>
+  <span>sorted by due date</span>
+</div>
+
+<div class="filter-bar">
+  <span
+    class="chip"
+    [class.active]="activeChip === 'all'"
+    (click)="setAssignmentChip('all', $event)"
+  >
+    All <span class="count">&middot; {{ totalActiveCount }}</span>
+  </span>
+  <span
+    class="chip"
+    [class.active]="activeChip === 'mine'"
+    (click)="setAssignmentChip('mine', $event)"
+  >
+    Mine <span class="count">&middot; {{ mineCount }}</span>
+  </span>
+  <span
+    class="chip"
+    [class.active]="activeChip === 'assigned'"
+    (click)="setAssignmentChip('assigned', $event)"
+    title="Tasks I created that are assigned to others"
+  >
+    Delegated <span class="count">&middot; {{ assignedCount }}</span>
+  </span>
+
+  <div class="filter-divider"></div>
+
+  <!-- Case dropdown -->
+  <div class="chip-wrap">
+    <span
+      class="chip"
+      [class.active]="selectedCases.size > 0"
+      (click)="toggleMenu('case', $event)"
+    >
+      <ng-container *ngIf="selectedCases.size === 0">
+        Case <i-lucide name="chevron-down" [size]="12"></i-lucide>
+      </ng-container>
+      <ng-container *ngIf="selectedCases.size > 0">
+        Case <span class="count">&middot; {{ selectedCases.size }}</span>
+      </ng-container>
+    </span>
+    <div class="dropdown-menu" *ngIf="openMenu === 'case'" (click)="swallow($event)">
+      <div class="dd-empty" *ngIf="caseOptions.length === 0">No cases</div>
+      <div
+        *ngFor="let opt of caseOptions"
+        class="dd-item"
+        [class.selected]="selectedCases.has(opt.key)"
+        (click)="toggleCase(opt.key, $event)"
+      >
+        <span class="dd-check">
+          <ng-container *ngIf="selectedCases.has(opt.key)">&#10003;</ng-container>
+        </span>
+        <span class="dd-label">{{ opt.label }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Priority dropdown -->
+  <div class="chip-wrap">
+    <span
+      class="chip"
+      [class.active]="selectedPriorities.size > 0"
+      (click)="toggleMenu('priority', $event)"
+    >
+      <ng-container *ngIf="selectedPriorities.size === 0">
+        Priority <i-lucide name="chevron-down" [size]="12"></i-lucide>
+      </ng-container>
+      <ng-container *ngIf="selectedPriorities.size > 0">
+        Priority <span class="count">&middot; {{ selectedPriorities.size }}</span>
+      </ng-container>
+    </span>
+    <div class="dropdown-menu" *ngIf="openMenu === 'priority'" (click)="swallow($event)">
+      <div
+        *ngFor="let p of priorityOptions"
+        class="dd-item"
+        [class.selected]="selectedPriorities.has(p)"
+        (click)="togglePriority(p, $event)"
+      >
+        <span class="dd-check">
+          <ng-container *ngIf="selectedPriorities.has(p)">&#10003;</ng-container>
+        </span>
+        <span class="dd-label">{{ p | titlecase }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Due dropdown -->
+  <div class="chip-wrap">
+    <span
+      class="chip"
+      [class.active]="selectedDue.size > 0"
+      (click)="toggleMenu('due', $event)"
+    >
+      <ng-container *ngIf="selectedDue.size === 0">
+        Due <i-lucide name="chevron-down" [size]="12"></i-lucide>
+      </ng-container>
+      <ng-container *ngIf="selectedDue.size > 0">
+        Due <span class="count">&middot; {{ selectedDue.size }}</span>
+      </ng-container>
+    </span>
+    <div class="dropdown-menu" *ngIf="openMenu === 'due'" (click)="swallow($event)">
+      <div
+        *ngFor="let d of dueOptions"
+        class="dd-item"
+        [class.selected]="selectedDue.has(d.key)"
+        (click)="toggleDue(d.key, $event)"
+      >
+        <span class="dd-check">
+          <ng-container *ngIf="selectedDue.has(d.key)">&#10003;</ng-container>
+        </span>
+        <span class="dd-label">{{ d.label }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Status dropdown — empty selection keeps the active-only default (no
+    COMPLETED/CANCELLED). Pick "Completed" to surface completed work; pick
+    "Blocked" to triage stalled tasks; etc.
+  -->
+  <div class="chip-wrap">
+    <span
+      class="chip"
+      [class.active]="selectedStatuses.size > 0"
+      (click)="toggleMenu('status', $event)"
+      title="Filter by lifecycle status"
+    >
+      <ng-container *ngIf="selectedStatuses.size === 0">
+        Status <i-lucide name="chevron-down" [size]="12"></i-lucide>
+      </ng-container>
+      <ng-container *ngIf="selectedStatuses.size > 0">
+        Status <span class="count">&middot; {{ selectedStatuses.size }}</span>
+      </ng-container>
+    </span>
+    <div class="dropdown-menu" *ngIf="openMenu === 'status'" (click)="swallow($event)">
+      <div
+        *ngFor="let s of statusOptions"
+        class="dd-item"
+        [class.selected]="selectedStatuses.has(s)"
+        (click)="toggleStatus(s, $event)"
+      >
+        <span class="dd-check">
+          <ng-container *ngIf="selectedStatuses.has(s)">&#10003;</ng-container>
+        </span>
+        <span class="dd-label">{{ statusOptionLabel(s) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <span class="filter-spacer"></span>
+
+  <!--
+    Clear-all reset — only renders when at least one filter is non-default
+    (Mine/Delegated active OR any dropdown has selections). Wipes scope +
+    all dropdown picks in a single click so users don't have to hunt for
+    each chip to deselect.
+  -->
+  <span
+    class="chip chip-clear"
+    *ngIf="hasActiveFilters()"
+    (click)="clearAllFilters($event)"
+    title="Clear all filters"
+  >
+    <i-lucide name="x" [size]="12"></i-lucide> Clear all
+  </span>
+</div>
+
+<!--
+  Skeleton state — mirrors the real D3 row exactly. Layout:
+    [☐] [title bar] ⟵──── auto-margin slack ────⟶ [status][case][pri][avatar][⋯]
+
+  Each `.sk-cell` is `flex: 0 0 auto` (fixed-width placeholder). The first
+  right-side cell (`.sk-status`) gets `margin-left: auto` so the entire right
+  cluster anchors to the row's right edge — same visual termination as a
+  real row (menu button at far right). Title widths vary per row (via the
+  `[attr.data-w]` index) so the placeholders look like real, variable-length
+  task titles instead of identical bars.
+
+  Group-header placeholder before each block of rows so the swap-to-real
+  doesn't reflow when "Overdue · 3" / "Today · 4" headers appear.
+-->
+<div *ngIf="loading" class="t-skeleton" aria-busy="true" aria-live="polite">
+  <div class="sk-group-head">
+    <div class="sk-cell sk-grouplabel"></div>
+  </div>
+  <div
+    class="sk-row"
+    *ngFor="let _ of [0, 1, 2, 3, 4]; let i = index"
+    [attr.data-w]="i % 4"
+  >
+    <div class="sk-cell sk-checkbox"></div>
+    <div class="sk-cell sk-title"></div>
+    <div class="sk-cell sk-status"></div>
+    <div class="sk-cell sk-case"></div>
+    <div class="sk-cell sk-pill"></div>
+    <div class="sk-cell sk-avatar"></div>
+    <div class="sk-cell sk-menu"></div>
+  </div>
+  <div class="sk-group-head">
+    <div class="sk-cell sk-grouplabel"></div>
+  </div>
+  <div
+    class="sk-row"
+    *ngFor="let _ of [0, 1, 2]; let i = index"
+    [attr.data-w]="(i + 1) % 4"
+  >
+    <div class="sk-cell sk-checkbox"></div>
+    <div class="sk-cell sk-title"></div>
+    <div class="sk-cell sk-status"></div>
+    <div class="sk-cell sk-case"></div>
+    <div class="sk-cell sk-pill"></div>
+    <div class="sk-cell sk-avatar"></div>
+    <div class="sk-cell sk-menu"></div>
+  </div>
+</div>
+
+<!--
+  Empty state — context-aware. `filtered` means the inbox has tasks but the
+  active filters hide all of them (offer "Clear filters"). `inbox` means a
+  genuinely empty queue (offer "+ New task" with a celebratory copy).
+-->
+<div *ngIf="!loading && groups.length === 0" class="t-empty">
+  <ng-container *ngIf="emptyStateMode() === 'filtered'; else emptyInbox">
+    <div class="empty-icon empty-icon--filtered">
+      <i-lucide name="filter" [size]="28"></i-lucide>
+    </div>
+    <div class="empty-title">No tasks match these filters</div>
+    <div class="empty-subtitle">
+      Try removing a filter to see more, or create a new task.
+    </div>
+    <div class="empty-actions">
+      <button type="button" class="btn" (click)="clearAllFilters($event)">
+        <i-lucide name="x" [size]="14"></i-lucide>
+        Clear filters
+      </button>
+      <button type="button" class="btn btn-primary" (click)="openNewTaskModal($event)">
+        <i-lucide name="plus" [size]="14"></i-lucide>
+        New task
+      </button>
+    </div>
+  </ng-container>
+
+  <ng-template #emptyInbox>
+    <div class="empty-icon empty-icon--done">
+      <i-lucide name="list-checks" [size]="28"></i-lucide>
+    </div>
+    <div class="empty-title">No tasks. Nice work.</div>
+    <div class="empty-subtitle">
+      Your inbox is clear. Create a task when something needs doing.
+    </div>
+    <div class="empty-actions">
+      <button type="button" class="btn btn-primary" (click)="openNewTaskModal($event)">
+        <i-lucide name="plus" [size]="14"></i-lucide>
+        New task
+      </button>
+    </div>
+  </ng-template>
+</div>
+
+<div class="t-list" *ngIf="!loading && groups.length > 0">
+  <div class="t-group" *ngFor="let group of groups" [class.is-collapsed]="isGroupCollapsed(group.key)">
+    <!--
+      Group header — click anywhere on the row toggles expand/collapse.
+      The `data-key` attribute drives the SCSS color-coded dot (Overdue =
+      red, Today = accent, Done = success green, others = muted gray) so
+      each section reads as its own semantic band. Chevron on the right
+      rotates -90° when collapsed.
+    -->
+    <button
+      type="button"
+      class="t-group-head"
+      [attr.data-key]="group.key"
+      [class.is-collapsed]="isGroupCollapsed(group.key)"
+      (click)="toggleGroup(group.key, $event)"
+      [attr.aria-expanded]="!isGroupCollapsed(group.key)"
+    >
+      <span class="t-group-label">{{ group.label }}</span>
+      <span class="count">{{ group.tasks.length }}</span>
+      <i-lucide name="chevron-down" [size]="14" class="t-group-chevron"></i-lucide>
+    </button>
+
+    <ng-container *ngIf="!isGroupCollapsed(group.key)">
+
+    <!--
+      D3 row — preview match (tasks-listview-row-redesign-options.html#d3).
+      Single line, ~51px tall. Layout (left → right):
+        [checkbox] [title (flex:1)] [⊞ subtasks chip] [⏱ time chip]
+        [case-pill] [priority pill] [due-label] [avatar(s)] [⋯ menu]
+      Chip indicators are conditional: subtasks chip only when the task
+      has ≥1 subtask; time chip only when the case is hourly/flat AND the
+      task has any time data. Subtask chip turns green at X/X done; time
+      chip turns warn when actual exceeds estimate.
+    -->
+    <div
+      class="t-row d3-row"
+      *ngFor="let task of group.tasks; trackBy: trackById"
+      [class.selected]="task.id === selectedTaskId"
+      [class.blocked]="task.status === 'BLOCKED'"
+      (click)="selectTask(task)"
+    >
+      <div class="t-checkbox" [class.checked]="task.status === 'COMPLETED'"></div>
+
+      <div class="d3-title" [class.done]="task.status === 'COMPLETED'">
+        {{ task.title }}
+      </div>
+
+      <!--
+        Status chip — answers "where in the lifecycle is this task?" FIRST
+        because for triage it's the most important signal (more important
+        than subtask count or time logged). Tone colors mirror the V1
+        stepper's active pill (Todo=muted, In progress=accent blue,
+        Review=info violet, Blocked=danger red, Completed=success green) so
+        the list + modal speak the same visual language.
+      -->
+      <span class="d3-indicator status-chip" [ngClass]="statusTone(task.status)">
+        {{ statusLabel(task.status) }}
+      </span>
+
+      <!--
+        Subtasks chip — only rendered when the task has ≥1 subtask. Turns
+        green when fully complete (X/X). Hidden entirely for tasks without
+        subtasks; no muted "no subtasks" placeholder.
+      -->
+      <span
+        class="d3-indicator"
+        *ngIf="subtaskProgress(task) as sp"
+        [class.complete]="sp.pct === 100"
+      >
+        <i-lucide name="list-checks" [size]="12"></i-lucide>
+        {{ sp.done }}/{{ sp.total }}
+      </span>
+
+      <!--
+        Time chip — gated by case billing type AND only when the task has
+        any time data (actual or estimated). Turns warn when actual hours
+        exceed estimated hours.
+      -->
+      <span
+        class="d3-indicator"
+        *ngIf="showTimeChip(task)"
+        [class.warn]="timeOverEstimate(task)"
+      >
+        <i-lucide name="clock" [size]="12"></i-lucide>
+        {{ task.actualHours || 0 }}h
+      </span>
+
+      <span class="case-pill" *ngIf="task.caseTitle || task.caseNumber">
+        <span class="case-dot" [style.background]="caseDotColor(task)"></span>
+        {{ task.caseTitle || task.caseNumber }}
+      </span>
+
+      <span class="pill" [ngClass]="'pill-' + (task.priority | priorityToTone)">
+        <span class="dot"></span>{{ task.priority | titlecase }}
+      </span>
+
+      <span
+        class="d3-due"
+        [class.overdue]="group.key === 'overdue'"
+        [class.today]="group.key === 'today'"
+        [class.done]="group.key === 'done'"
+      >
+        <ng-container *ngIf="task.status === 'COMPLETED' || task.status === 'CANCELLED'; else activeDueLabel">
+          {{ dueOrOutcomeLabel(task) }}
+        </ng-container>
+        <ng-template #activeDueLabel>
+          {{ task.dueDate | dueLabel }}
+        </ng-template>
+      </span>
+
+      <!--
+        V78 — multi-assignee avatar stack. Up to 3 overlapping ringed
+        avatars + "+N" chip. Falls back to legacy `assignedToName` for
+        rows the backfill hasn't reached yet.
+      -->
+      <ng-container *ngIf="(task.assignees?.length ?? 0) > 0; else legacyAvatar">
+        <div class="avatar-stack">
+          <div
+            class="av-ringed"
+            *ngFor="let a of (task.assignees | slice:0:3)"
+            [style.--ring]="avatarColor(a.id)"
+            [style.--bg]="avatarColor(a.id)"
+            [title]="(a.firstName ?? '') + ' ' + (a.lastName ?? '')"
+          >
+            <div class="inner"><div class="content">{{ (a.firstName ?? '') + ' ' + (a.lastName ?? '') | userInitials }}</div></div>
+          </div>
+          <span class="avatar-stack-extra" *ngIf="(task.assignees?.length ?? 0) > 3">
+            +{{ (task.assignees?.length ?? 0) - 3 }}
+          </span>
+        </div>
+      </ng-container>
+      <ng-template #legacyAvatar>
+        <div
+          class="av-ringed"
+          *ngIf="task.assignedToName as name"
+          [style.--ring]="avatarColor(task.assignedToId ?? name)"
+          [style.--bg]="avatarColor(task.assignedToId ?? name)"
+        >
+          <div class="inner"><div class="content">{{ name | userInitials }}</div></div>
+        </div>
+      </ng-template>
+
+      <div class="row-actions" (click)="swallow($event)">
+        <button
+          type="button"
+          class="btn btn-ghost btn-icon"
+          (click)="toggleRowMenu(task.id, $event)"
+          aria-label="Task actions"
+        >
+          <i-lucide name="more-horizontal" [size]="14"></i-lucide>
+        </button>
+        <div class="dropdown-menu row-menu" *ngIf="openRowMenuId === task.id">
+          <div class="dd-item" (click)="markComplete(task, $event)">
+            <i-lucide name="check" [size]="14"></i-lucide>
+            <span class="dd-label">Mark complete</span>
+          </div>
+          <div class="dd-item" (click)="setDueDateFromRow(task, $event)">
+            <i-lucide name="calendar-plus" [size]="14"></i-lucide>
+            <span class="dd-label">Set due date&hellip;</span>
+          </div>
+          <div class="dd-item" (click)="reassignFromRow(task, $event)">
+            <i-lucide name="user-plus" [size]="14"></i-lucide>
+            <span class="dd-label">Reassign&hellip;</span>
+          </div>
+          <div class="dd-sep"></div>
+          <div class="dd-item danger" (click)="deleteTask(task, $event)">
+            <i-lucide name="trash-2" [size]="14"></i-lucide>
+            <span class="dd-label">Delete</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    </ng-container>
+  </div>
+
+  <!--
+    Pagination footer — same shape as the case-list page (Spring Data Page
+    object). Visible whenever `pageMeta` is loaded; client-side filters
+    (Mine/All, Case, Priority, etc.) apply per-page, so "Showing X of Y"
+    reflects how many filtered rows are visible vs the total elements
+    across all pages.
+  -->
+  <div class="t-pagination" *ngIf="pageMeta">
+    <span>Showing {{ visibleCount() }} of {{ pageMeta.totalElements }}</span>
+    <div class="t-pages">
+      <a [class.disabled]="pageMeta.first" (click)="goToNextOrPreviousPage('back')" aria-label="Previous page">‹</a>
+      <span class="t-page-current">Page {{ pageMeta.number + 1 }} / {{ pageMeta.totalPages || 1 }}</span>
+      <a [class.disabled]="pageMeta.last" (click)="goToNextOrPreviousPage('forward')" aria-label="Next page">›</a>
+    </div>
+    <span>{{ pageMeta.size }} per page</span>
+  </div>
+</div>

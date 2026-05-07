@@ -204,10 +204,11 @@
       </div>
     </div>
 
-    <!-- Loading / error -->
-    <div class="cl-loading" *ngIf="isLoading">
-      <div class="cl-spinner"></div>Loading cases…
-    </div>
+    <!-- Loading — table-shape skeleton via the global Layer-2 component.
+         Keeps the table chrome (border, header bar, row spacing) so the
+         skeleton-to-data swap doesn't shift layout. -->
+    <leg-skel-table *ngIf="isLoading" [rows]="8" [cols]="6"
+                    label="Loading cases"></leg-skel-table>
     <div class="cl-error" *ngIf="error && !isLoading">
       <i class="ri-error-warning-line"></i>{{ error }}
       <button class="cl-btn cl-btn-sm" (click)="loadCases()">Retry</button>

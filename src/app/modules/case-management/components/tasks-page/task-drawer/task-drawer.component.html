@@ -1,7 +1,7 @@
 <!--
   Backdrop and drawer render together when a task is loaded.
   The backdrop is a button (not a div) so keyboard users can dismiss it
-  without leaving the page. The drawer is a fixed right-side overlay,
+  without leaving the page. The drawer is a centered modal surface,
   matching the brainstorm preview's "Drawer · D1 Inbox" content.
 -->
 
@@ -20,27 +20,56 @@
       <span class="dot"></span>{{ task.priority | titlecase }}
     </span>
     <h3 class="drawer-title">{{ task.title }}</h3>
-    <button type="button" class="icon-x" (click)="close()" aria-label="Close drawer">&#x2715;</button>
+    <button type="button" class="btn btn-ghost btn-icon" (click)="close()" aria-label="Close drawer">
+      <i-lucide name="x" [size]="16"></i-lucide>
+    </button>
   </header>
 
   <!--
-    VIEW-DRIVEN: Pipeline status-changer (Phase 2 — stubbed off via *ngIf="false").
-    Visible when activeView === 'pipeline' once the flag flips.
+    V1 Segmented Pills stepper — preview match (s1-wrap, s1-stepper).
+    Sits BELOW the header as its own banded stripe (bg-card-hover with
+    full-bleed border-top/bottom) so attorneys read status as a primary
+    control before diving into metadata. Off-track transitions (BLOCKED,
+    CANCELLED) live in the link row underneath.
   -->
-  <div class="status-changer" *ngIf="false">
-    <span class="opt">Open</span>
-    <span class="opt active">In progress</span>
-    <span class="opt">Blocked</span>
-    <span class="opt">Done</span>
-  </div>
+  <div class="s1-wrap">
+    <div class="s1-stepper" role="tablist" aria-label="Task status">
+      <button
+        type="button"
+        class="s1-step"
+        *ngFor="let s of stepperStatuses"
+        [ngClass]="stepStateOf(task.status, s)"
+        [attr.aria-pressed]="stepStateOf(task.status, s) === 'active'"
+        (click)="changeStatus(s, $event)"
+      >
+        <span class="step-tick">
+          <ng-container *ngIf="stepStateOf(task.status, s) === 'past'">&#10003;</ng-container>
+        </span>
+        {{ humanizeStatus(s) }}
+      </button>
+    </div>
 
-  <!--
-    VIEW-DRIVEN: Workload reassign action (Phase 3 — stubbed off via *ngIf="false").
-    Visible when activeView === 'workload' once the flag flips.
-  -->
-  <div class="reassign-box" *ngIf="false">
-    <div class="reassign-head">&#x2696; Reassign to balance load</div>
-    <div class="reassign-body">Available attorneys with capacity will list here.</div>
+    <div class="s1-offtrack">
+      <button
+        type="button"
+        class="link-btn link-blocked"
+        (click)="markBlockedLink($event)"
+        [class.is-active]="task.status === 'BLOCKED'"
+      >
+        <i-lucide name="pause" [size]="13"></i-lucide>
+        <ng-container *ngIf="task.status === 'BLOCKED'; else markBlockedLabel">Blocked</ng-container>
+        <ng-template #markBlockedLabel>Mark blocked</ng-template>
+      </button>
+      <button
+        type="button"
+        class="link-btn link-cancel"
+        (click)="cancelTaskLink($event)"
+        [disabled]="task.status === 'CANCELLED'"
+      >
+        <ng-container *ngIf="task.status === 'CANCELLED'; else cancelLabel">Cancelled</ng-container>
+        <ng-template #cancelLabel>Cancel</ng-template>
+      </button>
+    </div>
   </div>
 
   <!--
@@ -56,36 +85,174 @@
       <div>
         <div class="field-label">Case</div>
         <span class="case-pill" *ngIf="task.caseTitle || task.caseNumber; else noCase">
-          <span class="case-dot"></span>
+          <span class="case-dot" [style.background]="caseDotColor()"></span>
           {{ task.caseTitle || task.caseNumber }}
         </span>
         <ng-template #noCase>
           <div class="field-value muted">&mdash;</div>
         </ng-template>
       </div>
-      <div>
+      <!-- Due — click to open inline date editor (Phase E) -->
+      <div class="due-wrap">
         <div class="field-label">Due</div>
-        <div class="field-value">{{ task.dueDate | dueLabel }}</div>
-      </div>
-      <div>
-        <div class="field-label">Assignee</div>
-        <div class="field-value with-avatar" *ngIf="task.assignedToName as name; else noAssignee">
-          <div
-            class="av-ringed"
-            [style.--ring]="avatarColor(task.assignedToId ?? name)"
-            [style.--bg]="avatarColor(task.assignedToId ?? name)"
-          >
-            <div class="inner"><div class="content">{{ name | userInitials }}</div></div>
-          </div>
-          <span>{{ name }}</span>
+        <div
+          class="due-trigger"
+          (click)="toggleDueDateMenu($event)"
+          [class.muted]="!task.dueDate"
+        >
+          <i-lucide name="calendar" [size]="13"></i-lucide>
+          <span>{{ task.dueDate ? (task.dueDate | dueLabel) : 'Set due date' }}</span>
         </div>
-        <ng-template #noAssignee>
-          <div class="field-value muted">Unassigned</div>
-        </ng-template>
+
+        <div
+          class="due-menu"
+          *ngIf="dueDateMenuOpen"
+          (click)="$event.stopPropagation()"
+        >
+          <input
+            type="date"
+            class="due-input"
+            [(ngModel)]="dueDateInput"
+            [disabled]="dueDateSubmitting"
+            aria-label="Due date"
+          />
+          <div class="due-menu-actions">
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              (click)="clearDueDate($event)"
+              [disabled]="dueDateSubmitting || !task.dueDate"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              (click)="cancelDueDateMenu($event)"
+              [disabled]="dueDateSubmitting"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              (click)="submitDueDate($event)"
+              [disabled]="dueDateSubmitting"
+            >
+              Save
+            </button>
+          </div>
+        </div>
       </div>
+
+      <!--
+        Assignee — V78 multi-assignee. Trigger renders an avatar stack
+        (overlapping ringed avatars) + name list. Dropdown is multi-select:
+        checkbox per user, click toggles them in/out. Menu stays open so
+        the user can pick multiple in one session.
+      -->
+      <div class="assignee-wrap">
+        <div class="field-label">Assignee</div>
+        <div class="assignee-trigger" (click)="toggleAssigneeMenu($event)">
+          <ng-container *ngIf="(task.assignees?.length ?? 0) > 0; else noAssignee">
+            <div class="avatar-stack">
+              <div
+                class="av-ringed sm"
+                *ngFor="let a of (task.assignees | slice:0:3)"
+                [style.--ring]="avatarColor(a.id)"
+                [style.--bg]="avatarColor(a.id)"
+                [title]="(a.firstName ?? '') + ' ' + (a.lastName ?? '')"
+              >
+                <div class="inner"><div class="content">{{ (a.firstName ?? '') + ' ' + (a.lastName ?? '') | userInitials }}</div></div>
+              </div>
+              <span class="avatar-stack-extra" *ngIf="(task.assignees?.length ?? 0) > 3">
+                +{{ (task.assignees?.length ?? 0) - 3 }}
+              </span>
+            </div>
+            <span class="assignee-name" *ngIf="(task.assignees?.length ?? 0) === 1">
+              {{ (task.assignees?.[0]?.firstName ?? '') + ' ' + (task.assignees?.[0]?.lastName ?? '') }}
+            </span>
+            <span class="assignee-name muted" *ngIf="(task.assignees?.length ?? 0) > 1">
+              {{ task.assignees?.length }} attorneys
+            </span>
+          </ng-container>
+          <ng-template #noAssignee>
+            <span class="assignee-name muted">Unassigned</span>
+          </ng-template>
+          <i-lucide name="chevron-down" [size]="12"></i-lucide>
+        </div>
+
+        <div
+          class="dropdown-menu assignee-menu"
+          *ngIf="assigneeMenuOpen"
+          (click)="swallow($event)"
+        >
+          <input
+            type="text"
+            class="assignee-search"
+            [(ngModel)]="assigneeSearchQuery"
+            placeholder="Search&hellip;"
+            autocomplete="off"
+          />
+          <div class="dd-scroll">
+            <div class="dd-empty" *ngIf="filteredUsers.length === 0">No matches</div>
+            <button
+              type="button"
+              class="dd-item dd-item--multi"
+              *ngFor="let u of filteredUsers"
+              [class.selected]="isAssigned(u)"
+              (click)="toggleAssignee(u, $event)"
+            >
+              <span class="dd-checkbox" [class.checked]="isAssigned(u)" aria-hidden="true">
+                <i-lucide *ngIf="isAssigned(u)" name="check" [size]="11"></i-lucide>
+              </span>
+              <div
+                class="av-ringed sm"
+                [style.--ring]="avatarColor(u.id)"
+                [style.--bg]="avatarColor(u.id)"
+              >
+                <div class="inner"><div class="content">{{ u | userInitials }}</div></div>
+              </div>
+              <span class="dd-name">{{ u.firstName }} {{ u.lastName }}</span>
+              <span class="dd-role" *ngIf="u.roleName">{{ u.roleName }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!--
+        4th metadata cell — preview-aligned format:
+          "ESTIMATED · 4.0h"   ← label inlines the value (matches preview)
+          "2.4h logged · 1.6h remaining"
+        For CONTINGENCY/PRO_BONO cases, fall back to "Created" + dueLabel
+        so the cell isn't empty.
+      -->
       <div>
-        <div class="field-label">Status</div>
-        <span class="pill pill-subtle"><span class="dot"></span>{{ task.status | titlecase }}</span>
+        <ng-container *ngIf="showHoursCell(); else createdFallback">
+          <div class="field-label">
+            Estimated
+            <ng-container *ngIf="task.estimatedHours != null">
+              <span class="label-value">&middot; {{ task.estimatedHours }}h</span>
+            </ng-container>
+          </div>
+          <div class="field-value">
+            <ng-container *ngIf="task.actualHours != null; else noLogged">
+              {{ task.actualHours }}h logged
+              <ng-container *ngIf="hoursRemaining() != null">
+                &middot; {{ hoursRemaining() }}h remaining
+              </ng-container>
+            </ng-container>
+            <ng-template #noLogged>
+              <span class="muted">No time logged yet</span>
+            </ng-template>
+          </div>
+        </ng-container>
+        <ng-template #createdFallback>
+          <div class="field-label">Created</div>
+          <div class="field-value">
+            {{ task.createdAt | dueLabel }}
+          </div>
+        </ng-template>
       </div>
     </div>
 
@@ -94,7 +261,9 @@
       regardless of view. Sits between metadata grid and description.
     -->
     <div class="blocker-callout" *ngIf="isBlocked()">
-      <div class="blocker-head">&#9208; Blocked</div>
+      <div class="blocker-head">
+        <i-lucide name="alert-circle" [size]="14"></i-lucide> Blocked
+      </div>
       <div class="blocker-body">
         <ng-container *ngIf="task.blockerReason; else noReason">
           <strong>{{ task.blockerReason }}</strong>
@@ -115,16 +284,68 @@
     </div>
   </div>
 
-  <!-- Subtasks (always visible when present) -->
-  <div class="drawer-section" *ngIf="task.subtasks?.length">
+  <!-- Subtasks — interactive: add / toggle / delete. Always visible so the
+       + Add affordance is reachable even when the task has zero subtasks. -->
+  <div class="drawer-section">
     <div class="sec-head">
-      <span class="title">Subtasks &middot; {{ doneSubtaskCount }} of {{ task.subtasks?.length }}</span>
-      <button type="button" class="btn-ghost btn btn-sm">+ Add</button>
+      <span class="title">
+        Subtasks &middot; {{ doneSubtaskCount }} of {{ task.subtasks?.length || 0 }}
+      </span>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="openSubtaskAdd($event)">
+        <i-lucide name="plus" [size]="12"></i-lucide> Add
+      </button>
     </div>
+
+    <div
+      class="subtask-empty"
+      *ngIf="!subtaskAddOpen && (!task.subtasks || task.subtasks.length === 0)"
+    >
+      No subtasks yet.
+    </div>
+
+    <div class="subtask-add" *ngIf="subtaskAddOpen">
+      <input
+        type="text"
+        class="subtask-input"
+        [(ngModel)]="newSubtaskTitle"
+        placeholder="What needs to be done?"
+        (keydown.enter)="createSubtask()"
+        (keydown.escape)="cancelSubtaskAdd()"
+        #subtaskInput
+      />
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        (click)="createSubtask()"
+        [disabled]="!newSubtaskTitle.trim()"
+      >
+        Add
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="cancelSubtaskAdd()">
+        Cancel
+      </button>
+    </div>
+
     <div class="subtask-row" *ngFor="let st of task.subtasks">
-      <div class="t-checkbox" [class.checked]="st.status === 'COMPLETED'"></div>
+      <button
+        type="button"
+        class="t-checkbox-btn"
+        [class.checked]="st.status === 'COMPLETED'"
+        (click)="toggleSubtask(st, $event)"
+        [attr.aria-label]="st.status === 'COMPLETED' ? 'Mark incomplete' : 'Mark complete'"
+      >
+        <i-lucide *ngIf="st.status === 'COMPLETED'" name="check" [size]="11"></i-lucide>
+      </button>
       <div class="subtitle" [class.done]="st.status === 'COMPLETED'">{{ st.title }}</div>
-      <div class="due">{{ st.dueDate | dueLabel }}</div>
+      <span class="due">{{ (st.status === 'COMPLETED' ? st.completedAt : st.dueDate) | dueLabel }}</span>
+      <button
+        type="button"
+        class="btn btn-ghost btn-icon subtask-del"
+        (click)="deleteSubtask(st, $event)"
+        aria-label="Delete subtask"
+      >
+        <i-lucide name="trash-2" [size]="12"></i-lucide>
+      </button>
     </div>
   </div>
 
@@ -141,22 +362,46 @@
     </div>
   </div>
 
-  <!-- Time logged (always visible) -->
-  <div class="drawer-section">
+  <!--
+    Time logged — Phase H1. Hidden when the parent case is on a
+    contingency or pro-bono billing arrangement. The Start timer button
+    is currently a stub (wiring to TimeEntry deferred to backend audit).
+  -->
+  <div class="drawer-section" *ngIf="showHoursCell()">
     <div class="sec-head">
       <span class="title">Time logged &middot; {{ task.actualHours || 0 }} h</span>
-      <button type="button" class="btn-ghost btn btn-sm">&#9654; Start timer</button>
+      <button type="button" class="btn btn-ghost btn-sm">
+        <i-lucide name="play" [size]="12"></i-lucide> Start timer
+      </button>
     </div>
   </div>
 
-  <!-- Comments (always visible when present) -->
-  <div class="drawer-section" *ngIf="task.comments?.length">
+  <!--
+    Comments — Phase H2. Always visible. Add-only (no edit/delete).
+    Existing comments are previewed (max 3) with an expand toggle.
+    The textarea + Submit at the bottom POSTs a new comment.
+  -->
+  <div class="drawer-section">
     <div class="sec-head">
-      <span class="title">Comments &middot; {{ task.comments?.length }}</span>
+      <span class="title">
+        <i-lucide name="message-circle" [size]="13"></i-lucide>
+        Comments
+        <ng-container *ngIf="task.comments?.length">
+          &middot; {{ task.comments?.length }}
+        </ng-container>
+      </span>
     </div>
+
+    <div
+      class="comment-empty"
+      *ngIf="!task.comments?.length"
+    >
+      No comments yet.
+    </div>
+
     <div class="comment" *ngFor="let c of task.comments">
       <div
-        class="av-ringed"
+        class="av-ringed sm"
         [style.--ring]="avatarColor(c.userId ?? c.userName)"
         [style.--bg]="avatarColor(c.userId ?? c.userName)"
       >
@@ -169,5 +414,99 @@
         <div class="body">{{ c.comment }}</div>
       </div>
     </div>
+
+    <!--
+      Add comment composer — preview-aligned:
+      textarea on the left, [Submit] button beside it (top-aligned).
+      Add-only; no edit/delete.
+    -->
+    <div class="comment-input-wrap">
+      <textarea
+        class="comment-input"
+        [(ngModel)]="newComment"
+        placeholder="Add a comment&hellip;"
+        rows="2"
+        [disabled]="commentSubmitting"
+      ></textarea>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        (click)="submitComment($event)"
+        [disabled]="!newComment.trim() || commentSubmitting"
+      >
+        {{ commentSubmitting ? 'Posting…' : 'Submit' }}
+      </button>
+    </div>
+  </div>
+
+  <!--
+    Activity log — collapsible accordion, collapsed by default.
+    Preview-aligned format: "Activity history · {N} events  ▾". Until the
+    audit-log backend ships, the body shows a placeholder.
+  -->
+  <div class="drawer-section drawer-section--accordion">
+    <button
+      type="button"
+      class="sec-head sec-head--toggle activity-toggle"
+      (click)="toggleActivityLog($event)"
+      [attr.aria-expanded]="activityLogOpen"
+    >
+      <span class="title-text">
+        Activity history
+      </span>
+      <i-lucide
+        [name]="activityLogOpen ? 'chevron-up' : 'chevron-down'"
+        [size]="14"
+      ></i-lucide>
+    </button>
+
+    <div class="activity-body" *ngIf="activityLogOpen">
+      <div class="activity-empty">
+        Activity log not yet enabled.
+      </div>
+    </div>
   </div>
 </aside>
+
+<!--
+  BLOCKED required-prompt — small confirm modal stacked above the
+  drawer (higher z-index). Required reason; optional auto-unblock date.
+-->
+<div class="blocker-prompt-backdrop" *ngIf="blockerPromptOpen" (click)="cancelBlockerPrompt()"></div>
+<div class="blocker-prompt" *ngIf="blockerPromptOpen" role="dialog" aria-labelledby="blockerPromptTitle">
+  <header class="bp-head">
+    <i-lucide name="alert-circle" [size]="16"></i-lucide>
+    <h4 id="blockerPromptTitle">Mark task as Blocked</h4>
+    <button type="button" class="btn btn-ghost btn-icon" (click)="cancelBlockerPrompt()" aria-label="Close">
+      <i-lucide name="x" [size]="14"></i-lucide>
+    </button>
+  </header>
+  <div class="bp-body">
+    <label class="bp-field">
+      <span class="bp-label">Why blocked? <span class="req">*</span></span>
+      <textarea
+        class="bp-textarea"
+        [(ngModel)]="blockerReason"
+        rows="3"
+        placeholder="What's blocking this task?"
+      ></textarea>
+    </label>
+    <label class="bp-field">
+      <span class="bp-label">
+        <i-lucide name="calendar" [size]="12"></i-lucide> Auto-unblock on&hellip; (optional)
+      </span>
+      <input type="date" class="bp-date" [(ngModel)]="blockerAutoUnblockDate" />
+    </label>
+  </div>
+  <footer class="bp-foot">
+    <button type="button" class="btn" (click)="cancelBlockerPrompt()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="submitBlockerPrompt()"
+      [disabled]="!blockerReason.trim() || blockerSubmitting"
+    >
+      Set blocked
+    </button>
+  </footer>
+</div>

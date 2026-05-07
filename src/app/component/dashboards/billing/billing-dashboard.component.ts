@@ -5,6 +5,8 @@ import { forkJoin, of } from 'rxjs';
 import { map, catchError, finalize } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { LegSkelStatsComponent } from '../../../shared/components/skeleton/leg-skel-stats.component';
+import { LegSkelCardComponent } from '../../../shared/components/skeleton/leg-skel-card.component';
 
 interface BillingSummary {
   totalRevenue: number;
@@ -41,7 +43,7 @@ interface CaseProfitability {
 @Component({
   selector: 'app-billing-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, LegSkelStatsComponent, LegSkelCardComponent],
   templateUrl: './billing-dashboard.component.html',
   styleUrls: ['./billing-dashboard.component.scss']
 })

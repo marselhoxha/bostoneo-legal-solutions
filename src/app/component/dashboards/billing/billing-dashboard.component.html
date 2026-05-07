@@ -109,10 +109,13 @@
     <button type="button" class="btn-close" (click)="error = null"></button>
   </div>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="text-center py-5">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-3 text-muted">Loading dashboard...</p>
+  <!-- Loading — KPI strip + card placeholder matches the dashboard shape -->
+  <div *ngIf="loading">
+    <leg-skel-stats [count]="4" label="Loading billing stats"></leg-skel-stats>
+    <div class="mt-4">
+      <leg-skel-card [pills]="3" [actions]="2"
+                     label="Loading billing dashboard"></leg-skel-card>
+    </div>
   </div>
 
   <!-- Dashboard Content -->

@@ -43,6 +43,8 @@ import { NotificationManagerService, NotificationCategory, NotificationPriority 
 import { PRACTICE_AREA_FIELDS, PracticeAreaSection, PracticeAreaField, TYPE_TO_PRACTICE_AREA, groupPracticeAreaSections } from '../../../shared/practice-area-fields.config';
 import { ImageUrlPipe } from '../../../../../pipes/image-url.pipe';
 import { PiCaseDetailComponent } from '../pi-case-detail/pi-case-detail.component';
+import { LegSkelDetailComponent } from '../../../../../shared/components/skeleton/leg-skel-detail.component';
+import { LegSkelTableComponent } from '../../../../../shared/components/skeleton/leg-skel-table.component';
 import { FeatureFlagService } from '../../../../../core/services/feature-flag.service';
 
 @Component({
@@ -62,7 +64,9 @@ import { FeatureFlagService } from '../../../../../core/services/feature-flag.se
     CaseResearchComponent,
     CaseProgressManagerComponent,
     ImageUrlPipe,
-    PiCaseDetailComponent
+    PiCaseDetailComponent,
+    LegSkelDetailComponent,
+    LegSkelTableComponent
   ]
 })
 export class CaseDetailComponent implements OnInit, AfterViewInit, OnDestroy {

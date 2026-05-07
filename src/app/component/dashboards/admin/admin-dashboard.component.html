@@ -235,9 +235,8 @@
           </div>
         </div>
         <div class="card-body p-0">
-          <div *ngIf="attorneysLoading" class="text-center py-5">
-            <div class="spinner-border text-primary mb-3" role="status"></div>
-          </div>
+          <leg-skel-table *ngIf="attorneysLoading" [rows]="5" [cols]="4"
+                          label="Loading attorney performance"></leg-skel-table>
           <div *ngIf="!attorneysLoading && attorneys.length === 0" class="text-center py-5">
             <i class="ri-team-line fs-1 text-muted"></i>
             <h6 class="text-muted mb-0 mt-2">No attorney data</h6>

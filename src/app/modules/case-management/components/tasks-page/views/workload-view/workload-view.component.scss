@@ -1,0 +1,366 @@
+// ───────────────────────────────────────────────────────────────────────────
+// Workload view — design match: wave1-tasks-calendar-redesign-options#tasks-d3
+// Tasks grouped by assignee with capacity bar + status pill per person.
+// ───────────────────────────────────────────────────────────────────────────
+
+:host {
+  display: block;
+  background: var(--legience-bg-page);
+}
+
+.wl-loading {
+  padding: 80px 28px;
+  text-align: center;
+  color: var(--legience-text-muted);
+  font: 500 14px/1.4 var(--legience-font-sans);
+}
+
+.wl-list {
+  background: var(--legience-bg-elevated);
+  // Cap the list height and scroll internally so the tasks-page header +
+  // view switcher stay visible. Same calc as pipeline so both views feel
+  // consistent under varying viewport heights.
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--legience-border-emphasis) transparent;
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--legience-border-emphasis);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb:hover { background: var(--legience-text-subtle); }
+}
+
+// ─── Skeleton ────────────────────────────────────────────────────────────
+// Geometry mirrors the live workload list. First person row is shown as
+// "expanded" with task rows beneath so the hierarchy reads instantly.
+.wl-skeleton {
+  background: var(--legience-bg-elevated);
+}
+
+.wl-sk-person {
+  border-bottom: 1px solid var(--legience-border-hairline);
+  &:last-child { border-bottom: none; }
+}
+
+.wl-sk-person-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 28px;
+  background: var(--legience-bg-card-hover);
+}
+
+.wl-sk-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wl-sk-who-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wl-sk-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wl-sk-task {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 28px 12px 64px;
+  border-top: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+}
+
+// Cells — slight per-row width variation reads as natural content.
+.wl-sk-avatar     { width: 36px; height: 36px; border-radius: 50%; }
+.wl-sk-name       { width: 140px; height: 13px; }
+.wl-sk-count      { width: 60px; height: 10px; }
+.wl-sk-bar        { width: 100%; height: 8px; border-radius: 99px; }
+.wl-sk-cap-label  { width: 140px; height: 10px; }
+.wl-sk-pill       { width: 76px; height: 18px; border-radius: 100px; }
+.wl-sk-chevron    { width: 14px; height: 14px; border-radius: 3px; }
+
+.wl-sk-checkbox      { width: 16px; height: 16px; border-radius: 4px; }
+.wl-sk-task-title    { height: 13px; }
+.wl-sk-person[data-w='0'] .wl-sk-task[data-w='0'] .wl-sk-task-title { width: 70%; }
+.wl-sk-person[data-w='0'] .wl-sk-task[data-w='1'] .wl-sk-task-title { width: 55%; }
+.wl-sk-person[data-w='0'] .wl-sk-task[data-w='2'] .wl-sk-task-title { width: 80%; }
+.wl-sk-person[data-w='1'] .wl-sk-name { width: 110px; }
+.wl-sk-person[data-w='2'] .wl-sk-name { width: 160px; }
+.wl-sk-case-pill     { width: 120px; height: 18px; border-radius: var(--legience-radius); }
+.wl-sk-priority-pill { width: 60px;  height: 18px; border-radius: 100px; }
+.wl-sk-due           { width: 60px;  height: 11px; }
+
+// Shared shimmer cell + animation. Self-contained from the pipeline
+// equivalent so the two views can be compiled independently.
+.sk-cell {
+  background: linear-gradient(
+    90deg,
+    var(--legience-bg-subtle) 0%,
+    rgba(var(--legience-accent-rgb), 0.06) 50%,
+    var(--legience-bg-subtle) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: wl-sk-shimmer 1400ms linear infinite;
+}
+
+@keyframes wl-sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 920px) {
+  .wl-sk-person-head { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .wl-sk-cap { display: none; }
+  .wl-sk-task {
+    grid-template-columns: 22px 1fr auto;
+    padding: 12px 28px;
+    .wl-sk-case-pill, .wl-sk-priority-pill { display: none; }
+  }
+}
+
+.wl-empty {
+  padding: 80px 28px;
+  text-align: center;
+
+  .empty-title {
+    font: 600 16px/1.4 var(--legience-font-sans);
+    color: var(--legience-text-secondary);
+    margin-bottom: 6px;
+  }
+  .empty-sub {
+    font: 400 13px/1.5 var(--legience-font-sans);
+    color: var(--legience-text-muted);
+  }
+}
+
+.wl-person {
+  border-bottom: 1px solid var(--legience-border-hairline);
+  &:last-child { border-bottom: none; }
+}
+
+.wl-person-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px auto auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 28px;
+  background: var(--legience-bg-card-hover);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 100ms ease;
+  user-select: none;
+
+  &:hover { background: var(--legience-bg-row-hover); }
+
+  // Subtle danger wash on the head when this attorney is over capacity —
+  // matches the warning visual in the design.
+  &[data-status='over']  { background: rgba(var(--legience-danger-rgb), 0.04); }
+}
+
+.wl-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.wl-who-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.wl-name {
+  font: 600 13.5px/1.2 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wl-task-count {
+  font: 500 11.5px/1.2 var(--legience-font-sans);
+  color: var(--legience-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wl-cap-bar {
+  height: 8px;
+  background: var(--legience-bg-subtle);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.wl-cap-bar .fill {
+  height: 100%;
+  background: var(--legience-success);
+  border-radius: 99px;
+  transition: width 200ms ease, background 100ms ease;
+
+  &.warn   { background: var(--legience-warning); }
+  &.danger { background: var(--legience-danger); }
+}
+.wl-cap-label {
+  display: block;
+  margin-top: 5px;
+  font: 500 11.5px/1 var(--legience-font-sans);
+  color: var(--legience-text-subtle);
+  font-variant-numeric: tabular-nums;
+
+  &.warn   { color: #b45309; font-weight: 600; }
+  &.danger { color: var(--legience-danger); font-weight: 600; }
+}
+
+.wl-chevron {
+  color: var(--legience-text-muted);
+  transition: color 100ms ease;
+}
+.wl-person-head:hover .wl-chevron { color: var(--legience-text-primary); }
+
+.wl-task {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 28px 9px 64px;
+  border-top: 1px solid var(--legience-border-hairline);
+  background: var(--legience-bg-elevated);
+  cursor: pointer;
+  transition: background 100ms ease;
+
+  &:hover    { background: var(--legience-bg-row-hover); }
+  &.selected { background: var(--legience-accent-bg-subtle); }
+}
+
+.t-checkbox {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--legience-border-emphasis);
+  border-radius: 4px;
+  background: var(--legience-bg-elevated);
+
+  &.checked {
+    background: var(--legience-accent);
+    border-color: var(--legience-accent);
+  }
+}
+
+.wl-task-title {
+  font: 500 13px/1.3 var(--legience-font-sans);
+  color: var(--legience-text-primary);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.wl-due {
+  font: 500 11.5px/1 var(--legience-font-sans);
+  color: var(--legience-text-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// ─── shared chip / pill / avatar primitives (scoped to this component) ────
+.case-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: var(--legience-radius);
+  font: 500 11px/1.5 var(--legience-font-sans);
+  background: var(--legience-bg-subtle);
+  color: var(--legience-text-secondary);
+  border: 1px solid var(--legience-border-hairline);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  .case-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font: 600 10.5px/1.4 var(--legience-font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+}
+.pill-info    { background: var(--legience-info-bg-subtle);    color: var(--legience-info);    border-color: rgba(var(--legience-info-rgb), 0.25); }
+.pill-warning { background: var(--legience-warning-bg-subtle); color: #b45309;                 border-color: rgba(var(--legience-warning-rgb), 0.25); }
+.pill-danger  { background: var(--legience-danger-bg-subtle);  color: var(--legience-danger);  border-color: rgba(var(--legience-danger-rgb), 0.25); }
+.pill-orange  { background: var(--legience-orange-soft);       color: var(--legience-orange);  border-color: rgba(var(--legience-orange-rgb), 0.25); }
+.pill-subtle  { background: var(--legience-bg-subtle);         color: var(--legience-text-subtle); border-color: var(--legience-border-hairline); }
+.pill-success { background: var(--legience-success-bg-subtle); color: var(--legience-success); border-color: rgba(var(--legience-success-rgb), 0.25); }
+
+.av-ringed {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  padding: 1.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ring, var(--legience-accent));
+  flex-shrink: 0;
+
+  .inner {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: var(--legience-bg-elevated);
+    padding: 1px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .inner .content {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: var(--bg, var(--legience-accent));
+    color: #fff;
+    font: 600 8.5px/1 var(--legience-font-sans);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  // Larger avatar for the person-head row (more presence next to name).
+  &.lg {
+    width: 36px;
+    height: 36px;
+    padding: 2px;
+    .inner { padding: 2px; }
+    .inner .content { font-size: 11px; }
+  }
+}
+
+// Responsive — narrow viewports stack the right-side metrics, then drop to
+// a more compact row.
+@media (max-width: 920px) {
+  .wl-person-head {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    .wl-cap { display: none; }
+  }
+  .wl-task {
+    grid-template-columns: 22px 1fr auto;
+    padding: 9px 28px 9px 28px;
+    .case-pill, .pill { display: none; }
+  }
+}

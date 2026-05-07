@@ -10,6 +10,7 @@ import { CaseActivitiesService } from 'src/app/modules/legal/services/case-activ
 import { RbacService } from 'src/app/core/services/rbac.service';
 import { AiBriefingService, BriefingRequest } from 'src/app/core/services/ai-briefing.service';
 import { AppointmentService, AppointmentRequest } from 'src/app/core/services/appointment.service';
+import { PracticeAreaContextService } from 'src/app/core/services/practice-area-context.service';
 import Swal from 'sweetalert2';
 
 interface DashboardCase {
@@ -187,9 +188,23 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   // briefing only fires after schedule+urgent finish loading (~T+1s), and
   // before that we'd render the fallback as if it were the real briefing.
   aiBriefingLoading = true;
-  // Flags to track when data sources are loaded for AI briefing
-  private scheduleEventsLoaded = false;
-  private urgentItemsLoaded = false;
+  // Flags to track when data sources are loaded. Used both by the AI
+  // briefing trigger (tryLoadAiBriefing) and by the focus card *ngIf so
+  // dashboardFocus doesn't fall through to the "Good Evening" greeting
+  // branch on first paint while scheduleEvents/urgentItems are still
+  // empty arrays.
+  scheduleEventsLoaded = false;
+  urgentItemsLoaded = false;
+
+  /**
+   * The attorney's practice areas, intersected with the org's enabled set.
+   * Drives whether the practice-area-outlet renders and which lazy module
+   * loads. State now lives in PracticeAreaContextService so the topbar
+   * switcher pill and this dashboard outlet stay in sync. The CSVs are
+   * fed into the service from AppComponent's userData$ subscription.
+   */
+  readonly practiceAreas$: Observable<string[]>;
+  readonly activeTab$: Observable<string | null>;
 
   currentDate = new Date();
   private destroy$ = new Subject<void>();
@@ -203,8 +218,12 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     private rbacService: RbacService,
     private aiBriefingService: AiBriefingService,
     private appointmentService: AppointmentService,
+    private practiceAreaContext: PracticeAreaContextService,
     private cdr: ChangeDetectorRef
-  ) { }
+  ) {
+    this.practiceAreas$ = this.practiceAreaContext.practiceAreas$;
+    this.activeTab$ = this.practiceAreaContext.activeTab$;
+  }
 
   ngOnInit(): void {
     this.initializeWeekDays();
@@ -1042,12 +1061,167 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     return hours.toFixed(1);
   }
 
+  // Event details modal — opened from the horizontal-timeline event blocks
+  // and any other event surface that wants the read-only detail view.
+  selectedScheduleEvent: ScheduleEvent | null = null;
+  showEventDetailsModal = false;
+
   onEventClick(event: ScheduleEvent): void {
-    if (event.caseId) {
-      this.router.navigate(['/legal/cases', event.caseId]);
-    } else {
-      this.openCalendar();
+    this.selectedScheduleEvent = event;
+    this.showEventDetailsModal = true;
+  }
+
+  closeEventDetailsModal(): void {
+    this.showEventDetailsModal = false;
+    this.selectedScheduleEvent = null;
+  }
+
+  /** Navigate to the linked case from the event-details modal. */
+  openCaseFromEvent(): void {
+    const caseId = this.selectedScheduleEvent?.caseId;
+    this.closeEventDetailsModal();
+    if (caseId) {
+      this.router.navigate(['/legal/cases', caseId]);
     }
+  }
+
+  /** Open the calendar app from the event-details modal. */
+  openCalendarFromEvent(): void {
+    this.closeEventDetailsModal();
+    this.openCalendar();
+  }
+
+  /** Display label for the event type. */
+  getEventTypeLabel(type: string | undefined): string {
+    const map: Record<string, string> = {
+      consultation: 'Client meeting',
+      hearing: 'Court hearing',
+      review: 'Document review',
+      meeting: 'Meeting',
+      deposition: 'Deposition',
+    };
+    return map[type ?? ''] || 'Event';
+  }
+
+  /** Long-form date label for the modal header (e.g. "Wed, May 6"). */
+  getEventDateLabel(event: ScheduleEvent | null): string {
+    if (!event?.rawStart) return this.getCurrentDayFormatted();
+    return event.rawStart.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // HORIZONTAL TIMELINE — positions events along a fixed 8 AM → 6 PM
+  // window using % of range. `rawStart` / `rawEnd` are the precise
+  // Date stamps populated in loadScheduleEvents().
+  // ─────────────────────────────────────────────────────────────────
+  private readonly TIMELINE_START_HOUR = 8;
+  private readonly TIMELINE_END_HOUR = 18;
+
+  private get timelineRangeMinutes(): number {
+    return (this.TIMELINE_END_HOUR - this.TIMELINE_START_HOUR) * 60;
+  }
+
+  /** Hour tick marks across the top of the timeline. */
+  getHourTicks(): { label: string; leftPct: number }[] {
+    const ticks: { label: string; leftPct: number }[] = [];
+    for (let h = this.TIMELINE_START_HOUR; h <= this.TIMELINE_END_HOUR; h++) {
+      const minutesFromStart = (h - this.TIMELINE_START_HOUR) * 60;
+      const leftPct = (minutesFromStart / this.timelineRangeMinutes) * 100;
+      let label: string;
+      if (h === this.TIMELINE_START_HOUR) label = `${h} AM`;
+      else if (h === 12) label = '12 PM';
+      else if (h > 12) label = `${h - 12}`;
+      else label = `${h}`;
+      ticks.push({ label, leftPct });
+    }
+    return ticks;
+  }
+
+  /** Position + width % for an event block. Null when event lacks rawStart/rawEnd. */
+  getEventTimelinePosition(event: ScheduleEvent): { leftPct: number; widthPct: number } | null {
+    if (!event.rawStart || !event.rawEnd) return null;
+    const start = event.rawStart.getHours() * 60 + event.rawStart.getMinutes();
+    const end = event.rawEnd.getHours() * 60 + event.rawEnd.getMinutes();
+    const rangeStart = this.TIMELINE_START_HOUR * 60;
+    const rangeEnd = this.TIMELINE_END_HOUR * 60;
+    const clampedStart = Math.max(rangeStart, Math.min(rangeEnd, start));
+    const clampedEnd = Math.max(rangeStart, Math.min(rangeEnd, end));
+    const leftPct = ((clampedStart - rangeStart) / this.timelineRangeMinutes) * 100;
+    const widthPct = Math.max(4, ((clampedEnd - clampedStart) / this.timelineRangeMinutes) * 100);
+    return { leftPct, widthPct };
+  }
+
+  /** NOW indicator position. Returns null when current time is outside the visible window. */
+  getNowTimelinePosition(): { leftPct: number; label: string } | null {
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const rangeStart = this.TIMELINE_START_HOUR * 60;
+    const rangeEnd = this.TIMELINE_END_HOUR * 60;
+    if (minutes < rangeStart || minutes > rangeEnd) return null;
+    const leftPct = ((minutes - rangeStart) / this.timelineRangeMinutes) * 100;
+    const label = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return { leftPct, label };
+  }
+
+  /**
+   * Events to render along the horizontal timeline. Past, in-progress and
+   * upcoming events are all returned — the timeline reads as a complete
+   * day view. Past events are de-emphasized via the `is-past` modifier
+   * (faded + line-through) but still positioned at their actual time.
+   */
+  getActiveTimelineEvents(): ScheduleEvent[] {
+    return this.scheduleEvents;
+  }
+
+  /**
+   * Layout for the horizontal timeline. Each event gets a leftPct anchored
+   * to its start time and a widthPct that EXPANDS to fill the gap up to the
+   * next event when there's no overlap — so short events still show their
+   * full title. The duration-based width is the floor, the next-event's
+   * start (minus a small gap) is the ceiling.
+   */
+  getTimelineEventLayout(): Array<{ event: ScheduleEvent; leftPct: number; widthPct: number }> {
+    const positioned = this.getActiveTimelineEvents()
+      .map(event => ({ event, pos: this.getEventTimelinePosition(event) }))
+      .filter((p): p is { event: ScheduleEvent; pos: { leftPct: number; widthPct: number } } => p.pos !== null)
+      .sort((a, b) => a.pos.leftPct - b.pos.leftPct);
+
+    // % of the timeline range needed to comfortably show a title + time.
+    // 18% of a 10-hour window ≈ 108 minutes of visual space, enough for
+    // most event titles before truncation kicks in.
+    const MIN_LABEL_WIDTH_PCT = 18;
+    const GAP_PCT = 0.6;
+
+    return positioned.map((item, i) => {
+      const next = positioned[i + 1];
+      const nextStart = next ? next.pos.leftPct : 100;
+      const maxAllowed = Math.max(4, nextStart - item.pos.leftPct - GAP_PCT);
+      // Take the wider of (duration width, label-friendly width) but never
+      // exceed the room available before the next event starts.
+      const widthPct = Math.min(maxAllowed, Math.max(item.pos.widthPct, MIN_LABEL_WIDTH_PCT));
+      return { event: item.event, leftPct: item.pos.leftPct, widthPct };
+    });
+  }
+
+  /**
+   * Tone class for an event block — derived ONLY from the event type so
+   * every "client meeting" / "court hearing" / "deposition" reads the
+   * same color across the timeline. NOW and PAST states are layered on
+   * via separate `is-now` / `is-past` modifier classes in the template
+   * (ring/glow for NOW, fade + strikethrough for PAST) so they don't
+   * fight the type identity.
+   */
+  getEventToneClass(event: ScheduleEvent): string {
+    const map: Record<string, string> = {
+      consultation: 'tone-call',
+      hearing: 'tone-court',
+      review: 'tone-review',
+      meeting: 'tone-meeting',
+      deposition: 'tone-depo',
+    };
+    return map[event.type] || 'tone-meeting';
   }
 
   getEventHeaderClass(type: string): string {
@@ -1138,6 +1312,33 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       this.router.navigate([item.route]);
     } else if (item.caseId) {
       this.router.navigate(['/legal/cases', item.caseId]);
+    }
+  }
+
+  /**
+   * Map UrgentItem.priority to a Direction-3 modifier class for the
+   * numbered priority badge (`.d3-urgent-num`). Critical/high render the
+   * red default (no modifier), medium renders yellow (`.med`), anything
+   * else renders violet (`.low`).
+   */
+  getD3UrgentNumModifier(priority: string | undefined | null): string {
+    if (priority === 'critical' || priority === 'high') return '';
+    if (priority === 'medium') return 'med';
+    return 'low';
+  }
+
+  /**
+   * CTA label for the Direction-3 urgent item: deadlines/court → Open,
+   * documents → Review, tasks/meetings → Prep, billing → Follow up.
+   */
+  getD3UrgentCtaLabel(item: UrgentItem): string {
+    switch (item.type) {
+      case 'document': return 'Review';
+      case 'task':     return 'Prep';
+      case 'billing':  return 'Follow up';
+      case 'message':  return 'Reply';
+      case 'deadline':
+      default:         return 'Open';
     }
   }
 
@@ -1857,7 +2058,7 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   // 'info' (blueprint blue) — Action Cockpit philosophy.
   // ============================================================
   get dashboardFocus(): {
-    tone: 'urgent' | 'soon' | 'info';
+    tone: 'info';
     icon: string;
     eyebrow: string;
     titleStart: string;
@@ -1874,10 +2075,12 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     const todayEventCount = this.scheduleEvents?.length || 0;
     const pendingCount = this.pendingItems || 0;
 
-    // URGENT TONE — multiple critical items or many urgent
+    // URGENT STATE — multiple critical items or many urgent.
+    // Tone stays 'info' (Rox blueprint-blue Action Cockpit) — only the
+    // copy/icon reflect urgency. Color stays consistent across states.
     if (criticalCount >= 2 || urgentCount >= 4) {
       return {
-        tone: 'urgent',
+        tone: 'info',
         icon: 'ri-flashlight-fill',
         eyebrow: 'Right now, you should focus on',
         titleStart: `${urgentCount} urgent matters need your attention `,
@@ -1896,10 +2099,10 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
       };
     }
 
-    // SOON TONE — moderate workload
+    // SOON STATE — moderate workload. Same blueprint-blue tone.
     if (urgentCount >= 1 || todayEventCount >= 3) {
       return {
-        tone: 'soon',
+        tone: 'info',
         icon: 'ri-time-line',
         eyebrow: "Today's priorities",
         titleStart: `You have ${todayEventCount} event${todayEventCount === 1 ? '' : 's'} scheduled and `,
@@ -1979,147 +2182,13 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   }
 
   // ============================================================
-  // ACTION COCKPIT — Tier 3 differentiator components
+  // ACTION COCKPIT — cross-cutting components
+  //
+  // The AI Insights, Risk Alerts, and Cross-Matter Intelligence sections
+  // (and their click handlers) were moved out of this dashboard in Phase 6.
+  // They now live inside per-practice-area dashboard layers (e.g.
+  // PersonalInjuryDashboardModule) which the practice-area-outlet renders.
   // ============================================================
-
-  // AI Insights row — predictive alerts derived from case data
-  get aiInsights(): Array<{
-    category: string;
-    categoryLabel: string;
-    iconClass: string;
-    accentColor: 'orange' | 'green' | 'violet' | 'blue';
-    matter: string;
-    description: string;
-    actionLabel: string;
-    caseId?: number;     // present when the insight references a specific case
-  }> {
-    const insights: Array<any> = [];
-    const cases = this.recentCases || [];
-
-    // Check for PI cases (treatment gap candidates)
-    const piCase = cases.find(c => c.caseType?.toLowerCase().includes('personal injury') || c.caseType?.toLowerCase().includes('pi'));
-    if (piCase) {
-      insights.push({
-        category: 'gap',
-        categoryLabel: 'Treatment gap',
-        iconClass: 'ri-flashlight-fill',
-        accentColor: 'orange',
-        matter: piCase.clientName || piCase.title,
-        description: 'Possible treatment gap detected. Provider records may be incomplete — review for claim strength.',
-        actionLabel: 'Generate analysis',
-        caseId: piCase.id,
-      });
-    }
-
-    // Check for high-priority cases (settlement updates)
-    const highPriorityCase = cases.find(c => c.priority === 'high');
-    if (highPriorityCase) {
-      insights.push({
-        category: 'settlement',
-        categoryLabel: 'Settlement updated',
-        iconClass: 'ri-checkbox-circle-fill',
-        accentColor: 'green',
-        matter: highPriorityCase.clientName || highPriorityCase.title,
-        description: 'AI updated settlement range based on 3 comparable cases this quarter. Review projection.',
-        actionLabel: 'View comparables',
-        caseId: highPriorityCase.id,
-      });
-    }
-
-    // Cross-matter pattern (always show if cases exist)
-    // No caseId on this one — it's a multi-matter pattern, so it routes
-    // to the AI workspace where the cross-matter memo lives.
-    if (cases.length >= 3) {
-      insights.push({
-        category: 'pattern',
-        categoryLabel: 'Pattern detected',
-        iconClass: 'ri-pulse-line',
-        accentColor: 'violet',
-        matter: `${cases.length} matters`,
-        description: 'AI suggests grouping similar matters for batch review. Strategy memo available.',
-        actionLabel: 'View memo',
-      });
-    }
-
-    return insights.slice(0, 3);
-  }
-
-  // Risk Alerts — derived from urgent items and case data
-  get riskAlerts(): Array<{
-    severity: 'critical' | 'warning' | 'info';
-    type: string;
-    title: string;
-    description: string;
-    daysRemaining?: number;
-  }> {
-    const alerts: Array<any> = [];
-    const urgentCount = this.urgentItems?.length || 0;
-    const criticalUrgent = this.urgentItems?.filter(i => i.priority === 'critical') || [];
-
-    // Critical SoL-style alerts (driven by critical urgent items)
-    if (criticalUrgent.length > 0) {
-      const first = criticalUrgent[0];
-      alerts.push({
-        severity: 'critical',
-        type: 'sol',
-        title: 'Critical deadline approaching',
-        description: `${first.title} · ${first.dueLabel || 'within 48 hours'}`,
-      });
-    }
-
-    // Document staleness — if any case has no recent activity (mock heuristic)
-    const cases = this.recentCases || [];
-    const staleCase = cases.find(c => c.status === 'pending');
-    if (staleCase) {
-      alerts.push({
-        severity: 'warning',
-        type: 'doc-stale',
-        title: 'Document awaiting signature',
-        description: `${staleCase.title} · pending client action`,
-      });
-    }
-
-    // Comm gap alert — if many cases, assume some need follow-up
-    if (cases.length >= 5) {
-      alerts.push({
-        severity: 'warning',
-        type: 'comm-gap',
-        title: 'Client communication gap',
-        description: `${Math.min(2, cases.length)} clients haven't been updated in 7+ days`,
-      });
-    }
-
-    return alerts.slice(0, 4);
-  }
-
-  // Cross-matter intelligence — only shows when pattern detected
-  get crossMatterPattern(): {
-    title: string;
-    summary: string;
-    matters: Array<{ initials: string; bg: string; label: string }>;
-    primaryLabel: string;
-    secondaryLabel: string;
-  } | null {
-    const cases = this.recentCases || [];
-    if (cases.length < 3) return null;
-
-    // Look for any pattern (mock: shared case type)
-    const piCases = cases.filter(c => c.caseType?.toLowerCase().includes('personal injury') || c.caseType?.toLowerCase().includes('pi'));
-    if (piCases.length >= 2) {
-      return {
-        title: `Pattern across ${piCases.length} personal injury matters`,
-        summary: 'These matters share treatment patterns and similar settlement ranges based on past comparable cases. Strategy memo and comparable outcomes available.',
-        matters: piCases.slice(0, 3).map(c => ({
-          initials: this.getClientInitials(c.clientName || ''),
-          bg: this.getClientAvatarBg(c.clientName || ''),
-          label: (c.clientName || 'Client').split(' ')[0],
-        })),
-        primaryLabel: 'Open strategy memo',
-        secondaryLabel: 'Compare outcomes',
-      };
-    }
-    return null;
-  }
 
   // Client Communication Health — surfaces clients needing follow-up
   get clientCommHealth(): {
@@ -2172,40 +2241,25 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
     return colors[Math.abs(hash) % colors.length];
   }
 
-  // Action handlers for Tier 3 components
-  onInsightAction(insight: any): void {
-    // Navigate to the specific case the insight references when available
-    // (treatment gap on James Thompson should land on James Thompson's case,
-    // not on a generic AI workspace). Cross-matter patterns don't have a
-    // single case, so they fall back to the AI workspace.
-    if (insight && insight.caseId) {
-      this.router.navigate(['/legal/cases', insight.caseId]);
-    } else {
-      this.navigateTo('/legal/ai-assistant');
-    }
-  }
-
-  onRiskAction(): void {
-    this.navigateTo('/case-management/tasks');
-  }
-
-  onCrossMatterPrimary(): void {
-    this.navigateTo('/legal/cases');
-  }
-
-  onCrossMatterSecondary(): void {
-    this.navigateTo('/legal/ai-assistant');
-  }
-
+  // Action handlers for the deleted Tier 3 components (onInsightAction,
+  // onRiskAction, onCrossMatterPrimary/Secondary) were removed in Phase 6
+  // along with their template markup. The matching navigation lives inside
+  // each practice-area dashboard layer.
   onSendClientUpdate(client: any): void {
     this.navigateTo('/legal/cases');
   }
 
+  // The focus card's CTAs route based on the underlying state, not the
+  // visual tone — tone is locked to blueprint-blue so it can't be used as
+  // the discriminator. Mirrors the same urgent/soon thresholds used by the
+  // dashboardFocus getter.
   onFocusPrimary(): void {
-    const tone = this.dashboardFocus.tone;
-    if (tone === 'urgent') {
+    const urgentCount = this.urgentItems?.length || 0;
+    const criticalCount = this.urgentItems?.filter(i => i.priority === 'critical')?.length || 0;
+    const todayEventCount = this.scheduleEvents?.length || 0;
+    if (criticalCount >= 2 || urgentCount >= 4) {
       this.navigateTo('/case-management/tasks');
-    } else if (tone === 'soon') {
+    } else if (urgentCount >= 1 || todayEventCount >= 3) {
       this.navigateTo('/legal/calendar');
     } else {
       this.navigateTo('/legal/ai-assistant');
@@ -2213,8 +2267,10 @@ export class AttorneyDashboardComponent implements OnInit, OnDestroy {
   }
 
   onFocusSecondary(): void {
-    const tone = this.dashboardFocus.tone;
-    if (tone === 'urgent' || tone === 'soon') {
+    const urgentCount = this.urgentItems?.length || 0;
+    const criticalCount = this.urgentItems?.filter(i => i.priority === 'critical')?.length || 0;
+    const todayEventCount = this.scheduleEvents?.length || 0;
+    if (criticalCount >= 2 || urgentCount >= 1 || todayEventCount >= 3) {
       this.navigateTo('/case-management/tasks');
     } else {
       this.navigateTo('/legal/cases');

@@ -15,6 +15,7 @@ import { VirtualTableComponent } from './components/virtual-table/virtual-table.
 import { AvailabilitySettingsComponent } from './components/availability-settings/availability-settings.component';
 import { ImageUrlPipe } from '../pipes/image-url.pipe';
 import { AiDisclaimerComponent } from './components/ai-disclaimer/ai-disclaimer.component';
+import { SkeletonModule } from './components/skeleton/skeleton.module';
 
 /**
  * Note about standalone components:
@@ -63,7 +64,8 @@ import { AiDisclaimerComponent } from './components/ai-disclaimer/ai-disclaimer.
     MatButtonModule,
     ConfirmationDialogModule,
     ImageUrlPipe,
-    AiDisclaimerComponent
+    AiDisclaimerComponent,
+    SkeletonModule
   ],
   exports: [
     RouterModule,
@@ -80,7 +82,8 @@ import { AiDisclaimerComponent } from './components/ai-disclaimer/ai-disclaimer.
     MatDialogModule,
     MatButtonModule,
     ImageUrlPipe,
-    AiDisclaimerComponent
+    AiDisclaimerComponent,
+    SkeletonModule
   ]
 })
 export class SharedModule { }

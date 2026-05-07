@@ -391,15 +391,39 @@ export class HorizontalTopbarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Toggle sub menu item
+   * Click-toggle for sub-parent flyout (e.g. Invoices, Expenses).
+   *
+   * Desktop UX: hover on the sub-parent's <li> opens the flyout via CSS
+   * (`.is-flyout:hover > .lt-nav-flyout`). Click navigates to the parent's
+   * route (existing routerLink behavior).
+   *
+   * Touch UX: hover doesn't fire reliably. Tapping the parent navigates
+   * to its primary link (e.g. /invoices), which usually shows the same
+   * content as the first child anyway. Children are still reachable via
+   * the inline accordion that auto-renders below the parent on mobile.
+   *
+   * Kept as a public API in case future markup wires a real chevron
+   * button — collapses other open sub-parents first to maintain the
+   * "one open at a time" invariant within a single Bar 2 dropdown.
+   */
+  onSubParentToggle(subitem: any, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const wasOpen = !!subitem['_ltOpen'];
+    this.closeAllSubmenus();
+    // Re-open the Bar 2 parent (closeAllSubmenus collapsed it too).
+    const parentItem = this.menuItems.find(mi => mi.subItems?.some(s => s === subitem));
+    if (parentItem) parentItem['_ltOpen'] = true;
+    subitem['_ltOpen'] = !wasOpen;
+  }
+
+  /**
+   * @deprecated Legacy DOM-class toggle for the old Bootstrap-collapse
+   * sub-menu pattern. Replaced by `onSubParentToggle()` + CSS hover.
+   * Kept as a no-op so any stray template references don't fail.
    */
   toggleSubItem(event: any): void {
     event.preventDefault();
-    const anchor = event.currentTarget;
-    const nextEl = anchor.nextElementSibling;
-    if (nextEl) {
-      nextEl.classList.toggle('show');
-    }
   }
 
   /**
